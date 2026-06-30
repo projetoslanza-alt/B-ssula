@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plataforma Bússola — Módulo Universidade
 
-## Getting Started
+SaaS B2B multi-tenant para capacitação corporativa, desenvolvimento de equipes e trilhas de aprendizado.
 
-First, run the development server:
+> Todos podem aprender. Gestores orientam a rota. A empresa acompanha a evolução.
+
+## Stack
+
+- **Frontend/Backend:** Next.js 16 (App Router), TypeScript, Tailwind CSS
+- **Banco/Auth/Storage:** Supabase (PostgreSQL + RLS)
+- **Deploy:** Vercel
+
+## Pré-requisitos
+
+- Node.js 20+
+- Conta Supabase
+- npm
+
+## Configuração local
+
+1. Clone o repositório e instale dependências:
+
+```bash
+npm install
+```
+
+2. Copie as variáveis de ambiente:
+
+```bash
+cp .env.example .env.local
+```
+
+3. Preencha `.env.local` com credenciais do Supabase.
+
+4. Com Supabase local (`npx supabase start`), aplique migrations e massa QA:
+
+```bash
+npx supabase db reset
+npm run qa:setup:local
+```
+
+Documentação completa: [docs/qa-users.md](docs/qa-users.md)
+
+5. Inicie o servidor:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | Build de produção |
+| `npm run typecheck` | Verificação TypeScript |
+| `npm run lint` | ESLint |
+| `npm run test` | Testes unitários (Vitest) |
+| `npm run test:e2e` | Testes e2e (Playwright) |
+| `npm run test:rls` | Testes RLS com JWT real |
+| `npm run qa:setup:local` | Provisiona tenants e usuários QA locais |
+| `npm run qa:users:list` | Lista fixtures QA no banco |
 
-## Learn More
+## Estrutura principal
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                    # Rotas (auth, universidade, api)
+├── components/             # UI, layout, feedback
+├── modules/
+│   ├── core/               # Auth, auditoria, tenancy
+│   └── learning/           # Domínio Universidade
+├── lib/                    # Supabase, env, utils
+supabase/migrations/        # SQL versionado
+docs/                       # Arquitetura, deploy, roadmap
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Documentação
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [Arquitetura](docs/architecture.md)
+- [Modelo de dados](docs/data-model.md)
+- [Permissões](docs/permissions.md)
+- [Deploy](docs/deployment.md)
+- [Plano de implementação](docs/implementation-plan.md)
+- [Roadmap](docs/roadmap.md)
 
-## Deploy on Vercel
+## Primeiro administrador
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Após criar usuário no Supabase Auth:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Crie organização e membership no banco
+2. Atribua papel `org_admin` via `membership_roles`
+3. Defina `user_organization_context.active_tenant_id`
+
+Detalhes em [docs/deployment.md](docs/deployment.md).
+
+## Health check
+
+```
+GET /api/health
+```
+
+## Licença
+
+Proprietário — Lanza / Bússola

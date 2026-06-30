@@ -1,11 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { QA_USERS, qaPassword } from "./helpers/auth";
 
 const hasSupabase = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
 
-const adminEmail = process.env.TEST_ADMIN_A_EMAIL ?? "admin.norte@bussola.local";
-const adminPassword = process.env.TEST_ADMIN_A_PASSWORD ?? "Bussola@123";
+const adminEmail = process.env.TEST_ADMIN_A_EMAIL ?? QA_USERS.adminNorth;
+const adminPassword = process.env.TEST_ADMIN_A_PASSWORD ?? qaPassword("user.admin.north");
 
 test.describe("Fluxo administrador completo", () => {
   test.skip(!hasSupabase, "Requer Supabase configurado (npm run qa:setup:local)");

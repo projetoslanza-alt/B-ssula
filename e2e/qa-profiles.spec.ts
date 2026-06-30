@@ -1,20 +1,31 @@
 import { test, expect, type Page } from "@playwright/test";
-
-const LOCAL_PASSWORD = "Bussola@123";
+import { QA_USERS, qaPassword, login as authLogin } from "./helpers/auth";
 
 const QA_READY = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
 
-async function login(page: Page, email: string, expectPending = false) {
-  await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(LOCAL_PASSWORD);
-  await page.getByRole("button", { name: /entrar/i }).click();
+async function login(page: Page, fixtureKey: keyof typeof QA_USERS | string, expectPending = false) {
+  const emailMap: Record<string, string> = QA_USERS;
+  const email =
+    fixtureKey in emailMap
+      ? emailMap[fixtureKey as keyof typeof QA_USERS]
+      : String(fixtureKey);
+  const fixtureKeys: Record<string, string> = {
+    [QA_USERS.adminNorth]: "user.admin.north",
+    [QA_USERS.managerNorth]: "user.manager.north",
+    [QA_USERS.instructorNorth]: "user.instructor.north",
+    [QA_USERS.studentNorth]: "user.student.north",
+    [QA_USERS.noroleNorth]: "user.norole.north",
+    [QA_USERS.inactiveNorth]: "user.inactive.north",
+    [QA_USERS.multi]: "user.multi",
+  };
+  const fk = fixtureKeys[email];
+  await authLogin(page, email, fk ? qaPassword(fk) : undefined);
   if (expectPending) {
     await expect(page).toHaveURL(/acesso-pendente/, { timeout: 15_000 });
   } else {
-    await page.waitForURL(/universidade/, { timeout: 15_000 });
+    await page.waitForURL(/universidade|inicio/, { timeout: 15_000 });
   }
 }
 
@@ -22,14 +33,14 @@ test.describe("Administrador da organização", () => {
   test.skip(!QA_READY, "Requer Supabase local provisionado (npm run qa:setup:local)");
 
   test("login, admin, listagem de cursos", async ({ page }) => {
-    await login(page, "admin.norte@bussola.local");
+    await login(page, "adminNorth");
     await page.goto("/universidade/admin/cursos");
     await expect(page.getByRole("heading", { name: /cursos/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /novo curso/i })).toBeVisible();
   });
 
   test("acesso à criação, edição e preview", async ({ page }) => {
-    await login(page, "admin.norte@bussola.local");
+    await login(page, "adminNorth");
     await page.goto("/universidade/admin/cursos/novo");
     await expect(page.getByRole("heading", { name: /novo curso/i })).toBeVisible();
     await page.goto("/universidade/admin/cursos");
@@ -52,7 +63,7 @@ test.describe("Gestor", () => {
   test.skip(!QA_READY, "Requer Supabase local provisionado");
 
   test("acessa área permitida e é barrado na administração de cursos", async ({ page }) => {
-    await login(page, "gestor.norte@bussola.local");
+    await login(page, "managerNorth");
     await page.waitForURL(/universidade/);
     await expect(page.getByText(/olá/i)).toBeVisible();
     await page.goto("/universidade/admin/cursos");
@@ -64,7 +75,7 @@ test.describe("Instrutor", () => {
   test.skip(!QA_READY, "Requer Supabase local provisionado");
 
   test("acessa cursos próprios do tenant", async ({ page }) => {
-    await login(page, "instrutor.norte@bussola.local");
+    await login(page, "instructorNorth");
     await page.waitForURL(/universidade/);
     await page.goto("/universidade/admin/cursos");
     await expect(page.getByRole("heading", { name: /cursos/i })).toBeVisible();
@@ -75,7 +86,7 @@ test.describe("Aluno", () => {
   test.skip(!QA_READY, "Requer Supabase local provisionado");
 
   test("catálogo e negação de rota administrativa", async ({ page }) => {
-    await login(page, "aluno.norte@bussola.local");
+    await login(page, "studentNorth");
     await page.waitForURL(/universidade/);
     await page.goto("/universidade/catalogo");
     await expect(page.getByRole("heading", { name: /catálogo/i })).toBeVisible();
@@ -88,7 +99,7 @@ test.describe("Sem papel", () => {
   test.skip(!QA_READY, "Requer Supabase local provisionado");
 
   test("redireciona para acesso pendente", async ({ page }) => {
-    await login(page, "sempapel.norte@bussola.local", true);
+    await login(page, "noroleNorth", true);
     await expect(page.getByRole("heading", { name: /acesso não configurado/i })).toBeVisible();
   });
 });
@@ -97,7 +108,7 @@ test.describe("Inativo", () => {
   test.skip(!QA_READY, "Requer Supabase local provisionado");
 
   test("não acessa universidade com tenant inativo", async ({ page }) => {
-    await login(page, "inativo.norte@bussola.local", true);
+    await login(page, "inactiveNorth", true);
     await expect(page.getByRole("heading", { name: /acesso não configurado/i })).toBeVisible();
   });
 });
@@ -106,7 +117,7 @@ test.describe("Multiempresa", () => {
   test.skip(!QA_READY, "Requer Supabase local provisionado");
 
   test("troca Norte → Sul com isolamento de permissões", async ({ page }) => {
-    await login(page, "multiempresa@bussola.local");
+    await login(page, "multi");
     await page.waitForURL(/universidade/);
     const switcher = page.getByLabel(/trocar organização/i);
     await expect(switcher).toBeVisible();

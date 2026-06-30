@@ -23,7 +23,8 @@
     "qa:users:cleanup": "tsx scripts/provision-qa-users.ts --delete",
     "qa:setup:local": "tsx scripts/provision-qa-users.ts --environment=local --tenant=all",
     "qa:setup:staging": "tsx scripts/provision-qa-users.ts --environment=staging --tenant=all",
-    "db:types": "supabase gen types typescript --linked > src/types/supabase.ts",
+    "qa:verify:staging": "tsx scripts/qa-verify-staging.ts",
+    "db:types": "tsx scripts/generate-db-types.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

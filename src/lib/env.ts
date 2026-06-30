@@ -1,13 +1,12 @@
 import { z } from "zod";
+import { appEnvSchema } from "./app-env";
 
 /** Variáveis acessíveis no cliente (NEXT_PUBLIC_*) e configuração geral da app. */
 const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
-  APP_ENV: z
-    .enum(["development", "preview", "production", "test"])
-    .default("development"),
+  APP_ENV: appEnvSchema.default("development"),
 });
 
 const parsed = envSchema.safeParse({

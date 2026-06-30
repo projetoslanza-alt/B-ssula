@@ -37,7 +37,22 @@
 - [ ] Deploy Production ou Preview protegido
 - [ ] Auth callbacks configurados
 - [ ] Variáveis `NEXT_PUBLIC_*` e `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] `APP_ENV=staging` na Vercel (homologação cloud)
+- [ ] `NEXT_PUBLIC_APP_URL=https://bussola-staging-nine.vercel.app`
 - [ ] Smoke test pós-deploy
+
+### Variável APP_ENV na Vercel (ação manual)
+
+Se a Vercel ainda estiver com `APP_ENV=preview`, altere em:
+
+**Vercel → bussola-staging → Settings → Environment Variables**
+
+| Variável | Valor |
+|----------|-------|
+| `APP_ENV` | `staging` |
+| `NEXT_PUBLIC_APP_URL` | `https://bussola-staging-nine.vercel.app` |
+
+Salve e execute um **Redeploy** antes da validação final do health check (`/api/health` deve retornar `"environment": "staging"`).
 
 ## Migration `20250629120000`
 

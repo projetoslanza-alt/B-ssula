@@ -3,8 +3,8 @@
  * Testes RLS com JWT real — resolve fixtures por slug, e-mail e fixture_key.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { loadLocalSupabaseEnv } from "./qa-env";
-import { LOCAL_PASSWORD, TENANTS } from "./qa-fixtures";
+import { qaEmail, qaPassword, loadQaEnv } from "./qa-credentials";
+import { TENANTS } from "./qa-fixtures";
 
 type ScenarioResult = {
   scenario: string;
@@ -52,7 +52,7 @@ async function setActiveTenant(admin: SupabaseClient, userId: string, tenantId: 
 }
 
 async function main() {
-  const { url, anonKey, serviceKey } = loadLocalSupabaseEnv();
+  const { url, anonKey, serviceKey } = loadQaEnv();
   const admin = createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -71,11 +71,11 @@ async function main() {
   const southRestrictedStudent = courseByKey.get("south.course.restricted.student");
   const northRestrictedStudent = courseByKey.get("north.course.restricted.student");
 
-  const adminNorth = await signIn(url, anonKey, "admin.norte@bussola.local", LOCAL_PASSWORD);
-  const managerNorth = await signIn(url, anonKey, "gestor.norte@bussola.local", LOCAL_PASSWORD);
-  const instructorNorth = await signIn(url, anonKey, "instrutor.norte@bussola.local", LOCAL_PASSWORD);
-  const studentNorth = await signIn(url, anonKey, "aluno.norte@bussola.local", LOCAL_PASSWORD);
-  const noroleNorth = await signIn(url, anonKey, "sempapel.norte@bussola.local", LOCAL_PASSWORD);
+  const adminNorth = await signIn(url, anonKey, qaEmail("user.admin.north"), qaPassword("user.admin.north"));
+  const managerNorth = await signIn(url, anonKey, qaEmail("user.manager.north"), qaPassword("user.manager.north"));
+  const instructorNorth = await signIn(url, anonKey, qaEmail("user.instructor.north"), qaPassword("user.instructor.north"));
+  const studentNorth = await signIn(url, anonKey, qaEmail("user.student.north"), qaPassword("user.student.north"));
+  const noroleNorth = await signIn(url, anonKey, qaEmail("user.norole.north"), qaPassword("user.norole.north"));
 
   const studentSouthId = profileByKey.get("user.student.south")?.id;
   const southEnrollment = enrollments?.find(
@@ -198,7 +198,7 @@ async function main() {
   {
     const inactive = profileByKey.get("user.inactive.north");
     if (inactive) {
-      const inactiveClient = await signIn(url, anonKey, "inativo.norte@bussola.local", LOCAL_PASSWORD);
+      const inactiveClient = await signIn(url, anonKey, qaEmail("user.inactive.north"), qaPassword("user.inactive.north"));
       const { data } = await inactiveClient
         .from("organization_memberships")
         .select("id")
@@ -221,7 +221,7 @@ async function main() {
     const multiId = profileByKey.get("user.multi")?.id;
     if (multiId) {
       await setActiveTenant(admin, multiId, TENANTS.south.id);
-      const multiSouth = await signIn(url, anonKey, "multiempresa@bussola.local", LOCAL_PASSWORD);
+      const multiSouth = await signIn(url, anonKey, qaEmail("user.multi"), qaPassword("user.multi"));
       const { data: drafts } = await multiSouth
         .from("course_versions")
         .select("id")

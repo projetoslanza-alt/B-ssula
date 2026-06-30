@@ -20,6 +20,14 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
+const baseURL =
+  process.env.PLAYWRIGHT_BASE_URL ??
+  process.env.BASE_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "http://localhost:3000";
+
+const isRemoteBase = !baseURL.includes("localhost") && !baseURL.includes("127.0.0.1");
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -29,15 +37,19 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
     viewport: { width: 1280, height: 720 },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 720 } } }],
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000/api/health",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  ...(isRemoteBase
+    ? {}
+    : {
+        webServer: {
+          command: "npm run dev",
+          url: "http://localhost:3000/api/health",
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
+      }),
 });

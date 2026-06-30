@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -23,6 +25,8 @@
 # misc
 .DS_Store
 *.pem
+.tmp/
+.npm-cache/
 
 # debug
 npm-debug.log*
@@ -39,7 +43,6 @@ yarn-error.log*
 # credenciais QA (nunca versionar)
 .local/
 *.credentials.json
-qa-credentials*
 
 # vercel
 .vercel

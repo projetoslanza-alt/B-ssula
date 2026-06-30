@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
+import { isPlatformRoute, platformRoutes } from "@/lib/routes";
 
 const PUBLIC_ROUTES = [
   "/login",
@@ -55,11 +56,11 @@ export async function middleware(request: NextRequest) {
 
   if (user && (pathname === "/login" || pathname === "/")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/universidade";
+    url.pathname = platformRoutes.home;
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname.startsWith("/universidade")) {
+  if (user && isPlatformRoute(pathname)) {
     const { data: hasAccess } = await supabase.rpc("user_has_tenant_access");
     if (!hasAccess) {
       const url = request.nextUrl.clone();

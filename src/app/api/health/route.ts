@@ -5,7 +5,7 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     app: "bussola",
-    module: "learning",
+    module: "platform",
     environment: env.APP_ENV,
     timestamp: new Date().toISOString(),
   });

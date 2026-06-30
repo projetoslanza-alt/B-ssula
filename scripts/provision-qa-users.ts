@@ -2,10 +2,13 @@
 /**
  * Provisionamento idempotente de usuários e massa de teste QA.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadCloudEnv, loadLocalSupabaseEnv } from "./qa-env";
+import { provisionCrmData } from "./qa-data/crm";
+import { provisionOneOnOneData } from "./qa-data/one-on-one";
+import { provisionSupportData } from "./qa-data/tickets";
 import {
   ROLE_IDS,
   LOCAL_PASSWORD,
@@ -101,6 +104,19 @@ function guardStaging(args: Args) {
   if (process.env.STAGING_QA_CONFIRMATION !== "PROVISIONAR_HOMOLOGACAO") {
     console.error("Defina STAGING_QA_CONFIRMATION=PROVISIONAR_HOMOLOGACAO para provisionar homologação.");
     process.exit(1);
+  }
+}
+
+function loadExistingStagingPasswords(): Map<string, string> {
+  const path = resolve(".local/qa-credentials.json");
+  if (!existsSync(path)) return new Map();
+  try {
+    const data = JSON.parse(readFileSync(path, "utf8")) as {
+      users: { fixtureKey: string; password: string }[];
+    };
+    return new Map(data.users.map((u) => [u.fixtureKey, u.password]));
+  } catch {
+    return new Map();
   }
 }
 
@@ -600,7 +616,7 @@ async function provisionCourses(
           .eq("course_id", courseId)
           .maybeSingle();
         if (!enr) {
-          await admin.from("course_enrollments").insert({
+          const { error: enrError } = await admin.from("course_enrollments").insert({
             tenant_id: tenantId,
             user_id: studentId,
             course_id: courseId,
@@ -608,8 +624,9 @@ async function provisionCourses(
             mandatory: true,
             due_at: dueAt,
             status: c.dueInDays < 0 ? "overdue" : "not_started",
-            enrollment_origin: "assignment",
+            enrollment_origin: "admin",
           });
+          if (enrError) throw new Error(`Enrollment ${c.fixtureKey}: ${enrError.message}`);
         }
       }
     }
@@ -734,20 +751,39 @@ async function main() {
   const globalCategory = await ensureGlobalCategory(admin);
 
   const usersToProvision = mapUsersForEnvironment(args.environment);
+  const existingStagingPasswords =
+    args.environment === "staging" ? loadExistingStagingPasswords() : new Map<string, string>();
 
   for (const fixture of usersToProvision) {
     if (args.tenant === "north" && fixture.tenant === "south") continue;
     if (args.tenant === "south" && fixture.tenant === "north") continue;
     if (args.environment === "production" && fixture.roles.includes("platform_admin")) continue;
 
-    const password = args.environment === "local" ? LOCAL_PASSWORD : randomPassword();
-    await provisionUser(admin, userCache, fixture, args.environment, password, args.resetPasswords, userIds);
+    const password =
+      args.environment === "local"
+        ? LOCAL_PASSWORD
+        : (existingStagingPasswords.get(fixture.fixtureKey) ?? randomPassword());
+    const syncPassword = args.resetPasswords || args.environment === "staging";
+    await provisionUser(admin, userCache, fixture, args.environment, password, syncPassword, userIds);
     if (args.environment !== "local") {
       credentialRecords.push({ email: fixture.email, password, fixtureKey: fixture.fixtureKey });
     }
   }
 
   await provisionCourses(admin, args.tenant, userIds, courseIds, versionIds, globalCategory, tenantCategories);
+
+  if (args.environment !== "production") {
+    for (const tk of tenants) {
+      const owners = [...userIds.values()].slice(0, 4);
+      const employees = [...userIds.values()].slice(4, 12);
+      const courses = [...courseIds.values()];
+      if (owners.length) {
+        await provisionCrmData(admin, tk, owners);
+        await provisionOneOnOneData(admin, tk, owners, employees.length ? employees : owners, courses);
+        await provisionSupportData(admin, tk, [...userIds.values()]);
+      }
+    }
+  }
 
   if (args.environment === "local") {
     writeLocalEnv(envConfig.url, envConfig.anonKey, envConfig.serviceKey);

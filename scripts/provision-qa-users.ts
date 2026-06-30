@@ -22,6 +22,14 @@ type AdminDb = SupabaseClient;
 
 const STUDENT_ROLE = ROLE_IDS.student;
 
+const GLOBAL_CATEGORY_ID = "55555555-5555-5555-5555-555555555551";
+
+type LearningCategoryRef = {
+  id: string;
+  tenant_id: string | null;
+  is_global: boolean;
+};
+
 type Args = {
   environment: Environment;
   tenant: "all" | "north" | "south";
@@ -144,7 +152,85 @@ async function ensureAuthUser(
   return user.id;
 }
 
-async function ensureTenantStructure(admin: AdminDb, env: Environment, tenantKey: "north" | "south") {
+async function ensureGlobalCategory(admin: AdminDb): Promise<LearningCategoryRef> {
+  const { data: globalCategory, error: globalCategoryError } = await admin
+    .from("learning_categories")
+    .upsert(
+      {
+        id: GLOBAL_CATEGORY_ID,
+        tenant_id: null,
+        name: "Conteúdos oficiais Bússola",
+        slug: "conteudos-oficiais-bussola",
+        is_global: true,
+        is_active: true,
+        sort_order: 0,
+      },
+      { onConflict: "id" },
+    )
+    .select("id, tenant_id, is_global")
+    .single();
+
+  if (globalCategoryError || !globalCategory) {
+    throw new Error(
+      `Falha ao criar ou localizar a categoria global QA: ${
+        globalCategoryError?.message ?? "categoria não retornada"
+      }`,
+    );
+  }
+
+  if (!globalCategory.is_global) {
+    throw new Error("Categoria global QA existe mas is_global não é true");
+  }
+
+  if (globalCategory.tenant_id !== null) {
+    throw new Error("Categoria global QA deve ter tenant_id null");
+  }
+
+  return globalCategory;
+}
+
+async function ensureTenantCategory(
+  admin: AdminDb,
+  tenantKey: "north" | "south",
+): Promise<LearningCategoryRef> {
+  const t = TENANTS[tenantKey];
+  const { data: category, error: categoryError } = await admin
+    .from("learning_categories")
+    .upsert(
+      {
+        id: t.categoryId,
+        tenant_id: t.id,
+        name: "Categoria interna",
+        slug: `cat-${tenantKey}`,
+        is_global: false,
+        is_active: true,
+        sort_order: 0,
+      },
+      { onConflict: "id" },
+    )
+    .select("id, tenant_id, is_global")
+    .single();
+
+  if (categoryError || !category) {
+    throw new Error(
+      `Falha ao criar ou localizar a categoria ${tenantKey}: ${
+        categoryError?.message ?? "categoria não retornada"
+      }`,
+    );
+  }
+
+  if (category.tenant_id !== t.id) {
+    throw new Error(`Categoria ${tenantKey} não pertence ao tenant ${t.id}`);
+  }
+
+  return category;
+}
+
+async function ensureTenantStructure(
+  admin: AdminDb,
+  env: Environment,
+  tenantKey: "north" | "south",
+): Promise<LearningCategoryRef> {
   const t = TENANTS[tenantKey];
   const { error: orgErr } = await admin.from("organizations").upsert(
     {
@@ -180,17 +266,8 @@ async function ensureTenantStructure(admin: AdminDb, env: Environment, tenantKey
     },
     { onConflict: "id" },
   );
-  await admin.from("learning_categories").upsert(
-    {
-      id: t.categoryId,
-      tenant_id: t.id,
-      name: "Categoria interna",
-      slug: `cat-${tenantKey}`,
-      is_global: false,
-      is_active: true,
-    },
-    { onConflict: "id" },
-  );
+
+  return ensureTenantCategory(admin, tenantKey);
 }
 
 async function ensureMembership(
@@ -427,13 +504,36 @@ async function provisionCourses(
   userIds: Map<string, string>,
   courseIds: Map<string, string>,
   versionIds: Map<string, string>,
+  globalCategory: LearningCategoryRef,
+  tenantCategories: Partial<Record<"north" | "south", LearningCategoryRef>>,
 ) {
   for (const c of COURSE_FIXTURES) {
     if (tenantFilter !== "all" && c.tenant !== tenantFilter && c.tenant !== "global") continue;
 
     const tenantId = c.tenant === "global" ? null : TENANTS[c.tenant].id;
-    const categoryId =
-      c.tenant === "global" ? "55555555-5555-5555-5555-555555555551" : TENANTS[c.tenant].categoryId;
+
+    let categoryId: string;
+    if (c.tenant === "global") {
+      if (!globalCategory.is_global) {
+        throw new Error(`Categoria global inválida para o curso ${c.fixtureKey}`);
+      }
+      categoryId = globalCategory.id;
+    } else {
+      const category = tenantCategories[c.tenant];
+      if (!category) {
+        throw new Error(`Categoria não resolvida para o curso ${c.fixtureKey}`);
+      }
+      if (category.tenant_id !== tenantId) {
+        throw new Error(
+          `Categoria do tenant não corresponde ao curso ${c.fixtureKey}: esperado ${tenantId}, obtido ${category.tenant_id}`,
+        );
+      }
+      categoryId = category.id;
+    }
+
+    if (!categoryId) {
+      throw new Error(`Categoria não resolvida para o curso ${c.fixtureKey}`);
+    }
 
     const { data: existing } = await admin.from("courses").select("id").eq("fixture_key", c.fixtureKey).maybeSingle();
     let courseId = existing?.id;
@@ -626,9 +726,12 @@ async function main() {
   const credentialRecords: { email: string; password: string; fixtureKey: string }[] = [];
 
   const tenants: ("north" | "south")[] = args.tenant === "all" ? ["north", "south"] : [args.tenant];
+  const tenantCategories: Partial<Record<"north" | "south", LearningCategoryRef>> = {};
   for (const tk of tenants) {
-    await ensureTenantStructure(admin, args.environment, tk);
+    tenantCategories[tk] = await ensureTenantStructure(admin, args.environment, tk);
   }
+
+  const globalCategory = await ensureGlobalCategory(admin);
 
   const usersToProvision = mapUsersForEnvironment(args.environment);
 
@@ -644,7 +747,7 @@ async function main() {
     }
   }
 
-  await provisionCourses(admin, args.tenant, userIds, courseIds, versionIds);
+  await provisionCourses(admin, args.tenant, userIds, courseIds, versionIds, globalCategory, tenantCategories);
 
   if (args.environment === "local") {
     writeLocalEnv(envConfig.url, envConfig.anonKey, envConfig.serviceKey);

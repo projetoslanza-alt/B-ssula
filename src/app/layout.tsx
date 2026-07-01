@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Bússola — Universidade",
+    default: "Bússola by VendasComCiência",
     template: "%s | Bússola",
   },
   description:
-    "A Bússola transforma dados, processos e desenvolvimento em direção clara para pessoas e empresas.",
+    "Todo time precisa de um norte. O seu começa aqui. Desempenho, aprendizado e gestão em uma única jornada.",
 };
 
 export default function RootLayout({

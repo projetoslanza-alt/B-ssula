@@ -16,7 +16,7 @@ test.describe("Fluxo administrador completo", () => {
     await page.locator("#email").fill(adminEmail);
     await page.locator("#password").fill(adminPassword);
     await page.getByRole("button", { name: /entrar/i }).click();
-    await page.waitForURL(/universidade/);
+    await page.waitForURL(/inicio/);
     await page.goto("/universidade/admin/cursos");
     await expect(page.getByRole("heading", { name: /cursos/i })).toBeVisible();
   });

@@ -35,8 +35,8 @@ export async function createMeetingAction(formData: FormData) {
 
   if (error) throw error;
 
-  revalidatePath(platformRoutes.oneOnOne.meetings);
-  const dest = platformRoutes.oneOnOne.meeting(meeting.id);
+  revalidatePath(platformRoutes.northConversation.conversations);
+  const dest = platformRoutes.northConversation.conversation(meeting.id);
   if (isSafeReturnPath(returnTo)) redirect(`${dest}?return=${encodeURIComponent(returnTo)}`);
   redirect(dest);
 }
@@ -64,7 +64,7 @@ export async function completeMeetingAction(meetingId: string, formData: FormDat
     .eq("tenant_id", session.tenantId);
 
   if (error) throw error;
-  revalidatePath(platformRoutes.oneOnOne.meeting(meetingId));
+  revalidatePath(platformRoutes.northConversation.conversation(meetingId));
 }
 
 export async function createActionPlanAction(formData: FormData) {
@@ -92,6 +92,6 @@ export async function createActionPlanAction(formData: FormData) {
   });
 
   if (error) throw error;
-  if (meetingId) revalidatePath(platformRoutes.oneOnOne.meeting(meetingId));
-  revalidatePath(platformRoutes.oneOnOne.actionPlans);
+  if (meetingId) revalidatePath(platformRoutes.northConversation.conversation(meetingId));
+  revalidatePath(platformRoutes.northConversation.actionPlans);
 }

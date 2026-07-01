@@ -1,24 +1,62 @@
-import { requirePagePermission } from "@/lib/auth/page-guard";
-import { PageHeader } from "@/components/platform/page-header";
-import { getReportsOverview } from "@/modules/reports/queries/overview";
-import { MetricCard } from "@/components/platform/metric-card";
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { DemoBanner } from "@/components/platform/demo-banner";
+import { PageHeader } from "@/components/platform/page-header";
+import { MetricCard } from "@/components/platform/metric-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select } from "@/components/ui/input";
+import { DEMO_REPORTS } from "@/modules/demo-data";
 import { platformRoutes } from "@/lib/routes";
-export default async function Page() {
-  const session = await requirePagePermission("reports.view");
-  const data = await getReportsOverview(session.tenantId, ["crm", "one_on_one", "support", "learning"]);
+import { Star } from "lucide-react";
+
+export default function RelatoriosPage() {
+  const [filter, setFilter] = useState("todos");
+  const reports = filter === "todos" ? DEMO_REPORTS : DEMO_REPORTS.filter((r) => r.type === filter);
+
   return (
-    <div className="space-y-6">
-      <PageHeader title="Relatórios" description="Visão executiva consolidada." />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {data.crm && <MetricCard label="Pipeline CRM" value={`R$ ${data.crm.pipelineValue.toLocaleString("pt-BR")}`} />}
-        {data.ooo && <MetricCard label="Reuniões 1:1" value={data.ooo.meetings} />}
-        {data.support && <MetricCard label="Chamados abertos" value={data.support.open} />}
-        <MetricCard label="Matrículas" value={data.learningEnrollments} />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Link href={platformRoutes.reports.crm} className="rounded-lg border px-3 py-2 text-sm">CRM</Link>
-        <Link href={platformRoutes.reports.learning} className="rounded-lg border px-3 py-2 text-sm">Universidade</Link>
+    <div className="space-y-8">
+      <DemoBanner />
+      <PageHeader
+        subtitle="Transforme os dados da operação em análises sob medida."
+        title="Relatórios"
+        description="Construtor visual no-code para criar relatórios personalizados."
+        actions={
+          <Button asChild>
+            <Link href={platformRoutes.reports.new}>+ Criar relatório</Link>
+          </Button>
+        }
+      />
+
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MetricCard label="Meus relatórios" value={1} />
+        <MetricCard label="Compartilhados" value={1} variant="info" />
+        <MetricCard label="Modelos" value={3} variant="purple" />
+      </section>
+
+      <Select value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" aria-label="Tipo">
+        <option value="todos">Todos</option>
+        <option value="modelo">Modelos</option>
+        <option value="personalizado">Personalizados</option>
+      </Select>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {reports.map((r) => (
+          <Link key={r.id} href={platformRoutes.reports.report(r.id)}>
+            <Card className="h-full hover:border-sky-500/30">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <h3 className="font-medium">{r.name}</h3>
+                  {r.favorite && <Star className="h-4 w-4 fill-amber-400 text-amber-400" />}
+                </div>
+                <p className="mt-1 text-sm text-[var(--foreground-muted)]">{r.description}</p>
+                <p className="mt-2 text-xs text-[var(--foreground-disabled)]">{r.module} · {r.author}</p>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
       </div>
     </div>
   );

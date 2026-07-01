@@ -19,7 +19,7 @@ export function OrganizationSwitcher({
 
   return (
     <select
-      className="hidden h-8 rounded-lg border border-slate-200 bg-white px-2 text-sm lg:block"
+      className="hidden h-8 rounded-lg border border-[var(--border)] bg-[var(--card-elevated)] px-2 text-sm text-[var(--foreground)] lg:block"
       value={activeTenantId}
       disabled={pending}
       onChange={(e) => {

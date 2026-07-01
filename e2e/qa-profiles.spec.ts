@@ -64,10 +64,9 @@ test.describe("Gestor", () => {
 
   test("acessa área permitida e é barrado na administração de cursos", async ({ page }) => {
     await login(page, "managerNorth");
-    await page.waitForURL(/universidade/);
-    await expect(page.getByText(/olá/i)).toBeVisible();
+    await page.waitForURL(/inicio|universidade/);
     await page.goto("/universidade/admin/cursos");
-    await expect(page).toHaveURL(/\/universidade$/);
+    await expect(page).toHaveURL(/acesso-negado/);
   });
 });
 
@@ -76,7 +75,7 @@ test.describe("Instrutor", () => {
 
   test("acessa cursos próprios do tenant", async ({ page }) => {
     await login(page, "instructorNorth");
-    await page.waitForURL(/universidade/);
+    await page.waitForURL(/inicio|universidade/);
     await page.goto("/universidade/admin/cursos");
     await expect(page.getByRole("heading", { name: /cursos/i })).toBeVisible();
   });
@@ -87,11 +86,11 @@ test.describe("Aluno", () => {
 
   test("catálogo e negação de rota administrativa", async ({ page }) => {
     await login(page, "studentNorth");
-    await page.waitForURL(/universidade/);
+    await page.waitForURL(/inicio|universidade/);
     await page.goto("/universidade/catalogo");
     await expect(page.getByRole("heading", { name: /catálogo/i })).toBeVisible();
     await page.goto("/universidade/admin/cursos");
-    await expect(page).toHaveURL(/\/universidade$/);
+    await expect(page).toHaveURL(/acesso-negado/);
   });
 });
 
@@ -100,7 +99,7 @@ test.describe("Sem papel", () => {
 
   test("redireciona para acesso pendente", async ({ page }) => {
     await login(page, "noroleNorth", true);
-    await expect(page.getByRole("heading", { name: /acesso não configurado/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /acesso não configurado|conta indisponível/i })).toBeVisible();
   });
 });
 
@@ -109,7 +108,7 @@ test.describe("Inativo", () => {
 
   test("não acessa universidade com tenant inativo", async ({ page }) => {
     await login(page, "inactiveNorth", true);
-    await expect(page.getByRole("heading", { name: /acesso não configurado/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /acesso não configurado|conta indisponível/i })).toBeVisible();
   });
 });
 
@@ -118,7 +117,7 @@ test.describe("Multiempresa", () => {
 
   test("troca Norte → Sul com isolamento de permissões", async ({ page }) => {
     await login(page, "multi");
-    await page.waitForURL(/universidade/);
+    await page.waitForURL(/inicio|universidade/);
     const switcher = page.getByLabel(/trocar organização/i);
     await expect(switcher).toBeVisible();
     await switcher.selectOption({ label: "Empresa Sul" });
@@ -126,6 +125,6 @@ test.describe("Multiempresa", () => {
     await page.reload();
     await expect(switcher).toHaveValue("22222222-2222-2222-2222-222222222222");
     await page.goto("/universidade/admin/cursos");
-    await expect(page).toHaveURL(/\/universidade$/);
+    await expect(page).toHaveURL(/acesso-negado/);
   });
 });

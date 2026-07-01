@@ -64,8 +64,8 @@ export async function moveOpportunityStageAction(opportunityId: string, toStageI
     metadata: { from_stage_id: opp.stage_id, to_stage_id: toStageId },
   });
 
-  revalidatePath(platformRoutes.crm.pipeline);
-  revalidatePath(platformRoutes.crm.opportunities);
+  revalidatePath(platformRoutes.dashboards.root);
+  revalidatePath(platformRoutes.home);
 }
 
 export async function createOpportunityAction(formData: FormData) {
@@ -93,6 +93,6 @@ export async function createOpportunityAction(formData: FormData) {
 
   if (error) throw error;
 
-  revalidatePath(platformRoutes.crm.pipeline);
-  revalidatePath(platformRoutes.crm.opportunities);
+  revalidatePath(platformRoutes.dashboards.root);
+  revalidatePath(platformRoutes.home);
 }

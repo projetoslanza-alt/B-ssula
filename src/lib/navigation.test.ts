@@ -17,15 +17,19 @@ describe("navigation registry", () => {
 
   it("filtra itens por permissão do aluno", () => {
     const studentPerms = ["learning.catalog.read", "learning.progress.read_own", "support.view", "support.ticket.create"];
-    const crmItems = filterNavItems(
-      PLATFORM_MODULES.find((m) => m.id === "crm")!.items,
+    const dashboardsItems = filterNavItems(
+      PLATFORM_MODULES.find((m) => m.id === "dashboards")!.items,
       studentPerms,
     );
-    expect(crmItems).toHaveLength(0);
+    expect(dashboardsItems).toHaveLength(0);
     const learningItems = filterNavItems(
       PLATFORM_MODULES.find((m) => m.id === "learning")!.items,
       studentPerms,
     );
     expect(learningItems.length).toBeGreaterThan(0);
+  });
+
+  it("não inclui módulo CRM interno", () => {
+    expect(PLATFORM_MODULES.find((m) => m.id === "crm")).toBeUndefined();
   });
 });

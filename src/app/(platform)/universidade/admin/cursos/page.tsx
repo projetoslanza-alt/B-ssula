@@ -16,7 +16,7 @@ export default async function AdminCursosPage() {
   try {
     requirePermission(session, "learning.course.create");
   } catch {
-    redirect("/universidade");
+    redirect("/acesso-negado");
   }
 
   const supabase = await createClient();

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
+import { isSafeReturnPath } from "@/lib/navigation-utils";
 import { isPlatformRoute, platformRoutes } from "@/lib/routes";
 
 const PUBLIC_ROUTES = [
@@ -11,6 +12,7 @@ const PUBLIC_ROUTES = [
   "/acesso-pendente",
   "/acesso-negado",
   "/api/health",
+  "/validar-certificado",
 ];
 
 export async function middleware(request: NextRequest) {
@@ -41,7 +43,9 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
   const isPublic = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
@@ -50,17 +54,34 @@ export async function middleware(request: NextRequest) {
   if (!user && !isPublic && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", pathname);
+    url.search = "";
+    if (isSafeReturnPath(pathname)) {
+      url.searchParams.set("redirect", pathname);
+    }
     return NextResponse.redirect(url);
   }
 
   if (user && (pathname === "/login" || pathname === "/")) {
     const url = request.nextUrl.clone();
     url.pathname = platformRoutes.home;
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
   if (user && isPlatformRoute(pathname)) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.status === "suspended" || profile?.status === "removed") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/acesso-pendente";
+      url.search = "reason=suspended";
+      return NextResponse.redirect(url);
+    }
+
     const { data: hasAccess } = await supabase.rpc("user_has_tenant_access");
     if (!hasAccess) {
       const url = request.nextUrl.clone();

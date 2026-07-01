@@ -1,18 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { PageHeader } from "@/components/platform/page-header";
 import { MetricCard } from "@/components/platform/metric-card";
 import { ChartCard } from "@/components/platform/chart-card";
 import { Timeline } from "@/components/platform/timeline";
 import { StatusBadge } from "@/components/platform/status-badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DeTabPanel, DeTabs } from "@/components/platform/de-tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DEMO_CONVERSATIONS } from "@/modules/demo-data";
 import { platformRoutes } from "@/lib/routes";
 import { LineChartWidget } from "@/components/charts/chart-widgets";
+import {
+  NORTH_CONVERSATION_TABS,
+  type NorthConversationTabId,
+} from "@/modules/north-conversation/tabs";
 
 const STATUS_MAP: Record<string, { label: string; tone: "info" | "success" | "warning" | "default" }> = {
   programada: { label: "Programada", tone: "info" },
@@ -31,11 +34,16 @@ const EVOLUTION_DATA = [
 ];
 
 type NorthConversationHubProps = {
+  activeTab: NorthConversationTabId;
   canCreateMeeting?: boolean;
+  canViewTeam?: boolean;
 };
 
-export function NorthConversationHub({ canCreateMeeting = false }: NorthConversationHubProps) {
-  const [tab, setTab] = useState("overview");
+export function NorthConversationHub({
+  activeTab,
+  canCreateMeeting = false,
+  canViewTeam = false,
+}: NorthConversationHubProps) {
 
   const completed = DEMO_CONVERSATIONS.filter((c) => c.status === "concluida");
   const scores = completed.map((c) => c.score).filter((s): s is number => typeof s === "number");
@@ -75,18 +83,15 @@ export function NorthConversationHub({ canCreateMeeting = false }: NorthConversa
         }
       />
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Visão geral</TabsTrigger>
-          <TabsTrigger value="conversas">Conversas</TabsTrigger>
-          <TabsTrigger value="checkin">Check-in de Rota</TabsTrigger>
-          <TabsTrigger value="planos">Planos de ação</TabsTrigger>
-          <TabsTrigger value="jornada">Minha Jornada</TabsTrigger>
-          <TabsTrigger value="equipe">Mapa da Equipe</TabsTrigger>
-        </TabsList>
+      <DeTabs
+        tabs={NORTH_CONVERSATION_TABS.map((t) =>
+          t.id === "equipe" && !canViewTeam ? { ...t, hidden: true } : t,
+        )}
+        activeTab={activeTab}
+        basePath={platformRoutes.northConversation.root}
+      />
 
-        <TabsContent value="overview">
-          <div className="mt-4 space-y-4">
+      <DeTabPanel id="overview" activeTab={activeTab}>
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard label="Programadas" value={stats.programadas} hint="Próximos 15 dias" />
               <MetricCard
@@ -122,11 +127,9 @@ export function NorthConversationHub({ canCreateMeeting = false }: NorthConversa
                 )}
               </ChartCard>
             </section>
-          </div>
-        </TabsContent>
+      </DeTabPanel>
 
-        <TabsContent value="conversas">
-          <div className="mt-4 space-y-3">
+      <DeTabPanel id="conversas" activeTab={activeTab}>
             {DEMO_CONVERSATIONS.map((c) => {
               const st = STATUS_MAP[c.status];
               return (
@@ -149,11 +152,9 @@ export function NorthConversationHub({ canCreateMeeting = false }: NorthConversa
                 </Link>
               );
             })}
-          </div>
-        </TabsContent>
+      </DeTabPanel>
 
-        <TabsContent value="checkin">
-          <div className="mt-4">
+      <DeTabPanel id="checkin" activeTab={activeTab}>
             <Card className="border-[var(--border)] bg-[var(--panel)]">
               <CardContent className="p-5">
                 <p className="text-sm text-[var(--muted)]">
@@ -164,33 +165,25 @@ export function NorthConversationHub({ canCreateMeeting = false }: NorthConversa
                 </Button>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
+      </DeTabPanel>
 
-        <TabsContent value="planos">
-          <div className="mt-4">
+      <DeTabPanel id="planos" activeTab={activeTab}>
             <Button variant="outline" asChild>
               <Link href={platformRoutes.northConversation.actionPlans}>Ver planos de ação</Link>
             </Button>
-          </div>
-        </TabsContent>
+      </DeTabPanel>
 
-        <TabsContent value="jornada">
-          <div className="mt-4">
+      <DeTabPanel id="jornada" activeTab={activeTab}>
             <Button variant="outline" asChild>
               <Link href={platformRoutes.northConversation.myJourney}>Minha jornada</Link>
             </Button>
-          </div>
-        </TabsContent>
+      </DeTabPanel>
 
-        <TabsContent value="equipe">
-          <div className="mt-4">
+      <DeTabPanel id="equipe" activeTab={activeTab}>
             <Button variant="outline" asChild>
               <Link href={platformRoutes.northConversation.team}>Mapa da equipe</Link>
             </Button>
-          </div>
-        </TabsContent>
-      </Tabs>
+      </DeTabPanel>
     </div>
   );
 }

@@ -29,7 +29,7 @@ type RankingPodiumProps = {
 export function RankingPodium({
   entries,
   variant = "home",
-  href = platformRoutes.gamification.ranking,
+  href = `${platformRoutes.gamification.root}?tab=ranking`,
   showHeader = true,
   className,
 }: RankingPodiumProps) {

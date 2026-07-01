@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/platform/page-header";
 import { MetricCard } from "@/components/platform/metric-card";
 import { DataTable, DataTableCell, DataTableRow } from "@/components/platform/data-table";
 import { StatusBadge } from "@/components/platform/status-badge";
-import { Button } from "@/components/ui/button";
 import { FilterBar } from "@/components/platform/filter-bar";
 import { FilterSelect } from "@/components/platform/filter-select";
 import { Input } from "@/components/ui/input";
@@ -16,60 +15,97 @@ import { platformRoutes } from "@/lib/routes";
 import { EmptyState } from "@/components/feedback/states";
 
 const STATUS_LABELS: Record<string, { label: string; tone: "default" | "warning" | "info" | "success" | "danger" | "purple" }> = {
-  aberto: { label: "Aberto", tone: "default" },
-  aguardando_triagem: { label: "Aguardando solicitante", tone: "warning" },
-  em_analise: { label: "Em análise", tone: "info" },
-  em_atendimento: { label: "Em atendimento", tone: "purple" },
-  aguardando_solicitante: { label: "Aguardando solicitante", tone: "warning" },
-  encaminhado: { label: "Encaminhado", tone: "default" },
-  resolvido: { label: "Resolvido", tone: "success" },
-  fechado: { label: "Fechado", tone: "default" },
-  cancelado: { label: "Cancelado", tone: "danger" },
+  new: { label: "Novo", tone: "default" },
+  open: { label: "Aberto", tone: "default" },
+  in_progress: { label: "Em atendimento", tone: "purple" },
+  waiting_requester: { label: "Aguardando solicitante", tone: "warning" },
+  waiting_third_party: { label: "Aguardando terceiro", tone: "warning" },
+  resolved: { label: "Resolvido", tone: "success" },
+  closed: { label: "Fechado", tone: "default" },
+  cancelled: { label: "Cancelado", tone: "danger" },
 };
 
 const PRIORITY_LABELS: Record<string, { label: string; tone: "default" | "warning" | "danger" | "info" }> = {
-  baixa: { label: "Baixa", tone: "default" },
-  media: { label: "Média", tone: "info" },
-  alta: { label: "Alta", tone: "warning" },
-  critica: { label: "Crítica", tone: "danger" },
+  low: { label: "Baixa", tone: "default" },
+  medium: { label: "Média", tone: "info" },
+  high: { label: "Alta", tone: "warning" },
+  urgent: { label: "Crítica", tone: "danger" },
 };
 
-export function SupportHub() {
+export type SupportTicketRow = {
+  id: string;
+  ticket_number: string;
+  title: string;
+  status: string;
+  priority: string;
+  opened_at: string;
+  sla_due_at: string | null;
+};
+
+type SupportHubProps = {
+  tickets?: SupportTicketRow[];
+  overview?: { total: number; open: number; outOfSla: number };
+  canCreate?: boolean;
+};
+
+export function SupportHub({ tickets = [], overview, canCreate = true }: SupportHubProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [categoryFilter, setCategoryFilter] = useState("todos");
 
-  const categories = useMemo(
-    () => [...new Set(DEMO_TICKETS.map((t) => t.category))].sort(),
-    [],
-  );
+  const useDemoFallback = tickets.length === 0;
 
-  const stats = useMemo(
-    () => ({
+  const rows = useMemo(() => {
+    if (useDemoFallback) {
+      return DEMO_TICKETS.map((t) => ({
+        id: t.id,
+        ticket_number: t.protocol,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        opened_at: t.updatedAt,
+        category: t.category,
+      }));
+    }
+    return tickets.map((t) => ({ ...t, category: "—" }));
+  }, [tickets, useDemoFallback]);
+
+  const stats = useMemo(() => {
+    if (overview && !useDemoFallback) {
+      const resolved = rows.filter((t) => ["resolved", "closed"].includes(t.status)).length;
+      const inProgress = rows.filter((t) => t.status === "in_progress").length;
+      const waiting = rows.filter((t) =>
+        ["waiting_requester", "waiting_third_party", "new"].includes(t.status),
+      ).length;
+      return {
+        abertos: overview.open,
+        aguardando: waiting,
+        emAndamento: inProgress,
+        resolvidos: resolved,
+        tempoMedio: overview.outOfSla > 0 ? `${overview.outOfSla} fora SLA` : "—",
+      };
+    }
+    return {
       abertos: DEMO_TICKETS.filter((t) => t.status === "aberto" || t.status === "aguardando_triagem").length,
       aguardando: DEMO_TICKETS.filter((t) => t.status === "aguardando_triagem" || t.status === "aguardando_solicitante").length,
-      emAndamento: DEMO_TICKETS.filter((t) => ["em_analise", "em_atendimento"].includes(t.status)).length,
+      emAndamento: DEMO_TICKETS.filter((t) => ["em_analise", "em_atendimento", "in_progress"].includes(t.status)).length,
       resolvidos: DEMO_TICKETS.filter((t) => t.status === "resolvido").length,
       tempoMedio: "3h 18m",
-    }),
-    [],
-  );
+    };
+  }, [overview, rows, useDemoFallback]);
 
   const filtered = useMemo(() => {
-    return DEMO_TICKETS.filter((t) => {
+    return rows.filter((t) => {
       if (statusFilter !== "todos" && t.status !== statusFilter) return false;
-      if (categoryFilter !== "todos" && t.category !== categoryFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         return (
-          t.protocol.toLowerCase().includes(q) ||
-          t.title.toLowerCase().includes(q) ||
-          t.requester.toLowerCase().includes(q)
+          t.ticket_number.toLowerCase().includes(q) ||
+          t.title.toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [search, statusFilter, categoryFilter]);
+  }, [rows, search, statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -78,9 +114,11 @@ export function SupportHub() {
         title="Encontrou um obstáculo na rota?"
         description="Abra um chamado e receba a orientação necessária para continuar avançando."
         actions={
-          <Button asChild>
-            <Link href={platformRoutes.support.new}>+ Abrir novo chamado</Link>
-          </Button>
+          canCreate ? (
+            <Link href={platformRoutes.support.new} className="btn btn-primary btn-sm">
+              + Abrir novo chamado
+            </Link>
+          ) : undefined
         }
       />
 
@@ -88,19 +126,19 @@ export function SupportHub() {
         <MetricCard label="Abertos" value={stats.abertos} badge={{ label: "Fila atual", tone: "info" }} />
         <MetricCard label="Aguardando" value={stats.aguardando} badge={{ label: "Triagem", tone: "warning" }} />
         <MetricCard label="Em andamento" value={stats.emAndamento} badge={{ label: "Atendimento", tone: "purple" }} />
-        <MetricCard label="Resolvidos" value={stats.resolvidos} badge={{ label: "Este mês", tone: "success" }} />
-        <MetricCard label="Tempo médio" value={stats.tempoMedio} trend={{ label: "22 min", direction: "down" }} />
+        <MetricCard label="Resolvidos" value={stats.resolvidos} badge={{ label: "Encerrados", tone: "success" }} />
+        <MetricCard label="SLA" value={stats.tempoMedio} />
       </section>
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4">
+      <section className="card">
         <FilterBar className="mb-4 border-0 bg-transparent p-0">
           <div className="relative min-w-[200px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
             <Input
-              placeholder="Pesquisar protocolo, título ou solicitante"
+              placeholder="Pesquisar protocolo ou título"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-[42px] pl-9"
+              className="field h-[42px] pl-9"
               aria-label="Pesquisar chamados"
             />
           </div>
@@ -112,14 +150,6 @@ export function SupportHub() {
               </option>
             ))}
           </FilterSelect>
-          <FilterSelect value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Categorias">
-            <option value="todos">Todas as categorias</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </FilterSelect>
         </FilterBar>
 
         {filtered.length === 0 ? (
@@ -127,9 +157,11 @@ export function SupportHub() {
             title="Nenhum chamado encontrado"
             description="Ajuste os filtros ou abra um novo chamado."
             action={
-              <Button asChild>
-                <Link href={platformRoutes.support.new}>Abrir chamado</Link>
-              </Button>
+              canCreate ? (
+                <Link href={platformRoutes.support.new} className="btn btn-primary btn-sm">
+                  Abrir chamado
+                </Link>
+              ) : undefined
             }
           />
         ) : (
@@ -137,32 +169,28 @@ export function SupportHub() {
             columns={[
               { key: "protocol", label: "Protocolo" },
               { key: "title", label: "Título" },
-              { key: "category", label: "Categoria" },
               { key: "priority", label: "Prioridade" },
-              { key: "assignee", label: "Responsável" },
               { key: "status", label: "Status" },
-              { key: "updated", label: "Atualização" },
+              { key: "opened", label: "Abertura" },
               { key: "actions", label: "", className: "w-20" },
             ]}
             className="border-0 bg-transparent"
           >
             {filtered.map((t) => {
-              const st = STATUS_LABELS[t.status];
-              const pr = PRIORITY_LABELS[t.priority];
+              const st = STATUS_LABELS[t.status] ?? { label: t.status, tone: "default" as const };
+              const pr = PRIORITY_LABELS[t.priority] ?? { label: t.priority, tone: "default" as const };
               return (
                 <DataTableRow key={t.id}>
-                  <DataTableCell className="font-mono text-[var(--primary)]">{t.protocol}</DataTableCell>
+                  <DataTableCell className="font-mono text-[var(--blue)]">{t.ticket_number}</DataTableCell>
                   <DataTableCell className="font-medium">{t.title}</DataTableCell>
-                  <DataTableCell className="text-[var(--muted)]">{t.category}</DataTableCell>
                   <DataTableCell>
                     <StatusBadge label={pr.label} tone={pr.tone} />
                   </DataTableCell>
-                  <DataTableCell className="text-[var(--muted)]">{t.assignee ?? "—"}</DataTableCell>
                   <DataTableCell>
                     <StatusBadge label={st.label} tone={st.tone} />
                   </DataTableCell>
                   <DataTableCell className="whitespace-nowrap text-[var(--muted)]">
-                    {new Date(t.updatedAt).toLocaleString("pt-BR", {
+                    {new Date(t.opened_at).toLocaleString("pt-BR", {
                       day: "2-digit",
                       month: "2-digit",
                       hour: "2-digit",
@@ -170,9 +198,9 @@ export function SupportHub() {
                     })}
                   </DataTableCell>
                   <DataTableCell>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={platformRoutes.support.ticket(t.id)}>Ver</Link>
-                    </Button>
+                    <Link href={platformRoutes.support.ticket(t.id)} className="btn btn-ghost btn-sm">
+                      Ver
+                    </Link>
                   </DataTableCell>
                 </DataTableRow>
               );

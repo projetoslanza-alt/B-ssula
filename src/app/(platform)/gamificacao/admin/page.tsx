@@ -1,7 +1,6 @@
-import { ModulePreparationPage } from "@/components/platform/module-preparation";
-import { requirePagePermission } from "@/lib/auth/page-guard";
+import { redirect } from "next/navigation";
+import { platformRoutes } from "@/lib/routes";
 
-export default async function GamificacaoAdminPage() {
-  await requirePagePermission("gamification.campaign.create");
-  return <ModulePreparationPage title="Campanhas e pontuação" />;
+export default function GamificacaoAdminRedirect() {
+  redirect(`${platformRoutes.gamification.root}?tab=admin`);
 }

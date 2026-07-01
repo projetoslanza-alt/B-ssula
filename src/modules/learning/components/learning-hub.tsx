@@ -1,19 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { PageHeader } from "@/components/platform/page-header";
 import { MetricCard } from "@/components/platform/metric-card";
 import { StatusBadge } from "@/components/platform/status-badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DeTabPanel, DeTabs } from "@/components/platform/de-tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DEMO_COURSES, DEMO_PATHS } from "@/modules/demo-data";
 import { platformRoutes } from "@/lib/routes";
 import { ArrowRight, GraduationCap } from "lucide-react";
+import { LEARNING_TABS, type LearningTabId } from "@/modules/learning/tabs";
 
-export function LearningHub() {
-  const [tab, setTab] = useState("inicio");
+type LearningHubProps = {
+  activeTab: LearningTabId;
+};
+
+export function LearningHub({ activeTab }: LearningHubProps) {
 
   const inProgress = DEMO_COURSES.filter((c) => c.status === "em_andamento");
   const completed = DEMO_COURSES.filter((c) => c.status === "concluido");
@@ -39,19 +42,10 @@ export function LearningHub() {
         </div>
       </section>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="inicio">Início</TabsTrigger>
-          <TabsTrigger value="cursos">Meus cursos</TabsTrigger>
-          <TabsTrigger value="trilhas">Trilhas</TabsTrigger>
-          <TabsTrigger value="catalogo">Catálogo</TabsTrigger>
-          <TabsTrigger value="avaliacoes">Avaliações</TabsTrigger>
-          <TabsTrigger value="certificados">Certificados</TabsTrigger>
-          <TabsTrigger value="progresso">Meu progresso</TabsTrigger>
-        </TabsList>
+      <DeTabs tabs={[...LEARNING_TABS]} activeTab={activeTab} basePath={platformRoutes.learning.root} />
 
-        <TabsContent value="inicio">
-          <div className="mt-6 space-y-6">
+      <DeTabPanel id="inicio" activeTab={activeTab}>
+          <div className="space-y-6">
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <MetricCard label="Cursos em andamento" value={inProgress.length} variant="purple" />
               <MetricCard label="Concluídos" value={completed.length} variant="success" />
@@ -75,75 +69,72 @@ export function LearningHub() {
               </div>
             </section>
           </div>
-        </TabsContent>
+      </DeTabPanel>
 
-        <TabsContent value="cursos">
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {DEMO_COURSES.map((c) => (
-              <Card key={c.id}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between">
-                    <h4 className="font-medium">{c.title}</h4>
-                    <StatusBadge label={c.status.replace(/_/g, " ")} tone={c.status === "concluido" ? "success" : "info"} />
-                  </div>
-                  <p className="mt-1 text-sm text-[var(--foreground-muted)]">{c.instructor} · {c.workloadHours}h</p>
-                  <Button variant="link" className="mt-2 h-auto p-0" asChild>
-                    <Link href={platformRoutes.learning.catalog}>Acessar</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+      <DeTabPanel id="cursos" activeTab={activeTab}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {DEMO_COURSES.map((c) => (
+            <Card key={c.id}>
+              <CardContent className="p-4">
+                <div className="flex justify-between">
+                  <h4 className="font-medium">{c.title}</h4>
+                  <StatusBadge label={c.status.replace(/_/g, " ")} tone={c.status === "concluido" ? "success" : "info"} />
+                </div>
+                <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+                  {c.instructor} · {c.workloadHours}h
+                </p>
+                <Button variant="link" className="mt-2 h-auto p-0" asChild>
+                  <Link href={platformRoutes.learning.catalog}>Acessar</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </DeTabPanel>
 
-        <TabsContent value="trilhas">
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            {DEMO_PATHS.map((p) => (
-              <Card key={p.id}>
-                <CardContent className="p-5">
-                  <h4 className="font-medium">{p.title}</h4>
-                  <p className="mt-1 text-sm text-[var(--foreground-muted)]">{p.courses} cursos · {p.workloadHours}h</p>
-                  <div className="mt-3 h-2 rounded-full bg-[var(--card-elevated)]">
-                    <div className="h-2 rounded-full bg-violet-500" style={{ width: `${p.progress}%` }} />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+      <DeTabPanel id="trilhas" activeTab={activeTab}>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {DEMO_PATHS.map((p) => (
+            <Card key={p.id}>
+              <CardContent className="p-5">
+                <h4 className="font-medium">{p.title}</h4>
+                <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+                  {p.courses} cursos · {p.workloadHours}h
+                </p>
+                <div className="mt-3 h-2 rounded-full bg-[var(--card-elevated)]">
+                  <div className="h-2 rounded-full bg-violet-500" style={{ width: `${p.progress}%` }} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </DeTabPanel>
 
-        <TabsContent value="catalogo">
-          <div className="mt-6">
-            <Button asChild>
-              <Link href={platformRoutes.learning.catalog}>Ver catálogo completo <ArrowRight className="h-4 w-4" /></Link>
-            </Button>
-          </div>
-        </TabsContent>
+      <DeTabPanel id="aulas" activeTab={activeTab}>
+        <Button asChild>
+          <Link href={platformRoutes.learning.catalog}>
+            Ver catálogo e aulas <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      </DeTabPanel>
 
-        <TabsContent value="avaliacoes">
-          <div className="mt-6">
-            <Button variant="outline" asChild>
-              <Link href={platformRoutes.learning.assessments}>Ver avaliações</Link>
-            </Button>
-          </div>
-        </TabsContent>
+      <DeTabPanel id="avaliacoes" activeTab={activeTab}>
+        <Button variant="outline" asChild>
+          <Link href={platformRoutes.learning.assessments}>Ver avaliações</Link>
+        </Button>
+      </DeTabPanel>
 
-        <TabsContent value="certificados">
-          <div className="mt-6">
-            <Button asChild>
-              <Link href={platformRoutes.learning.certificates}>Ver certificados</Link>
-            </Button>
-          </div>
-        </TabsContent>
+      <DeTabPanel id="certificados" activeTab={activeTab}>
+        <Button asChild>
+          <Link href={platformRoutes.learning.certificates}>Ver certificados</Link>
+        </Button>
+      </DeTabPanel>
 
-        <TabsContent value="progresso">
-          <div className="mt-6">
-            <Button asChild>
-              <Link href={platformRoutes.learning.progress}>Minha jornada de aprendizado</Link>
-            </Button>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <DeTabPanel id="progresso" activeTab={activeTab}>
+        <Button asChild>
+          <Link href={platformRoutes.learning.progress}>Minha jornada de aprendizado</Link>
+        </Button>
+      </DeTabPanel>
     </div>
   );
 }

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
 
 export function BackLink({ href, label = "Voltar" }: { href: string; label?: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-amber-800"
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--muted)] hover:text-[var(--text)]"
     >
       <ArrowLeft className="h-4 w-4" aria-hidden />
       {label}
@@ -33,20 +33,15 @@ export function DetailTabs({
   };
 
   return (
-    <div className="border-b border-slate-200" role="tablist" aria-label="Seções">
-      <nav className="-mb-px flex gap-4 overflow-x-auto">
+    <div className="tabs border-0 bg-transparent p-0" role="tablist" aria-label="Seções">
+      <nav className="flex gap-2 overflow-x-auto">
         {tabs.map((tab) => (
           <Link
             key={tab.id}
             href={buildHref(tab.id)}
             role="tab"
             aria-selected={activeTab === tab.id}
-            className={cn(
-              "whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors",
-              activeTab === tab.id
-                ? "border-amber-600 text-amber-900"
-                : "border-transparent text-slate-500 hover:border-slate-200 hover:text-slate-800",
-            )}
+            className={cn("tab-btn", activeTab === tab.id && "active")}
           >
             {tab.label}
             {tab.count !== undefined && (

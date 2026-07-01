@@ -25,7 +25,7 @@ export default async function InicioPage() {
         : "Acompanhe o desempenho da equipe na gamificação.",
       badge: "Destaque",
       type: "reconhecimento",
-      href: platformRoutes.gamification.ranking,
+      href: platformRoutes.gamification.root + "?tab=ranking",
     },
     {
       title: `${metrics.metaAtingida}% da meta já foi alcançada`,

@@ -1,48 +1,51 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
-import { PageHeader } from "@/components/platform/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { DEMO_NOTIFICATIONS } from "@/modules/demo-data";
+import { requirePageSession } from "@/lib/auth/page-guard";
+import { NotificationsPageClient } from "@/components/platform/notifications-page-client";
+import { resolveTabParam } from "@/lib/tab-params";
+import { listUserNotifications } from "@/modules/notifications/queries/notifications";
 import { platformRoutes } from "@/lib/routes";
-import { cn } from "@/lib/utils";
 
-export default function NotificacoesPage() {
-  const [filter, setFilter] = useState<"todas" | "nao_lidas" | "lidas">("todas");
-  const items = DEMO_NOTIFICATIONS.filter((n) => {
-    if (filter === "nao_lidas") return !n.read;
-    if (filter === "lidas") return n.read;
-    return true;
-  });
+const FILTERS = ["todas", "nao_lidas", "lidas"] as const;
+
+export default async function NotificacoesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const session = await requirePageSession();
+  const params = await searchParams;
+  const filter = resolveTabParam(params.filter, FILTERS, "todas") as (typeof FILTERS)[number];
+  const items = await listUserNotifications(session.userId, session.tenantId, 50);
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Notificações" backHref={platformRoutes.home} />
-      <div className="flex gap-2">
-        {(["todas", "nao_lidas", "lidas"] as const).map((f) => (
-          <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
-            {f === "todas" ? "Todas" : f === "nao_lidas" ? "Não lidas" : "Lidas"}
-          </Button>
-        ))}
+    <>
+      <div className="section-head">
+        <div>
+          <h2>Notificações</h2>
+          <p>Atualizações da operação, módulos e jornadas em um só lugar.</p>
+        </div>
+        <div className="section-actions">
+          <Link href={platformRoutes.home} className="btn btn-ghost btn-sm">
+            Voltar ao início
+          </Link>
+        </div>
       </div>
-      <div className="space-y-2">
-        {items.map((n) => (
-          <Link key={n.id} href={n.link ?? platformRoutes.notifications}>
-            <Card className={cn("hover:border-sky-500/30", !n.read && "border-sky-500/20 bg-sky-500/5")}>
-              <CardContent className="flex items-start justify-between gap-4 p-4">
-                <div>
-                  <p className="font-medium">{n.title}</p>
-                  <p className="text-sm text-[var(--foreground-muted)]">{n.message}</p>
-                  <p className="mt-1 text-xs text-[var(--foreground-disabled)]">{new Date(n.createdAt).toLocaleString("pt-BR")}</p>
-                </div>
-                {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" />}
-              </CardContent>
-            </Card>
+
+      <div className="tabs" role="tablist" aria-label="Filtros de notificações">
+        {FILTERS.map((f) => (
+          <Link
+            key={f}
+            href={`${platformRoutes.notifications}?filter=${f}`}
+            role="tab"
+            aria-selected={filter === f}
+            className={`tab-btn${filter === f ? " active" : ""}`}
+          >
+            {f === "todas" ? "Todas" : f === "nao_lidas" ? "Não lidas" : "Lidas"}
           </Link>
         ))}
       </div>
-    </div>
+
+      <NotificationsPageClient items={items} filter={filter} />
+    </>
   );
 }

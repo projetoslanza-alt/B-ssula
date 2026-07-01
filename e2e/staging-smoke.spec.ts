@@ -26,7 +26,7 @@ test.describe("Smoke pós-deploy staging", () => {
     await adminLogin(page);
     await page.goto("/inicio");
     await expect(page.getByRole("button", { name: "Pesquisar" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Abrir notificações" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Abrir notificações" })).toBeVisible();
 
     await page.getByRole("button", { name: "Pesquisar" }).click();
     await expect(page.getByRole("dialog", { name: /pesquisar na plataforma/i })).toBeVisible();
@@ -34,7 +34,7 @@ test.describe("Smoke pós-deploy staging", () => {
 
     await page.goto("/chamados");
     await expect(page.getByRole("button", { name: "Pesquisar" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Abrir notificações" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Abrir notificações" })).toBeVisible();
   });
 
   test("rotas principais sem 404/500", async ({ page }) => {

@@ -24,6 +24,7 @@ import { OrganizationSwitcher } from "@/components/layout/organization-switcher"
 import { filterModules, detectModuleFromPath } from "@/lib/navigation";
 import { platformRoutes } from "@/lib/routes";
 import type { OrganizationSummary } from "@/modules/core/auth/session";
+import type { NotificationRow } from "@/modules/notifications/queries/notifications";
 import { cn } from "@/lib/utils";
 
 const MODULE_ICONS: Record<string, React.ReactNode> = {
@@ -49,9 +50,13 @@ export type PlatformLayoutSession = {
 
 export function PlatformLayoutClient({
   session,
+  notifications,
+  unreadCount,
   children,
 }: {
   session: PlatformLayoutSession;
+  notifications: NotificationRow[];
+  unreadCount: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -177,7 +182,7 @@ export function PlatformLayoutClient({
                 </div>
               </div>
               <div className="topbar-actions">
-                <TopbarActions />
+                <TopbarActions notifications={notifications} unreadCount={unreadCount} />
                 <OrganizationSwitcher organizations={session.organizations} activeTenantId={session.tenantId} />
               </div>
             </header>

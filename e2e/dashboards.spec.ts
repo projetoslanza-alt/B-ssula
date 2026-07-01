@@ -19,8 +19,8 @@ test.describe("Dashboards", () => {
   test("KPIs são exibidos", async ({ page }) => {
     await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
     await page.goto("/dashboards");
-    await expect(page.getByText("Ligações")).toBeVisible();
-    await expect(page.getByText("Receita")).toBeVisible();
+    await expect(page.getByText("Ligações", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Receita", { exact: true }).first()).toBeVisible();
   });
 
   test("gerente acessa dashboards com escopo", async ({ page }) => {

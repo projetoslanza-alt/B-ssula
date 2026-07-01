@@ -20,11 +20,17 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
-const baseURL =
-  process.env.PLAYWRIGHT_BASE_URL ??
-  process.env.BASE_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  (process.env.CI ? "http://localhost:3099" : "http://localhost:3000");
+const isCiE2e =
+  process.env.PLAYWRIGHT_E2E_CI === "1" ||
+  process.env.CI === "1" ||
+  process.env.CI === "true";
+
+const baseURL = isCiE2e
+  ? "http://localhost:3099"
+  : (process.env.PLAYWRIGHT_BASE_URL ??
+    process.env.BASE_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "http://localhost:3000");
 
 const isRemoteBase = !baseURL.includes("localhost") && !baseURL.includes("127.0.0.1");
 const skipWebServer = isRemoteBase || process.env.PLAYWRIGHT_SKIP_WEBSERVER === "1";
@@ -34,8 +40,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   timeout: 60_000,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  forbidOnly: isCiE2e,
+  retries: isCiE2e ? 2 : 0,
   reporter: "html",
   use: {
     baseURL,
@@ -47,10 +53,12 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
-          command: process.env.CI ? "npm run dev -- -p 3099" : "npm run dev",
-          url: process.env.CI ? "http://localhost:3099/api/health" : "http://localhost:3000/api/health",
-          reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
+          command: isCiE2e
+            ? "npm run build && npx next start --port 3099"
+            : "npm run dev",
+          url: isCiE2e ? "http://localhost:3099/login" : "http://localhost:3000/api/health",
+          reuseExistingServer: !isCiE2e,
+          timeout: 300_000,
         },
       }),
 });

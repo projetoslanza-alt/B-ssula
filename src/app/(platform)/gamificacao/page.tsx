@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requirePageSession } from "@/lib/auth/page-guard";
 import { platformRoutes } from "@/lib/routes";
-import { isTabAlias, resolveTabParam } from "@/lib/tab-params";
+import { resolveTabParam } from "@/lib/tab-params";
 import { hasPermission } from "@/modules/core/auth/session";
 import { GamificationHub } from "@/modules/gamification/components/gamification-hub";
 import { getActiveCampaign, listCampaignsForAdmin } from "@/modules/gamification/queries/campaigns";
@@ -31,7 +31,11 @@ export default async function GamificacaoPage({
   const session = await requirePageSession();
   const params = await searchParams;
 
-  if (isTabAlias(params.tab, GAMIFICATION_TAB_ALIASES)) {
+  if (
+    params.tab &&
+    GAMIFICATION_TAB_ALIASES[params.tab] &&
+    GAMIFICATION_TAB_ALIASES[params.tab] !== params.tab
+  ) {
     const canonical = GAMIFICATION_TAB_ALIASES[params.tab!];
     const qs = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {

@@ -14,10 +14,8 @@ export const GAMIFICATION_TAB_IDS = GAMIFICATION_TABS.map((t) => t.id);
 /** URLs legadas redirecionam para os IDs canônicos. */
 export const GAMIFICATION_TAB_ALIASES: Record<string, GamificationTabId> = {
   active: "campanha",
-  campanha: "campanha",
   missions: "missoes",
   achievements: "conquistas",
   journey: "jornada",
   admin: "central",
-  central: "central",
 };

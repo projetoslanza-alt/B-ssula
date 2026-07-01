@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -11,13 +11,26 @@ import { BrandLogo } from "@/components/platform/brand-logo";
 import { isSafeReturnPath } from "@/lib/navigation-utils";
 import { platformRoutes } from "@/lib/routes";
 
-type LoginFormProps = {
-  redirectParam?: string | null;
-  logoutReason?: boolean;
-};
+function subscribeToLocationSearch() {
+  return () => {};
+}
 
-export function LoginForm({ redirectParam, logoutReason = false }: LoginFormProps) {
+function readSearchParam(key: string): string | null {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+export function LoginForm() {
   const router = useRouter();
+  const redirectParam = useSyncExternalStore(
+    subscribeToLocationSearch,
+    () => readSearchParam("redirect"),
+    () => null,
+  );
+  const logoutReason = useSyncExternalStore(
+    subscribeToLocationSearch,
+    () => readSearchParam("reason") === "logout",
+    () => false,
+  );
   const redirect = isSafeReturnPath(redirectParam) ? redirectParam! : platformRoutes.home;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

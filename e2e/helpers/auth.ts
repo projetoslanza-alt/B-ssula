@@ -55,9 +55,14 @@ export async function login(
 ) {
   const pwd = password ?? (fixtureKey && isStaging ? loadStagingPassword(fixtureKey) : LOCAL_PASSWORD);
   await page.goto("/login");
+  await page.locator("#email").waitFor({ state: "visible", timeout: 20_000 });
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(pwd);
   await page.getByRole("button", { name: /entrar/i }).click();
+  await page.waitForURL(
+    (url) => !url.pathname.startsWith("/login"),
+    { timeout: 20_000 },
+  );
 }
 
 export async function expectUniversityOrPending(page: Page) {

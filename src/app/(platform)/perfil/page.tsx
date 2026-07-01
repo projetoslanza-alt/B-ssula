@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requirePageSession } from "@/lib/auth/page-guard";
 import { createClient } from "@/lib/supabase/server";
+import { getUserJourney } from "@/modules/gamification/queries/journey";
 import { ProfileClient } from "./profile-client";
 
 export default async function PerfilPage() {
@@ -23,6 +24,8 @@ export default async function PerfilPage() {
     .eq("user_id", session.userId)
     .order("issued_at", { ascending: false });
 
+  const journey = await getUserJourney(session.tenantId, session.userId);
+
   if (!session) redirect("/login");
 
   return (
@@ -30,6 +33,7 @@ export default async function PerfilPage() {
       session={session}
       enrollments={enrollments ?? []}
       certificates={certificates ?? []}
+      journey={journey}
     />
   );
 }

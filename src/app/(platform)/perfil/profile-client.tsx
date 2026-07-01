@@ -18,6 +18,8 @@ const TABS = [
 
 type Tab = (typeof TABS)[number];
 
+import type { JourneySummary } from "@/modules/gamification/domain/types";
+
 type Cert = {
   id: string;
   validation_code: string;
@@ -40,10 +42,12 @@ export function ProfileClient({
   session,
   enrollments,
   certificates,
+  journey,
 }: {
   session: SessionContext;
   enrollments: Enrollment[];
   certificates: Cert[];
+  journey: JourneySummary;
 }) {
   const [tab, setTab] = useState<Tab>("Dados pessoais");
 
@@ -177,9 +181,19 @@ export function ProfileClient({
 
       {tab === "Gamificação" && (
         <Card>
-          <CardContent className="p-6 text-sm">
+          <CardContent className="space-y-3 p-6 text-sm">
+            <p>
+              <span className="text-[var(--foreground-muted)]">Pontos totais:</span>{" "}
+              {journey.totalPoints.toLocaleString("pt-BR")}
+            </p>
+            <p>
+              <span className="text-[var(--foreground-muted)]">Campanhas:</span> {journey.campaignsParticipated}
+            </p>
+            <p>
+              <span className="text-[var(--foreground-muted)]">Medalhas:</span> {journey.medals}
+            </p>
             <a href={platformRoutes.gamification.root} className="text-[var(--primary)] hover:underline">
-              Acessar Gamificação — Rota do Fechamento
+              Acessar Gamificação
             </a>
           </CardContent>
         </Card>

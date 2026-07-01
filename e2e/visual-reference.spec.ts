@@ -39,4 +39,30 @@ test.describe("Regressão visual — referência Dark Executive", () => {
       fullPage: false,
     });
   });
+
+  test("captura app /news em 1280×800", async ({ page }) => {
+    test.skip(!QA_READY, "Requer Supabase configurado para login");
+
+    await page.setViewportSize(VIEWPORT);
+    await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
+    await page.goto("/news");
+    await expect(page.getByRole("heading", { name: "News" })).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({
+      path: "test-results/visual-reference-app-news.png",
+      fullPage: false,
+    });
+  });
+
+  test("captura app /dashboards em 1280×800", async ({ page }) => {
+    test.skip(!QA_READY, "Requer Supabase configurado para login");
+
+    await page.setViewportSize(VIEWPORT);
+    await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
+    await page.goto("/dashboards");
+    await expect(page.getByRole("heading", { name: "Dashboards" })).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({
+      path: "test-results/visual-reference-app-dashboards.png",
+      fullPage: false,
+    });
+  });
 });

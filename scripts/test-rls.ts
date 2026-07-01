@@ -75,9 +75,13 @@ async function main() {
   const managerNorth = await signIn(url, anonKey, qaEmail("user.manager.north"), qaPassword("user.manager.north"));
   const instructorNorth = await signIn(url, anonKey, qaEmail("user.instructor.north"), qaPassword("user.instructor.north"));
   const studentNorth = await signIn(url, anonKey, qaEmail("user.student.north"), qaPassword("user.student.north"));
+  const studentSouth = await signIn(url, anonKey, qaEmail("user.student.south"), qaPassword("user.student.south"));
   const noroleNorth = await signIn(url, anonKey, qaEmail("user.norole.north"), qaPassword("user.norole.north"));
 
   const studentSouthId = profileByKey.get("user.student.south")?.id;
+  if (studentSouthId) {
+    await setActiveTenant(admin, studentSouthId, TENANTS.south.id);
+  }
   const southEnrollment = enrollments?.find(
     (e) => e.user_id === studentSouthId && e.tenant_id === TENANTS.south.id,
   );
@@ -277,6 +281,36 @@ async function main() {
   {
     const { data } = await studentNorth.from("courses").select("id").eq("id", northCoursePublished.id).maybeSingle();
     record("Positivo", "Aluno Norte", "Norte", "SELECT curso publicado Norte", "permitido", Boolean(data), data ? "ok" : "vazio");
+  }
+
+  const { data: northNewsFixture } = await admin
+    .from("news_publications")
+    .select("id")
+    .eq("fixture_key", "north.news.featured")
+    .maybeSingle();
+  if (northNewsFixture) {
+    const newsId = northNewsFixture.id;
+    {
+      const { data } = await studentNorth.from("news_publications").select("id").eq("id", newsId).maybeSingle();
+      record("News tenant", "Aluno Norte", "Norte", "SELECT publicação Norte", "permitido", Boolean(data), data ? "ok" : "vazio");
+    }
+    if (studentSouthId) {
+      const { data } = await studentSouth.from("news_publications").select("id").eq("id", newsId).maybeSingle();
+      record("News tenant", "Aluno Sul", "Sul", "SELECT publicação Norte", "bloqueado/vazio", !data, data ? "violação" : "ok");
+    }
+  }
+  {
+    const { error } = await managerNorth.from("news_publications").insert({
+      tenant_id: TENANTS.north.id,
+      title: "Tentativa gerente",
+      summary: "x",
+      content: "x",
+      category: "comunicado",
+      status: "draft",
+      audience_type: "all",
+      author_id: profileByKey.get("user.manager.north")!.id,
+    });
+    record("News RBAC", "Gestor Norte", "Norte", "INSERT publicação sem news.manage", "bloqueado", Boolean(error), error?.message ?? "inseriu");
   }
 
   console.log("\n=== Matriz RLS (JWT real) ===\n");

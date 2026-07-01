@@ -11,6 +11,7 @@ export const platformRoutes = {
     root: "/news",
     new: "/news/nova",
     post: (id: string) => `/news/${id}`,
+    edit: (id: string) => `/news/${id}/editar`,
   },
   support: {
     root: "/chamados",

@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { loadCloudEnv, loadLocalSupabaseEnv } from "./qa-env";
 import { provisionCrmData } from "./qa-data/crm";
+import { provisionCrmActivities, provisionNewsData } from "./qa-data/news";
 import { provisionOneOnOneData } from "./qa-data/one-on-one";
 import { provisionSupportData } from "./qa-data/tickets";
 import {
@@ -779,6 +780,8 @@ async function main() {
       const courses = [...courseIds.values()];
       if (owners.length) {
         await provisionCrmData(admin, tk, owners);
+        await provisionCrmActivities(admin, tk, owners);
+        await provisionNewsData(admin, tk, owners[0]);
         await provisionOneOnOneData(admin, tk, owners, employees.length ? employees : owners, courses);
         await provisionSupportData(admin, tk, [...userIds.values()]);
       }

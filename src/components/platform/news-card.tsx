@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { GraduationCap, Target, Trophy, type LucideIcon } from "lucide-react";
-import { StatusBadge } from "@/components/platform/status-badge";
 
-const ICONS: Record<string, LucideIcon> = {
-  reconhecimento: Trophy,
-  resultado: Target,
-  universidade: GraduationCap,
+const ICONS: Record<string, string> = {
+  reconhecimento: "🏆",
+  resultado: "🎯",
+  universidade: "🎓",
+  default: "📰",
 };
 
-const BADGE_TONES: Record<string, "warning" | "info" | "purple" | "default"> = {
-  reconhecimento: "warning",
-  resultado: "info",
+const TAG_CLASS: Record<string, string> = {
+  reconhecimento: "orange",
+  resultado: "blue",
   universidade: "purple",
+  Destaque: "orange",
+  Meta: "blue",
+  Universidade: "purple",
 };
 
 type NewsCardProps = {
@@ -26,27 +28,20 @@ type NewsCardProps = {
 };
 
 export function NewsCard({ title, description, badge, type = "default", href, compact, className }: NewsCardProps) {
-  const Icon = ICONS[type] ?? Trophy;
-  const tone = BADGE_TONES[type] ?? "default";
+  const emoji = ICONS[type] ?? ICONS.default;
+  const tagTone = TAG_CLASS[type] ?? TAG_CLASS[badge] ?? "gray";
 
   const content = (
-    <div
-      className={cn(
-        "flex h-full gap-3 rounded-xl border border-[var(--border)] bg-[var(--panel)] p-3.5 transition-colors",
-        href && "hover:border-[var(--border-active)] hover:bg-[var(--panel-secondary)]",
-        compact ? "items-center" : "items-start",
-        className,
-      )}
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--panel-secondary)]">
-        <Icon className="h-4 w-4 text-[var(--muted)]" strokeWidth={1.75} />
+    <article className={cn("card news-card card-hover", className)}>
+      <div className="news-icon" aria-hidden>
+        {emoji}
       </div>
-      <div className="min-w-0 flex-1">
-        <StatusBadge label={badge} tone={tone} className="mb-1.5" />
-        <h3 className="text-sm font-bold leading-snug text-[var(--foreground)]">{title}</h3>
-        {!compact && <p className="mt-1 text-xs leading-relaxed text-[var(--muted)] line-clamp-2">{description}</p>}
+      <div>
+        <span className={cn("tag", tagTone)}>{badge}</span>
+        <h3>{title}</h3>
+        {!compact && <p>{description}</p>}
       </div>
-    </div>
+    </article>
   );
 
   if (href) return <Link href={href}>{content}</Link>;

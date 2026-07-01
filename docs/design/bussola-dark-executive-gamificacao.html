@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Protótipo navegável do sistema Bússola by VendasComCiência" />
+  <title>Bússola by VendasComCiência</title>
+  <style>
+    :root {
+      --bg: #070a0f;
+      --bg-2: #0b1018;
+      --panel: #101722;
+      --panel-2: #151e2b;
+      --panel-3: #1a2635;
+      --border: #263548;
+      --border-soft: rgba(255,255,255,.075);
+      --text: #f8fafc;
+      --muted: #98a7ba;
+      --muted-2: #6f7e91;
+      --blue: #39bdf8;
+      --blue-2: #2563eb;
+      --orange: #f59e0b;
+      --green: #22c55e;
+      --red: #ef4444;
+      --purple: #8b5cf6;
+      --shadow: 0 18px 55px rgba(0,0,0,.32);
+      --radius: 18px;
+      --sidebar: 272px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% -10%, rgba(37,99,235,.22), transparent 28%),
+        radial-gradient(circle at 85% 5%, rgba(56,189,248,.11), transparent 23%),
+        linear-gradient(180deg, #070a0f 0%, #080c12 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .app { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 100vh; }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: var(--sidebar);
+      z-index: 60;
+      padding: 22px 16px;
+      background: rgba(8, 12, 18, .92);
+      backdrop-filter: blur(18px);
+      border-right: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: width .25s ease, transform .25s ease;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 8px 10px;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, rgba(56,189,248,.2), rgba(37,99,235,.35));
+      border: 1px solid rgba(56,189,248,.35);
+      box-shadow: 0 10px 28px rgba(37,99,235,.22);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-mark::before {
+      content: "";
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--blue);
+      border-radius: 50%;
+      position: absolute;
+    }
+
+    .brand-mark::after {
+      content: "";
+      width: 2px;
+      height: 30px;
+      background: linear-gradient(var(--orange), var(--blue));
+      transform: rotate(35deg);
+      border-radius: 999px;
+      box-shadow: 0 0 18px rgba(56,189,248,.7);
+    }
+
+    .brand strong { display: block; font-size: 20px; letter-spacing: .2px; }
+    .brand small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+    .menu-label {
+      padding: 0 12px;
+      font-size: 10px;
+      letter-spacing: 1.6px;
+      color: var(--muted-2);
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .nav { display: grid; gap: 6px; }
+    .nav-btn {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      padding: 12px 13px;
+      border-radius: 13px;
+      transition: .2s ease;
+      position: relative;
+    }
+
+    .nav-btn:hover { background: rgba(255,255,255,.04); color: var(--text); }
+    .nav-btn.active {
+      color: var(--text);
+      background: linear-gradient(90deg, rgba(37,99,235,.18), rgba(56,189,248,.06));
+      border: 1px solid rgba(56,189,248,.18);
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+
+    .nav-btn .icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.04);
+      color: var(--blue);
+      font-size: 14px;
+      flex: 0 0 auto;
+    }
+
+    .nav-btn .badge {
+      margin-left: auto;
+      min-width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      padding: 0 7px;
+      display: grid;
+      place-items: center;
+      background: rgba(245,158,11,.16);
+      color: #ffd48a;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .sidebar-bottom { margin-top: auto; display: grid; gap: 8px; }
+    .profile-mini {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+      border: 1px solid var(--border-soft);
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, var(--blue-2), var(--purple));
+      font-weight: 800;
+    }
+    .profile-mini strong { font-size: 13px; display: block; }
+    .profile-mini small { color: var(--muted); font-size: 11px; }
+
+    .main { grid-column: 2; min-width: 0; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      background: rgba(7,10,15,.72);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .mobile-menu {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .crumb { color: var(--muted); font-size: 13px; }
+    .crumb strong { color: var(--text); }
+
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--muted);
+      border: 1px solid var(--border-soft);
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    .icon-btn:hover { color: var(--text); border-color: var(--border); }
+    .icon-btn .dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 7px;
+      height: 7px;
+      background: var(--orange);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px var(--panel);
+    }
+
+
+    .notifications-wrap { position: relative; }
+    .notification-count {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--orange);
+      color: #111827;
+      font-size: 10px;
+      font-weight: 800;
+      border: 2px solid #090D14;
+      line-height: 1;
+    }
+    .notification-menu {
+      position: absolute;
+      top: calc(100% + 12px);
+      right: 0;
+      width: min(390px, calc(100vw - 32px));
+      max-height: min(620px, calc(100vh - 110px));
+      overflow: hidden;
+      background: rgba(13,18,26,.98);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 24px 70px rgba(0,0,0,.48);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-8px) scale(.985);
+      transform-origin: top right;
+      transition: .18s ease;
+      z-index: 90;
+    }
+    .notification-menu.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+    .notification-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 17px 18px 13px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .notification-head h3 { margin: 0; font-size: 16px; }
+    .notification-head small { color: var(--muted); }
+    .notification-clear {
+      border: 0;
+      background: transparent;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .notification-list {
+      max-height: 470px;
+      overflow-y: auto;
+      padding: 7px;
+    }
+    .notification-item {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 12px minmax(0,1fr) auto;
+      align-items: start;
+      gap: 11px;
+      padding: 13px 12px;
+      border: 0;
+      border-radius: 13px;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: .16s ease;
+    }
+    .notification-item:hover,
+    .notification-item:focus-visible {
+      background: rgba(56,189,248,.08);
+      outline: none;
+    }
+    .notification-item + .notification-item { margin-top: 2px; }
+    .notification-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 6px;
+      background: var(--blue);
+      box-shadow: 0 0 0 4px rgba(56,189,248,.08);
+    }
+    .notification-item.read .notification-status {
+      background: #64748B;
+      box-shadow: none;
+    }
+    .notification-copy { min-width: 0; }
+    .notification-copy strong { display: block; font-size: 13px; margin-bottom: 4px; }
+    .notification-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .notification-time {
+      color: #728198;
+      font-size: 10px;
+      white-space: nowrap;
+      padding-top: 2px;
+    }
+    .notification-module {
+      display: inline-flex;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: #BCEAFF;
+      background: rgba(56,189,248,.09);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .notification-foot {
+      padding: 11px 14px;
+      border-top: 1px solid var(--border-soft);
+      color: var(--muted);
+      text-align: center;
+      font-size: 11px;
+    }
+
+    .content { padding: 30px; max-width: 1680px; margin: 0 auto; }
+    .view { display: none; animation: fade .25s ease; }
+    .view.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .hero {
+      min-height: 360px;
+      border-radius: 26px;
+      border: 1px solid rgba(56,189,248,.19);
+      background:
+        linear-gradient(120deg, rgba(10,17,28,.95), rgba(12,28,48,.84)),
+        radial-gradient(circle at 80% 40%, rgba(56,189,248,.22), transparent 28%);
+      position: relative;
+      overflow: hidden;
+      padding: 52px;
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto;
+      border-radius: 50%;
+      border: 1px solid rgba(56,189,248,.15);
+    }
+    .hero::before { width: 470px; height: 470px; right: -150px; top: -100px; }
+    .hero::after { width: 330px; height: 330px; right: -80px; top: -25px; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #a8dcff;
+      font-size: 12px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      font-weight: 800;
+      margin-bottom: 18px;
+    }
+    .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--blue); }
+
+    h1, h2, h3, h4, p { margin-top: 0; }
+    .hero h1 { font-size: clamp(38px, 5vw, 68px); line-height: .98; margin-bottom: 20px; letter-spacing: -2.5px; }
+    .hero h1 span { color: var(--blue); }
+    .hero p { color: var(--muted); font-size: 17px; line-height: 1.75; max-width: 670px; }
+    .hero-actions { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-weight: 800;
+      transition: .2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--blue), var(--blue-2)); color: #04111b; box-shadow: 0 10px 24px rgba(37,99,235,.26); }
+    .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.08); }
+    .btn-secondary { color: var(--text); background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.1); }
+    .btn-secondary:hover { background: rgba(255,255,255,.09); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-danger { background: rgba(239,68,68,.13); color: #ff9999; border: 1px solid rgba(239,68,68,.24); }
+    .btn-sm { padding: 9px 12px; font-size: 12px; border-radius: 10px; }
+
+    .compass-art { min-height: 260px; display: grid; place-items: center; position: relative; z-index: 2; }
+    .compass {
+      width: 245px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 1px solid rgba(56,189,248,.28);
+      box-shadow: inset 0 0 45px rgba(56,189,248,.1), 0 0 70px rgba(37,99,235,.18);
+      position: relative;
+      display: grid;
+      place-items: center;
+      animation: float 6s ease-in-out infinite;
+    }
+    @keyframes float { 50% { transform: translateY(-8px) rotate(1deg); } }
+    .compass::before { content: ""; width: 72%; height: 72%; border: 1px dashed rgba(255,255,255,.16); border-radius: 50%; }
+    .compass::after {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 150px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--orange) 0 48%, var(--blue) 52% 100%);
+      transform: rotate(32deg);
+      box-shadow: 0 0 22px rgba(56,189,248,.45);
+    }
+    .compass span { position: absolute; color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: 2px; }
+    .compass .n { top: 14px; } .compass .s { bottom: 14px; } .compass .e { right: 14px; } .compass .w { left: 14px; }
+
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 34px 0 18px; }
+    .section-head h2 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.5px; }
+    .section-head p { margin: 0; color: var(--muted); }
+    .section-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .grid-5 { grid-template-columns: repeat(5, minmax(0,1fr)); }
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    .card {
+      background: linear-gradient(160deg, rgba(17,24,35,.96), rgba(13,20,30,.98));
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: 0 14px 42px rgba(0,0,0,.18);
+      min-width: 0;
+    }
+    .card-hover { transition: .2s ease; }
+    .card-hover:hover { transform: translateY(-3px); border-color: rgba(56,189,248,.24); }
+
+    .metric { position: relative; overflow: hidden; }
+    .metric::after {
+      content: "";
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      position: absolute;
+      right: -30px;
+      bottom: -40px;
+      background: radial-gradient(circle, rgba(56,189,248,.16), transparent 66%);
+    }
+    .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .metric-icon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: rgba(56,189,248,.09); color: var(--blue); }
+    .metric-label { color: var(--muted); font-size: 13px; }
+    .metric-value { font-size: 28px; font-weight: 900; margin: 16px 0 7px; letter-spacing: -.8px; }
+    .trend { font-size: 12px; font-weight: 700; }
+    .trend.up { color: #75df9c; } .trend.down { color: #ff8d8d; } .trend.neutral { color: var(--muted); }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .tag.blue { color: #a8dcff; background: rgba(56,189,248,.1); border-color: rgba(56,189,248,.2); }
+    .tag.green { color: #9cf0b8; background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.2); }
+    .tag.orange { color: #ffd28a; background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.2); }
+    .tag.red { color: #ffabab; background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.2); }
+    .tag.purple { color: #ccb8ff; background: rgba(139,92,246,.1); border-color: rgba(139,92,246,.2); }
+    .tag.gray { color: #c6d0dc; background: rgba(148,163,184,.08); border-color: rgba(148,163,184,.16); }
+
+    .chart-card { min-height: 330px; }
+    .chart-head { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .chart-head h3 { margin-bottom: 5px; }
+    .chart-head p { color: var(--muted); font-size: 13px; }
+    canvas { width: 100%; max-width: 100%; }
+
+    .progress { height: 8px; background: rgba(255,255,255,.06); border-radius: 999px; overflow: hidden; }
+    .progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue-2), var(--blue)); }
+
+    .table-wrap { overflow-x: auto; border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { text-align: left; padding: 13px 12px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+    th { color: var(--muted); font-size: 11px; letter-spacing: .6px; text-transform: uppercase; }
+    td { color: #dbe4ef; }
+    tbody tr:hover { background: rgba(255,255,255,.025); }
+
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; }
+    .field, .select, textarea {
+      background: #0b121c;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      min-height: 42px;
+      padding: 10px 12px;
+      outline: none;
+      transition: .2s ease;
+    }
+    .field:focus, .select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(56,189,248,.1); }
+    .field::placeholder, textarea::placeholder { color: #607087; }
+    .filters .field { min-width: 220px; }
+    label { font-size: 12px; font-weight: 800; color: #c6d0dc; display: grid; gap: 7px; }
+    textarea { min-height: 110px; resize: vertical; }
+
+    .news-card { display: grid; grid-template-columns: 64px 1fr; gap: 15px; align-items: center; }
+    .news-icon { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; font-size: 22px; background: linear-gradient(145deg, rgba(56,189,248,.1), rgba(37,99,235,.2)); border: 1px solid rgba(56,189,248,.15); }
+    .news-card h3 { margin: 0 0 7px; font-size: 16px; }
+    .news-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+    .tabs { display: flex; gap: 8px; padding: 6px; border-radius: 13px; background: rgba(255,255,255,.035); border: 1px solid var(--border-soft); overflow-x: auto; }
+    .tab-btn { border: 0; background: transparent; color: var(--muted); padding: 10px 13px; border-radius: 9px; white-space: nowrap; font-weight: 800; font-size: 12px; }
+    .tab-btn.active { background: var(--panel-3); color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+    .tab-pane { display: none; margin-top: 18px; }
+    .tab-pane.active { display: block; animation: fade .2s ease; }
+
+    .course-card { padding: 0; overflow: hidden; }
+    .course-cover { height: 150px; padding: 18px; display: flex; align-items: end; background: linear-gradient(135deg, rgba(37,99,235,.7), rgba(139,92,246,.48)), radial-gradient(circle at 80% 20%, rgba(255,255,255,.2), transparent 24%); position: relative; }
+    .course-cover::after { content: ""; width: 120px; height: 120px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); position: absolute; right: -22px; top: -30px; }
+    .course-cover.orange { background: linear-gradient(135deg, rgba(245,158,11,.72), rgba(239,68,68,.45)); }
+    .course-cover.green { background: linear-gradient(135deg, rgba(34,197,94,.62), rgba(37,99,235,.48)); }
+    .course-cover h3 { position: relative; z-index: 2; margin: 0; font-size: 18px; max-width: 250px; }
+    .course-body { padding: 18px; }
+    .course-meta { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+    .course-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; }
+
+    .certificate {
+      min-height: 230px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #111926, #0d1520);
+      border: 1px solid rgba(56,189,248,.2);
+    }
+    .certificate::before { content: ""; position: absolute; inset: 12px; border: 1px solid rgba(245,158,11,.22); border-radius: 12px; pointer-events: none; }
+    .certificate::after { content: "✦"; position: absolute; right: 24px; bottom: 16px; font-size: 62px; color: rgba(56,189,248,.08); }
+    .certificate h3 { font-size: 21px; max-width: 80%; }
+    .certificate p { color: var(--muted); line-height: 1.55; }
+
+    .timeline { display: grid; gap: 0; }
+    .timeline-item { position: relative; padding: 0 0 22px 32px; }
+    .timeline-item::before { content: ""; position: absolute; left: 9px; top: 17px; bottom: 0; width: 1px; background: var(--border); }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-dot { position: absolute; left: 3px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel); border: 3px solid var(--blue); box-shadow: 0 0 0 4px rgba(56,189,248,.08); }
+    .timeline-item.done .timeline-dot { border-color: var(--green); }
+    .timeline-item.pending .timeline-dot { border-color: var(--muted-2); }
+    .timeline-item strong { display: block; font-size: 13px; }
+    .timeline-item small { color: var(--muted); }
+
+    .wizard { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
+    .wizard-step { flex: 0 0 auto; min-width: 140px; padding: 11px 12px; border-radius: 11px; background: rgba(255,255,255,.03); border: 1px solid var(--border-soft); color: var(--muted); font-size: 12px; font-weight: 800; }
+    .wizard-step.active { color: var(--text); background: rgba(56,189,248,.09); border-color: rgba(56,189,248,.28); }
+    .wizard-step.done { color: #9cf0b8; }
+
+    .question { padding: 17px; border-radius: 14px; background: rgba(255,255,255,.025); border: 1px solid var(--border-soft); margin-bottom: 12px; }
+    .question h4 { font-size: 14px; margin-bottom: 13px; line-height: 1.5; }
+    .scale { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
+    .scale label { cursor: pointer; }
+    .scale input { display: none; }
+    .scale span { min-height: 46px; border: 1px solid var(--border); border-radius: 10px; display: grid; place-items: center; color: var(--muted); background: #0b121b; transition: .2s; text-align: center; padding: 5px; font-size: 11px; }
+    .scale input:checked + span { color: #06111b; border-color: var(--blue); background: var(--blue); font-weight: 900; }
+
+    .report-builder { display: grid; grid-template-columns: 270px 1fr; gap: 16px; min-height: 600px; }
+    .builder-sidebar { display: grid; align-content: start; gap: 12px; }
+    .data-source { padding: 13px; border-radius: 11px; border: 1px solid var(--border-soft); background: rgba(255,255,255,.025); cursor: pointer; transition: .2s; }
+    .data-source:hover, .data-source.active { border-color: rgba(56,189,248,.35); background: rgba(56,189,248,.07); }
+    .data-source strong { display: block; font-size: 13px; }
+    .data-source small { color: var(--muted); }
+    .report-canvas { min-width: 0; }
+    .builder-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+    .builder-block { min-height: 220px; border: 1px dashed #34465d; border-radius: 14px; padding: 16px; background: rgba(255,255,255,.018); position: relative; }
+    .builder-block .block-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+    .mini-action { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); }
+
+
+    /* NEWS: pódio sem ícones ou fotos */
+    .home-news-grid { display: grid; grid-template-columns: 1.25fr .95fr; gap: 18px; }
+    .podium-card { background: linear-gradient(180deg, #0B1731 0%, #0A1224 100%); overflow: hidden; position: relative; }
+    .podium-card::after { content: ''; position: absolute; right: -18px; bottom: -24px; width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, #FFB357, #F59E0B); opacity: .92; }
+    .podium-header { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+    .podium-header h3 { margin: 0; font-size: 17px; }
+    .podium-header p { margin: 6px 0 0; color: #B7C4D8; font-size: 13px; }
+    .podium-top3 { color: #C9D7EE; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; padding-top: 4px; }
+    .podium-wrap { display: flex; align-items: end; justify-content: center; gap: 12px; min-height: 260px; padding-top: 26px; position: relative; z-index: 1; }
+    .podium-person { width: 32%; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    .podium-name { font-weight: 750; text-align: center; line-height: 1.2; min-height: 38px; display: grid; place-items: end center; }
+    .podium-value { color: #A9B8CC; font-size: 13px; margin-top: 5px; margin-bottom: 12px; }
+    .podium-step { width: 100%; border-radius: 12px 12px 0 0; border: 1px solid rgba(132,161,205,.24); background: linear-gradient(180deg, rgba(40,62,102,.72), rgba(22,37,66,.88)); display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 900; font-size: 38px; position: relative; overflow: hidden; }
+    .podium-step::before { content: ''; position: absolute; inset: 0; border-top: 1px solid rgba(255,255,255,.06); }
+    .podium-first .podium-step { height: 138px; color: #FFB357; background: linear-gradient(180deg, rgba(82,58,45,.95), rgba(42,33,31,.88)); }
+    .podium-second .podium-step { height: 103px; color: #D9E4F3; }
+    .podium-third .podium-step { height: 78px; color: #D79A65; }
+    .news-stack { display: grid; gap: 12px; }
+
+    /* Gamificação — Rotas & Desafios */
+    .campaign-hero { position: relative; overflow: hidden; background: linear-gradient(120deg, rgba(37,99,235,.30), rgba(13,20,30,.98) 52%, rgba(245,158,11,.10)); }
+    .campaign-hero::after { content: ''; position: absolute; width: 360px; height: 360px; border: 1px solid rgba(56,189,248,.10); border-radius: 50%; right: -160px; top: -190px; box-shadow: 0 0 0 48px rgba(56,189,248,.025), 0 0 0 96px rgba(56,189,248,.018); }
+    .campaign-hero > * { position: relative; z-index: 1; }
+    .campaign-title { font-size: clamp(26px, 3vw, 42px); letter-spacing: -1.4px; margin: 10px 0; }
+    .campaign-meta { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+    .campaign-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+    .route-panel { padding: 22px; background: linear-gradient(145deg, rgba(16,26,39,.98), rgba(11,18,29,.98)); border: 1px solid rgba(56,189,248,.16); border-radius: 16px; }
+    .route-track { position: relative; height: 78px; margin-top: 24px; }
+    .route-track::before { content: ''; position: absolute; left: 10px; right: 10px; top: 30px; height: 8px; border-radius: 999px; background: rgba(255,255,255,.06); }
+    .route-track::after { content: ''; position: absolute; left: 10px; top: 30px; width: calc(72% - 10px); height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--blue-2), var(--blue), var(--orange)); box-shadow: 0 0 20px rgba(56,189,248,.22); }
+    .route-marker { position: absolute; left: calc(72% - 12px); top: 17px; width: 32px; height: 32px; border-radius: 50%; border: 6px solid #101b29; background: var(--orange); box-shadow: 0 0 0 2px rgba(245,158,11,.45), 0 0 20px rgba(245,158,11,.35); z-index: 2; }
+    .route-milestones { display: flex; justify-content: space-between; position: absolute; inset: 48px 0 auto; color: var(--muted); font-size: 11px; }
+    .projection-box { padding: 14px 16px; border-radius: 12px; background: rgba(56,189,248,.07); border: 1px solid rgba(56,189,248,.15); margin-top: 10px; color: #D8EBFA; }
+    .points-breakdown { display: grid; gap: 10px; }
+    .point-row { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-soft); }
+    .point-row:last-child { border-bottom: 0; }
+    .point-row strong { min-width: 70px; text-align: right; }
+    .campaign-podium { display: flex; align-items: end; justify-content: center; gap: 12px; min-height: 270px; padding: 20px 12px 0; }
+    .campaign-podium-place { width: 31%; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+    .campaign-podium-place .person { text-align: center; min-height: 58px; display: grid; place-items: end center; }
+    .campaign-podium-place .person strong { display: block; font-size: 13px; }
+    .campaign-podium-place .person small { color: var(--muted); }
+    .campaign-podium-block { width: 100%; display: grid; place-items: center; font-size: 36px; font-weight: 900; border: 1px solid var(--border); border-radius: 13px 13px 0 0; background: linear-gradient(180deg, #223553, #14213A); }
+    .campaign-podium-place.first .campaign-podium-block { height: 150px; color: #FFC76D; background: linear-gradient(180deg, #5A4430, #282228); }
+    .campaign-podium-place.second .campaign-podium-block { height: 112px; color: #E5EDF7; }
+    .campaign-podium-place.third .campaign-podium-block { height: 82px; color: #E1A16C; }
+    .rank-self { background: rgba(56,189,248,.075); box-shadow: inset 3px 0 0 var(--blue); }
+    .mission-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+    .mission-card { position: relative; overflow: hidden; }
+    .mission-card::after { content: ''; position: absolute; width: 110px; height: 110px; border-radius: 50%; right: -45px; bottom: -50px; background: radial-gradient(circle, rgba(56,189,248,.12), transparent 68%); }
+    .mission-meta { display: flex; justify-content: space-between; gap: 10px; margin: 14px 0 8px; color: var(--muted); font-size: 12px; }
+    .achievement-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+    .achievement-card { min-height: 180px; display: grid; align-content: space-between; background: linear-gradient(145deg, rgba(17,25,38,.98), rgba(11,18,28,.98)); }
+    .achievement-seal { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; border: 2px solid rgba(245,158,11,.35); background: rgba(245,158,11,.10); color: #FFD08A; }
+    .achievement-seal.silver { border-color: rgba(203,213,225,.35); background: rgba(203,213,225,.08); color: #E2E8F0; }
+    .achievement-seal.blue { border-color: rgba(56,189,248,.35); background: rgba(56,189,248,.09); color: #B8E5FF; }
+    .campaign-table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .admin-chart-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .audit-item { display: grid; grid-template-columns: 120px 1fr auto; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); align-items: center; }
+    .audit-item:last-child { border-bottom: 0; }
+    .gamification-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; }
+    .campaign-rules { display: grid; gap: 10px; counter-reset: rules; }
+    .campaign-rule { padding: 13px 14px 13px 48px; border-radius: 12px; border: 1px solid var(--border-soft); background: rgba(255,255,255,.025); position: relative; }
+    .campaign-rule::before { counter-increment: rules; content: counter(rules); position: absolute; left: 13px; top: 11px; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; background: rgba(56,189,248,.10); color: var(--blue); font-weight: 900; }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0,0,0,.68);
+      backdrop-filter: blur(6px);
+      padding: 24px;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(780px, 100%); max-height: 90vh; overflow: auto; background: #0d141e; border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); }
+    .modal-head, .modal-foot { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 18px 20px; border-bottom: 1px solid var(--border-soft); }
+    .modal-foot { border-bottom: 0; border-top: 1px solid var(--border-soft); justify-content: flex-end; }
+    .modal-body { padding: 20px; }
+    .close-modal { width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); }
+
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 400;
+      min-width: 280px;
+      padding: 15px 17px;
+      border-radius: 13px;
+      background: #111b27;
+      color: var(--text);
+      border: 1px solid rgba(56,189,248,.25);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      transition: .25s ease;
+    }
+    .toast.show { opacity: 1; transform: none; }
+
+    .empty-state { text-align: center; padding: 45px 20px; color: var(--muted); }
+    .empty-state .empty-icon { width: 68px; height: 68px; border-radius: 20px; display: grid; place-items: center; margin: 0 auto 15px; background: rgba(56,189,248,.08); color: var(--blue); font-size: 24px; }
+
+    .kpi-ring { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; margin: 10px auto; background: conic-gradient(var(--blue) 0 76%, rgba(255,255,255,.06) 76% 100%); position: relative; }
+    .kpi-ring::before { content: ""; width: 88px; height: 88px; border-radius: 50%; background: var(--panel); position: absolute; }
+    .kpi-ring strong { position: relative; z-index: 2; font-size: 23px; }
+
+    .split { display: grid; grid-template-columns: 1.25fr .75fr; gap: 16px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .divider { height: 1px; background: var(--border-soft); margin: 18px 0; }
+    .right { text-align: right; }
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .between { justify-content: space-between; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .wrap { flex-wrap: wrap; }
+    .mt-16 { margin-top: 16px; }
+    .mt-24 { margin-top: 24px; }
+    .mb-0 { margin-bottom: 0; }
+
+    @media (max-width: 1280px) {
+      .grid-5 { grid-template-columns: repeat(3,minmax(0,1fr)); }
+      .grid-4 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .hero { grid-template-columns: 1fr .7fr; }
+    }
+
+    @media (max-width: 980px) {
+      :root { --sidebar: 250px; }
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { grid-column: 1 / -1; }
+      .mobile-menu { display: grid; place-items: center; }
+      .content { padding: 22px; }
+      .topbar { padding: 0 22px; }
+      .hero { grid-template-columns: 1fr; padding: 38px; }
+      .compass-art { display: none; }
+      .grid-3, .grid-4, .grid-5 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .split, .report-builder, .home-news-grid, .admin-chart-grid { grid-template-columns: 1fr; }
+      .builder-sidebar { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .gamification-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .achievement-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+
+    @media (max-width: 680px) {
+      .content { padding: 16px; }
+      .topbar { height: 66px; padding: 0 16px; }
+      .crumb { display: none; }
+      .hero { padding: 28px 22px; min-height: 380px; }
+      .hero h1 { letter-spacing: -1.6px; }
+      .grid-2, .grid-3, .grid-4, .grid-5, .builder-grid, .builder-sidebar, .home-news-grid, .mission-grid, .achievement-grid, .gamification-summary, .admin-chart-grid { grid-template-columns: 1fr; }
+      .podium-wrap { gap: 8px; min-height: 250px; }
+      .podium-step { font-size: 28px; }
+      .campaign-podium { gap: 7px; padding-left: 0; padding-right: 0; }
+      .campaign-podium-block { font-size: 28px; }
+      .audit-item { grid-template-columns: 1fr; }
+      .span-2, .span-3 { grid-column: auto; }
+      .section-head { align-items: start; flex-direction: column; }
+      .section-actions { width: 100%; }
+      .section-actions .btn { flex: 1; }
+      .scale { grid-template-columns: 1fr; }
+      .filters { display: grid; grid-template-columns: 1fr; }
+      .filters .field, .filters .select { width: 100%; min-width: 0; }
+      .modal-backdrop { padding: 12px; }
+      .notification-menu { position: fixed; top: 72px; right: 12px; left: 12px; width: auto; max-height: calc(100vh - 88px); }
+      .notification-list { max-height: calc(100vh - 190px); }
+    }
+
+    @media print {
+      .sidebar, .topbar, .section-actions, .btn, .filters, .tabs, .no-print { display: none !important; }
+      .app, .main { display: block; }
+      .content { max-width: none; padding: 0; }
+      body { background: #fff; color: #111; }
+      .view { display: none !important; }
+      #view-relatorios.active, #view-universidade.active, #view-gamificacao.active { display: block !important; }
+      .card, .builder-block, .certificate { background: #fff !important; color: #111 !important; box-shadow: none; border-color: #bbb; }
+      .muted, .chart-head p, td, th { color: #444 !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div><strong>Bússola</strong><small>by VendasComCiência</small></div>
+      </div>
+
+      <div>
+        <div class="menu-label">Navegação</div>
+        <nav class="nav" aria-label="Menu principal">
+          <button class="nav-btn active" data-view="inicio"><span class="icon">⌂</span><span>Início</span></button>
+          <button class="nav-btn" data-view="dashboards"><span class="icon">▥</span><span>Dashboards</span></button>
+          <button class="nav-btn" data-view="news"><span class="icon">◫</span><span>News</span><span class="badge">4</span></button>
+          <button class="nav-btn" data-view="chamados"><span class="icon">◇</span><span>Chamados</span><span class="badge">3</span></button>
+          <button class="nav-btn" data-view="conversa"><span class="icon">◎</span><span>Conversa de Norte</span></button>
+          <button class="nav-btn" data-view="universidade"><span class="icon">◆</span><span>Universidade</span></button>
+          <button class="nav-btn" data-view="gamificacao"><span class="icon">◇</span><span>Gamificação</span><span class="badge">2</span></button>
+          <button class="nav-btn" data-view="relatorios"><span class="icon">▤</span><span>Relatórios</span></button>
+          <button class="nav-btn" data-view="administracao"><span class="icon">⚙</span><span>Administração</span></button>
+        </nav>
+      </div>
+
+      <div class="sidebar-bottom">
+        <button class="nav-btn" onclick="showToast('Central de ajuda aberta.')"><span class="icon">?</span><span>Ajuda</span></button>
+        <div class="profile-mini">
+          <div class="avatar">EM</div>
+          <div><strong>Eloise Machado</strong><small>Gestora comercial</small></div>
+          <span class="muted">⋮</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu" id="mobileMenu" aria-label="Abrir menu">☰</button>
+          <div class="crumb">Bússola / <strong id="crumbTitle">Início</strong></div>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" aria-label="Pesquisar" onclick="showToast('Busca global disponível no protótipo.')">⌕</button>
+          <div class="notifications-wrap" id="notificationsWrap">
+            <button class="icon-btn" id="notificationsButton" aria-label="Abrir notificações" aria-haspopup="true" aria-expanded="false">♢<span class="notification-count" id="notificationCount">6</span></button>
+            <div class="notification-menu" id="notificationMenu" role="menu" aria-label="Lista de notificações">
+              <div class="notification-head">
+                <div><h3>Notificações</h3><small id="notificationSummary">6 não lidas</small></div>
+                <button class="notification-clear" type="button" id="markAllRead">Marcar como lidas</button>
+              </div>
+              <div class="notification-list">
+                <button class="notification-item" type="button" data-notification-view="gamificacao" data-notification-tab="game-ranking" role="menuitem">
+                  <span class="notification-status"></span>
+                  <span class="notification-copy"><strong>Você entrou no Top 3</strong><span>Agora você ocupa o 2º lugar na Rota do Fechamento. Faltam 300 pontos para alcançar Isabella.</span><span class="notification-module">Gamificação</span></span>
+                  <span class="notification-time">Agora</span>
+                </button>
+                <button class="notification-item" type="button" data-notification-view="chamados" role="menuitem">
+                  <span class="notification-status"></span>
+                  <span class="notification-copy"><strong>Seu chamado recebeu uma resposta</strong><span>O chamado #1048 sobre certificado foi atualizado pelo responsável.</span><span class="notification-module">Chamados</span></span>
+                  <span class="notification-time">12 min</span>
+                </button>
+                <button class="notification-item" type="button" data-notification-view="conversa" data-notification-tab="conv-checkin" role="menuitem">
+                  <span class="notification-status"></span>
+                  <span class="notification-copy"><strong>Check-in de Rota disponível</strong><span>Responda às perguntas antes da próxima Conversa de Norte.</span><span class="notification-module">Conversa de Norte</span></span>
+                  <span class="notification-time">1h</span>
+                </button>
+                <button class="notification-item" type="button" data-notification-view="universidade" data-notification-tab="uni-assessments" role="menuitem">
+                  <span class="notification-status"></span>
+                  <span class="notification-copy"><strong>Nova avaliação liberada</strong><span>A avaliação de Diagnóstico Comercial já está disponível.</span><span class="notification-module">Universidade</span></span>
+                  <span class="notification-time">2h</span>
+                </button>
+                <button class="notification-item" type="button" data-notification-view="news" role="menuitem">
+                  <span class="notification-status"></span>
+                  <span class="notification-copy"><strong>Nova publicação na NEWS</strong><span>Confira o resultado semanal e os destaques da operação.</span><span class="notification-module">NEWS</span></span>
+                  <span class="notification-time">Ontem</span>
+                </button>
+                <button class="notification-item" type="button" data-notification-view="relatorios" role="menuitem">
+                  <span class="notification-status"></span>
+                  <span class="notification-copy"><strong>Exportação concluída</strong><span>O relatório “Performance comercial — Julho” está pronto para consulta.</span><span class="notification-module">Relatórios</span></span>
+                  <span class="notification-time">Ontem</span>
+                </button>
+              </div>
+              <div class="notification-foot">Selecione uma notificação para abrir o módulo relacionado.</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- INÍCIO -->
+        <section class="view active" id="view-inicio" data-title="Início">
+          <div class="hero">
+            <div>
+              <span class="eyebrow">Bússola by VendasComCiência</span>
+              <h1>Todo time precisa de um <span>norte.</span></h1>
+              <p>O norte da sua operação comercial. A Bússola reúne desempenho, aprendizado, desenvolvimento e gestão em uma única jornada — da primeira ligação ao fechamento.</p>
+              <div class="hero-actions">
+                <button class="btn btn-primary" data-go="dashboards">Ver indicadores ↗</button>
+                <button class="btn btn-secondary" data-go="universidade">Continuar minha jornada</button>
+              </div>
+            </div>
+            <div class="compass-art" aria-hidden="true">
+              <div class="compass"><span class="n">N</span><span class="s">S</span><span class="e">L</span><span class="w">O</span></div>
+            </div>
+          </div>
+
+          <div class="section-head">
+            <div><h2>NEWS</h2><p>Os destaques mais importantes da operação, em um só lugar.</p></div>
+            <div class="section-actions"><button class="btn btn-secondary btn-sm" data-go="news">Ver central de News</button></div>
+          </div>
+
+          <div class="home-news-grid">
+            <div class="card podium-card">
+              <div class="podium-header">
+                <div><h3>Pódio de vendedores</h3><p>Performance da semana</p></div>
+                <div class="podium-top3">TOP 3</div>
+              </div>
+              <div class="podium-wrap">
+                <div class="podium-person podium-second">
+                  <div class="podium-name">Guilherme Lanza</div>
+                  <div class="podium-value">R$ 42 mil</div>
+                  <div class="podium-step">2</div>
+                </div>
+                <div class="podium-person podium-first">
+                  <div class="podium-name">Isabella Nogueira</div>
+                  <div class="podium-value">R$ 58 mil</div>
+                  <div class="podium-step">1</div>
+                </div>
+                <div class="podium-person podium-third">
+                  <div class="podium-name">Ana Luiza</div>
+                  <div class="podium-value">R$ 36 mil</div>
+                  <div class="podium-step">3</div>
+                </div>
+              </div>
+            </div>
+            <div class="news-stack">
+              <article class="card news-card card-hover"><div class="news-icon">🏆</div><div><span class="tag orange">Destaque</span><h3>Isabella Nogueira lidera a semana</h3><p>Ela alcançou o melhor resultado do período e puxou o ritmo da operação comercial.</p></div></article>
+              <article class="card news-card card-hover"><div class="news-icon">🎯</div><div><span class="tag blue">Meta</span><h3>78% da meta já foi alcançada</h3><p>A operação avançou 12 pontos percentuais nos últimos sete dias.</p></div></article>
+              <article class="card news-card card-hover"><div class="news-icon">🎓</div><div><span class="tag purple">Universidade</span><h3>Já assistiu sua aula hoje?</h3><p>Continue a trilha Contorno de Objeções e avance mais uma etapa da sua jornada.</p></div></article>
+            </div>
+          </div>
+
+          <div class="section-head"><div><h2>Mais notícias</h2><p>Resultados, reconhecimentos e próximos passos da operação.</p></div><button class="btn btn-ghost btn-sm" data-go="news">Ver todas</button></div>
+          <div class="grid grid-3">
+            <article class="card news-card card-hover"><div class="news-icon">🏆</div><div><span class="tag orange">Destaque</span><h3>Pódio de vendedores da semana</h3><p>Isabella Nogueira, Guilherme Lanza e Ana Luiza lideraram em contratos assinados.</p></div></article>
+            <article class="card news-card card-hover"><div class="news-icon">🎯</div><div><span class="tag blue">Meta</span><h3>78% da meta já alcançada</h3><p>A operação avançou 12 pontos percentuais nos últimos sete dias.</p></div></article>
+            <article class="card news-card card-hover"><div class="news-icon">🎓</div><div><span class="tag purple">Universidade</span><h3>Já assistiu sua aula hoje?</h3><p>Continue a trilha Contorno de Objeções e avance mais uma etapa.</p></div></article>
+          </div>
+        </section>
+
+        <!-- DASHBOARDS -->
+        <section class="view" id="view-dashboards" data-title="Dashboards">
+          <div class="section-head">
+            <div><span class="eyebrow">Performance</span><h2>Dashboards comerciais</h2><p>Indicadores, comparativos e conversões da operação.</p></div>
+            <div class="section-actions"><button class="btn btn-secondary" onclick="window.print()">Exportar PDF</button><button class="btn btn-primary" onclick="exportDashboardExcel()">Exportar Excel</button></div>
+          </div>
+
+          <div class="card filters">
+            <select class="select"><option>Julho de 2026</option><option>Junho de 2026</option></select>
+            <select class="select"><option>Todas as equipes</option><option>Equipe Horizonte</option><option>Equipe Norte</option></select>
+            <select class="select"><option>Todos os vendedores</option><option>Mariana Costa</option><option>Lucas Alves</option></select>
+            <button class="btn btn-primary btn-sm" onclick="showToast('Filtros aplicados.')">Aplicar filtros</button>
+          </div>
+
+          <div class="grid grid-4 mt-16">
+            <div class="card metric"><div class="metric-label">Ligações</div><div class="metric-value">2.480</div><span class="trend up">↑ 8,4%</span></div>
+            <div class="card metric"><div class="metric-label">Reuniões realizadas</div><div class="metric-value">342</div><span class="trend up">↑ 11,2%</span></div>
+            <div class="card metric"><div class="metric-label">Contratos assinados</div><div class="metric-value">126</div><span class="trend up">↑ 14,9%</span></div>
+            <div class="card metric"><div class="metric-label">Conversão geral</div><div class="metric-value">5,1%</div><span class="trend up">↑ 0,7 p.p.</span></div>
+          </div>
+
+          <div class="grid grid-2 mt-16">
+            <div class="card chart-card"><div class="chart-head"><div><h3>Meta x realizado</h3><p>Comparativo semanal de contratos.</p></div><span class="tag green">78% atingido</span></div><canvas id="barChart" height="240"></canvas></div>
+            <div class="card chart-card"><div class="chart-head"><div><h3>Evolução das vendas</h3><p>Resultado acumulado nos últimos seis meses.</p></div><span class="tag blue">Tendência positiva</span></div><canvas id="lineChart" height="240"></canvas></div>
+            <div class="card chart-card"><div class="chart-head"><div><h3>Funil comercial</h3><p>Conversão entre as etapas principais.</p></div></div><div id="funnel"></div></div>
+            <div class="card chart-card"><div class="chart-head"><div><h3>Ranking de vendedores</h3><p>Contratos assinados no período.</p></div></div><div id="rankingBars"></div></div>
+          </div>
+        </section>
+
+        <!-- NEWS -->
+        <section class="view" id="view-news" data-title="News">
+          <div class="section-head"><div><span class="eyebrow">Operação em movimento</span><h2>News</h2><p>Comunicados, reconhecimentos e atualizações.</p></div><button class="btn btn-primary" onclick="openModal('newsModal')">+ Nova publicação</button></div>
+          <div class="grid grid-2">
+            <article class="card span-2" style="min-height:270px;background:linear-gradient(120deg,rgba(37,99,235,.32),rgba(17,24,35,.96)),radial-gradient(circle at 85% 50%,rgba(56,189,248,.22),transparent 25%);display:grid;align-content:end;">
+              <span class="tag orange" style="width:max-content">Destaque da semana</span><h2 style="font-size:32px;margin:14px 0 10px">Equipe Horizonte alcança 112% da meta semanal</h2><p class="muted" style="max-width:730px">Disciplina de follow-up e uma nova cadência de confirmação de reuniões ajudaram a equipe a superar o objetivo.</p>
+            </article>
+            <article class="card news-card"><div class="news-icon">📣</div><div><span class="tag blue">Comunicado</span><h3>Nova rotina de confirmação</h3><p>A partir de segunda-feira, as reuniões devem ser confirmadas 24h e 1h antes.</p></div></article>
+            <article class="card news-card"><div class="news-icon">🎓</div><div><span class="tag purple">Universidade</span><h3>Nova aula de diagnóstico comercial</h3><p>Conteúdo disponível para SDRs e consultores comerciais.</p></div></article>
+            <article class="card news-card"><div class="news-icon">⭐</div><div><span class="tag orange">Reconhecimento</span><h3>Mariana é destaque em conversão</h3><p>Ela atingiu 34% de conversão de reunião para contrato gerado.</p></div></article>
+            <article class="card news-card"><div class="news-icon">⚠</div><div><span class="tag red">Atenção</span><h3>Atualização programada</h3><p>A plataforma ficará indisponível por 20 minutos no domingo.</p></div></article>
+          </div>
+        </section>
+
+        <!-- CHAMADOS -->
+        <section class="view" id="view-chamados" data-title="Chamados">
+          <div class="section-head"><div><span class="eyebrow">Central de Orientação</span><h2>Encontrou um obstáculo na rota?</h2><p>Abra um chamado e receba a orientação necessária para continuar avançando.</p></div><button class="btn btn-primary" onclick="openModal('ticketModal')">+ Abrir novo chamado</button></div>
+          <div class="grid grid-5">
+            <div class="card metric"><div class="metric-label">Abertos</div><div class="metric-value">18</div><span class="tag blue">Fila atual</span></div>
+            <div class="card metric"><div class="metric-label">Aguardando</div><div class="metric-value">7</div><span class="tag orange">Triagem</span></div>
+            <div class="card metric"><div class="metric-label">Em andamento</div><div class="metric-value">11</div><span class="tag purple">Atendimento</span></div>
+            <div class="card metric"><div class="metric-label">Resolvidos</div><div class="metric-value">94</div><span class="tag green">Este mês</span></div>
+            <div class="card metric"><div class="metric-label">Tempo médio</div><div class="metric-value">3h 18m</div><span class="trend up">↓ 22 min</span></div>
+          </div>
+          <div class="card mt-16">
+            <div class="filters"><input class="field" placeholder="Pesquisar protocolo, título ou solicitante" /><select class="select"><option>Todos os status</option><option>Aberto</option><option>Em atendimento</option><option>Resolvido</option></select><select class="select"><option>Todas as categorias</option><option>CRM externo</option><option>OPENS</option><option>Universidade</option></select></div>
+            <div class="table-wrap mt-16"><table><thead><tr><th>Protocolo</th><th>Título</th><th>Categoria</th><th>Prioridade</th><th>Responsável</th><th>Status</th><th>Atualização</th><th></th></tr></thead><tbody id="ticketsTable"></tbody></table></div>
+          </div>
+        </section>
+
+        <!-- CONVERSA DE NORTE -->
+        <section class="view" id="view-conversa" data-title="Conversa de Norte">
+          <div class="section-head"><div><span class="eyebrow">Desenvolvimento</span><h2>Conversa de Norte</h2><p>Reconheça avanços, identifique desvios e defina os próximos passos.</p></div><button class="btn btn-primary" onclick="openModal('conversationModal')">+ Iniciar conversa</button></div>
+          <div class="tabs" data-tabs="conversationTabs">
+            <button class="tab-btn active" data-tab="conv-overview">Visão geral</button>
+            <button class="tab-btn" data-tab="conv-conversas">Conversas</button>
+            <button class="tab-btn" data-tab="conv-checkin">Check-in de Rota</button>
+            <button class="tab-btn" data-tab="conv-actions">Planos de ação</button>
+            <button class="tab-btn" data-tab="conv-journey">Minha Jornada</button>
+            <button class="tab-btn" data-tab="conv-team">Mapa da Equipe</button>
+          </div>
+
+          <div class="tab-pane active" id="conv-overview">
+            <div class="grid grid-4 mt-16">
+              <div class="card metric"><div class="metric-label">Programadas</div><div class="metric-value">8</div><span class="trend neutral">Próximos 15 dias</span></div>
+              <div class="card metric"><div class="metric-label">Realizadas</div><div class="metric-value">24</div><span class="trend up">92% no prazo</span></div>
+              <div class="card metric"><div class="metric-label">Ações abertas</div><div class="metric-value">17</div><span class="trend down">4 atrasadas</span></div>
+              <div class="card metric"><div class="metric-label">Nota média</div><div class="metric-value">7,8</div><span class="trend up">↑ 0,4</span></div>
+            </div>
+            <div class="grid grid-2 mt-16">
+              <div class="card chart-card"><div class="chart-head"><div><h3>Evolução da equipe</h3><p>Nota média das Conversas de Norte.</p></div></div><canvas id="conversationLine" height="240"></canvas></div>
+              <div class="card"><div class="chart-head"><div><h3>Próximas conversas</h3><p>Agenda dos próximos dias.</p></div></div><div class="timeline"><div class="timeline-item done"><span class="timeline-dot"></span><strong>Mariana Costa</strong><small>Hoje, 14h • Fechamento mensal</small></div><div class="timeline-item"><span class="timeline-dot"></span><strong>Lucas Alves</strong><small>Amanhã, 10h • Desenvolvimento</small></div><div class="timeline-item pending"><span class="timeline-dot"></span><strong>Rafael Lima</strong><small>04/07, 15h • Plano de recuperação</small></div></div></div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="conv-conversas">
+            <div class="card mt-16">
+              <div class="wizard"><div class="wizard-step done">1. Preparação</div><div class="wizard-step done">2. Abertura</div><div class="wizard-step active">3. Indicadores</div><div class="wizard-step">4. Diagnóstico</div><div class="wizard-step">5. Direção</div><div class="wizard-step">6. Compromisso</div></div>
+              <div class="split mt-24">
+                <div>
+                  <h3>Indicadores do período</h3><p class="muted">Analise o que os números mostram antes de registrar o diagnóstico.</p>
+                  <div class="table-wrap"><table><thead><tr><th>Indicador</th><th>Meta</th><th>Realizado</th><th>Atingimento</th><th>Status</th></tr></thead><tbody><tr><td>Ligações</td><td>600</td><td>624</td><td>104%</td><td><span class="tag green">OK</span></td></tr><tr><td>Reuniões realizadas</td><td>24</td><td>19</td><td>79%</td><td><span class="tag orange">Parcial</span></td></tr><tr><td>Contratos gerados</td><td>10</td><td>5</td><td>50%</td><td><span class="tag red">Crítico</span></td></tr></tbody></table></div>
+                </div>
+                <div class="card" style="background:#0b121c"><h3>Resumo do colaborador</h3><p class="muted small">Mariana Costa • SDR</p><div class="kpi-ring"><strong>7,4</strong></div><div class="divider"></div><p class="small"><strong>Principal alerta:</strong><br><span class="muted">Conversão de reunião para contrato gerado.</span></p><p class="small"><strong>Plano anterior:</strong><br><span class="muted">2 de 3 ações concluídas.</span></p></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="conv-checkin">
+            <div class="split mt-16">
+              <div class="card">
+                <span class="tag blue">Check-in mensal</span><h2 style="margin:14px 0 8px">Como está sua rota?</h2><p class="muted">Responda com sinceridade. O objetivo é identificar pontos de apoio, colaboração e desenvolvimento.</p>
+                <form id="checkinForm">
+                  <div id="checkinQuestions" class="mt-24"></div>
+                  <div class="grid grid-2 mt-16"><label>Como você está se sentindo?<select class="select"><option>Muito bem</option><option>Bem</option><option>Neutro</option><option>Desmotivado</option><option>Muito desmotivado</option></select></label><label>Gostaria de conversar com seu gestor?<select class="select"><option>Não</option><option>Talvez</option><option>Sim</option></select></label></div>
+                  <label class="mt-16">Existe algo que gostaria de compartilhar?<textarea placeholder="Comentário opcional"></textarea></label>
+                  <div class="flex between items-center mt-16 wrap gap-12"><span class="muted small">Suas respostas serão usadas para apoiar seu desenvolvimento.</span><button class="btn btn-primary" type="submit">Enviar check-in</button></div>
+                </form>
+              </div>
+              <div class="card"><h3>Radar da equipe</h3><p class="muted">Média das dez dimensões no ciclo atual.</p><canvas id="radarChart" height="340"></canvas><div class="divider"></div><div class="flex between"><span class="muted">Resultado geral</span><span class="tag orange">Rota estável • 4,1</span></div></div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="conv-actions">
+            <div class="grid grid-3 mt-16">
+              <div class="card"><span class="tag orange">Em andamento</span><h3 class="mt-16">Melhorar confirmação de reuniões</h3><p class="muted">Confirmar agenda 24h e 1h antes.</p><div class="progress"><span style="width:70%"></span></div><div class="course-meta mt-16"><span>Responsável: Mariana</span><span>70%</span></div></div>
+              <div class="card"><span class="tag blue">Aberta</span><h3 class="mt-16">Revisar oportunidades paradas</h3><p class="muted">Definir próxima ação em 100% dos registros.</p><div class="progress"><span style="width:35%"></span></div><div class="course-meta mt-16"><span>Responsável: Lucas</span><span>35%</span></div></div>
+              <div class="card"><span class="tag green">Concluída</span><h3 class="mt-16">Curso de contorno de objeções</h3><p class="muted">Concluir curso e obter nota mínima 8.</p><div class="progress"><span style="width:100%"></span></div><div class="course-meta mt-16"><span>Nota: 9,2</span><span>100%</span></div></div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="conv-journey">
+            <div class="card mt-16"><div class="chart-head"><div><h3>Minha Jornada</h3><p>Evolução de nota, classificação e compromissos.</p></div></div><canvas id="journeyLine" height="250"></canvas><div class="grid grid-4 mt-16"><div class="card"><span class="muted small">Nota atual</span><h2>8,3</h2><span class="tag green">Alta performance</span></div><div class="card"><span class="muted small">Ações concluídas</span><h2>14</h2><span class="trend up">82% de conclusão</span></div><div class="card"><span class="muted small">Competência em destaque</span><h3>Resiliência</h3><span class="tag blue">Forte</span></div><div class="card"><span class="muted small">Próximo foco</span><h3>Diagnóstico</h3><span class="tag orange">Em desenvolvimento</span></div></div></div>
+          </div>
+
+          <div class="tab-pane" id="conv-team">
+            <div class="grid grid-3 mt-16" id="teamCards"></div>
+          </div>
+        </section>
+
+        <!-- UNIVERSIDADE -->
+        <section class="view" id="view-universidade" data-title="Universidade">
+          <div class="section-head"><div><span class="eyebrow">Universidade Bússola</span><h2>Conhecimento para avançar na direção certa.</h2><p>Aprenda, pratique, valide seu conhecimento e conquiste certificados.</p></div><button class="btn btn-primary" onclick="showToast('Novo curso criado como rascunho.')">+ Criar curso</button></div>
+          <div class="tabs" data-tabs="universityTabs">
+            <button class="tab-btn active" data-tab="uni-home">Início</button>
+            <button class="tab-btn" data-tab="uni-courses">Meus cursos</button>
+            <button class="tab-btn" data-tab="uni-paths">Trilhas</button>
+            <button class="tab-btn" data-tab="uni-lessons">Aulas</button>
+            <button class="tab-btn" data-tab="uni-assessments">Avaliações</button>
+            <button class="tab-btn" data-tab="uni-certificates">Certificados</button>
+            <button class="tab-btn" data-tab="uni-progress">Meu progresso</button>
+          </div>
+
+          <div class="tab-pane active" id="uni-home">
+            <div class="grid grid-4 mt-16">
+              <div class="card metric"><div class="metric-label">Cursos em andamento</div><div class="metric-value">3</div><span class="tag purple">Continue estudando</span></div>
+              <div class="card metric"><div class="metric-label">Aulas pendentes</div><div class="metric-value">7</div><span class="tag orange">2 vencem esta semana</span></div>
+              <div class="card metric"><div class="metric-label">Certificados</div><div class="metric-value">12</div><span class="tag green">+2 neste mês</span></div>
+              <div class="card metric"><div class="metric-label">Horas de aprendizado</div><div class="metric-value">38h</div><span class="trend up">↑ 6h no mês</span></div>
+            </div>
+            <div class="section-head"><div><h2>Continue de onde parou</h2><p>Seus cursos em andamento.</p></div></div>
+            <div class="grid grid-3" id="courseCards"></div>
+          </div>
+
+          <div class="tab-pane" id="uni-courses">
+            <div class="grid grid-3 mt-16" id="allCourseCards"></div>
+          </div>
+
+          <div class="tab-pane" id="uni-paths">
+            <div class="grid grid-3 mt-16"><div class="card"><span class="tag purple">Trilha</span><h3 class="mt-16">Onboarding Comercial</h3><p class="muted">Processos, cultura, ferramentas e primeiros passos.</p><div class="progress"><span style="width:86%"></span></div><div class="course-meta mt-16"><span>6 cursos</span><span>86%</span></div></div><div class="card"><span class="tag blue">Trilha</span><h3 class="mt-16">SDR de Alta Performance</h3><p class="muted">Abordagem, qualificação, agendamento e rotina.</p><div class="progress"><span style="width:54%"></span></div><div class="course-meta mt-16"><span>8 cursos</span><span>54%</span></div></div><div class="card"><span class="tag orange">Trilha</span><h3 class="mt-16">Liderança com Direção</h3><p class="muted">Gestão, feedback, performance e desenvolvimento.</p><div class="progress"><span style="width:28%"></span></div><div class="course-meta mt-16"><span>5 cursos</span><span>28%</span></div></div></div>
+          </div>
+
+          <div class="tab-pane" id="uni-lessons">
+            <div class="split mt-16"><div class="card" style="min-height:430px;display:grid;place-items:center;background:linear-gradient(145deg,#101b2a,#0b1119)"><div class="right" style="text-align:center"><div style="width:84px;height:84px;border-radius:50%;display:grid;place-items:center;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.28);font-size:30px;margin:auto">▶</div><h2 class="mt-16">Diagnóstico comercial na prática</h2><p class="muted">Aula 3 de 7 • 18 minutos</p><button class="btn btn-primary">Reproduzir aula</button></div></div><div class="card"><h3>Conteúdo do curso</h3><div class="timeline mt-24"><div class="timeline-item done"><span class="timeline-dot"></span><strong>1. Entendendo a dor</strong><small>Concluída • 12 min</small></div><div class="timeline-item done"><span class="timeline-dot"></span><strong>2. Perguntas de profundidade</strong><small>Concluída • 16 min</small></div><div class="timeline-item"><span class="timeline-dot"></span><strong>3. Diagnóstico na prática</strong><small>Em andamento • 18 min</small></div><div class="timeline-item pending"><span class="timeline-dot"></span><strong>4. Construindo valor</strong><small>Bloqueada • 14 min</small></div></div></div></div>
+          </div>
+
+          <div class="tab-pane" id="uni-assessments">
+            <div class="grid grid-3 mt-16"><div class="card"><span class="tag orange">Disponível</span><h3 class="mt-16">Avaliação — Diagnóstico Comercial</h3><p class="muted">10 questões • Nota mínima 7 • 2 tentativas</p><button class="btn btn-primary btn-sm mt-16" onclick="openModal('assessmentModal')">Iniciar avaliação</button></div><div class="card"><span class="tag green">Aprovada</span><h3 class="mt-16">Quiz — CRM externo</h3><p class="muted">Nota 9,0 • Concluída em 27/06/2026</p><button class="btn btn-secondary btn-sm mt-16">Ver resultado</button></div><div class="card"><span class="tag red">Revisão necessária</span><h3 class="mt-16">Prova — Contorno de Objeções</h3><p class="muted">Nota 6,2 • Nova tentativa disponível</p><button class="btn btn-secondary btn-sm mt-16">Revisar conteúdo</button></div></div>
+          </div>
+
+          <div class="tab-pane" id="uni-certificates">
+            <div class="grid grid-4 mt-16"><div class="card metric"><div class="metric-label">Total de certificados</div><div class="metric-value">12</div><span class="tag green">Disponíveis</span></div><div class="card metric"><div class="metric-label">Neste mês</div><div class="metric-value">2</div><span class="trend up">Novas conquistas</span></div><div class="card metric"><div class="metric-label">Carga certificada</div><div class="metric-value">42h</div><span class="tag blue">Aprendizado validado</span></div><div class="card metric"><div class="metric-label">Próximo certificado</div><div class="metric-value">86%</div><span class="tag orange">Onboarding</span></div></div>
+            <div class="grid grid-3 mt-16" id="certificateCards"></div>
+          </div>
+
+          <div class="tab-pane" id="uni-progress">
+            <div class="split mt-16"><div class="card chart-card"><div class="chart-head"><div><h3>Horas estudadas</h3><p>Evolução dos últimos seis meses.</p></div></div><canvas id="learningLine" height="260"></canvas></div><div class="card"><h3>Minha rota de aprendizado</h3><div class="timeline mt-24"><div class="timeline-item done"><span class="timeline-dot"></span><strong>Início</strong><small>Trilha iniciada</small></div><div class="timeline-item done"><span class="timeline-dot"></span><strong>Aprendizado</strong><small>12 aulas concluídas</small></div><div class="timeline-item"><span class="timeline-dot"></span><strong>Prática</strong><small>Atividade em andamento</small></div><div class="timeline-item pending"><span class="timeline-dot"></span><strong>Avaliação</strong><small>Aguardando liberação</small></div><div class="timeline-item pending"><span class="timeline-dot"></span><strong>Certificação</strong><small>Próximo destino</small></div></div></div></div>
+          </div>
+        </section>
+
+
+        <!-- GAMIFICAÇÃO -->
+        <section class="view" id="view-gamificacao" data-title="Gamificação">
+          <div class="section-head">
+            <div><span class="eyebrow">Rotas & Desafios</span><h2>Gamificação</h2><p>Campanhas comerciais como jornadas de desempenho, desenvolvimento e reconhecimento.</p></div>
+            <div class="section-actions"><button class="btn btn-secondary" onclick="exportGamificationExcel()">Exportar ranking</button><button class="btn btn-primary" onclick="openModal('campaignModal')">+ Criar campanha</button></div>
+          </div>
+
+          <div class="tabs" data-tabs>
+            <button class="tab-btn active" data-tab="game-active">Campanha ativa</button>
+            <button class="tab-btn" data-tab="game-ranking">Ranking</button>
+            <button class="tab-btn" data-tab="game-missions">Missões</button>
+            <button class="tab-btn" data-tab="game-achievements">Conquistas</button>
+            <button class="tab-btn" data-tab="game-journey">Minha jornada</button>
+            <button class="tab-btn" data-tab="game-admin">Central de campanhas</button>
+          </div>
+
+          <div class="tab-pane active" id="game-active">
+            <div class="card campaign-hero">
+              <div class="flex between wrap gap-12">
+                <div>
+                  <div class="flex gap-8 wrap"><span class="tag green">Campanha ativa</span><span class="tag blue">Individual</span><span class="tag gray">01/07 a 31/07</span></div>
+                  <h2 class="campaign-title">Rota do Fechamento</h2>
+                  <p class="muted" style="max-width:760px">Aumentar o número de oportunidades qualificadas e vendas fechadas, reconhecendo consistência, evolução e qualidade da execução.</p>
+                  <div class="campaign-meta"><span>Responsável: Eloise Machado</span><span>•</span><span>32 participantes</span><span>•</span><span>Atualização em tempo real</span></div>
+                  <div class="campaign-actions"><button class="btn btn-primary" onclick="openModal('campaignRulesModal')">Ver regras</button><button class="btn btn-secondary" onclick="showToast('Premiação: 1º vale-presente, 2º day off e 3º reconhecimento especial.')">Ver premiação</button></div>
+                </div>
+                <div class="card" style="min-width:220px;background:rgba(7,12,20,.55)"><span class="muted small">Encerramento da rota</span><div class="metric-value">12 dias</div><span class="trend up">Você está no ritmo da meta</span></div>
+              </div>
+            </div>
+
+            <div class="gamification-summary mt-16">
+              <div class="card metric"><span class="metric-label">Rota concluída</span><div class="metric-value">72%</div><span class="trend up">14 de 20 vendas</span></div>
+              <div class="card metric"><span class="metric-label">Meus pontos</span><div class="metric-value">1.480</div><span class="trend up">+260 nesta semana</span></div>
+              <div class="card metric"><span class="metric-label">Posição atual</span><div class="metric-value">2º</div><span class="trend neutral">130 pontos do 1º</span></div>
+              <div class="card metric"><span class="metric-label">Premiação</span><div class="metric-value" style="font-size:20px">Day off</div><span class="trend up">Posição atual elegível</span></div>
+            </div>
+
+            <div class="split mt-16">
+              <div class="route-panel">
+                <div class="chart-head"><div><h3>Avanço na rota</h3><p>Meta principal: 20 vendas fechadas.</p></div><span class="tag orange">Faltam 6 vendas</span></div>
+                <div class="route-track"><span class="route-marker"></span><div class="route-milestones"><span>Início</span><span>50%</span><span>Meta</span><span>Superação</span></div></div>
+                <div class="projection-box"><strong>Projeção:</strong> mantendo o ritmo atual, você deve encerrar a campanha com <strong>22 vendas</strong>.</div>
+              </div>
+              <div class="card">
+                <div class="chart-head"><div><h3>Meus pontos</h3><p>Detalhamento das ações pontuadas.</p></div><button class="btn btn-ghost btn-sm" onclick="openParticipant('Guilherme Lanza')">Ver histórico</button></div>
+                <div class="points-breakdown">
+                  <div class="point-row"><span>Ligações realizadas</span><small class="muted">120</small><strong>+240</strong></div>
+                  <div class="point-row"><span>Oportunidades criadas</span><small class="muted">18</small><strong>+360</strong></div>
+                  <div class="point-row"><span>Reuniões realizadas</span><small class="muted">10</small><strong>+300</strong></div>
+                  <div class="point-row"><span>Vendas fechadas</span><small class="muted">4</small><strong>+600</strong></div>
+                  <div class="point-row"><span>Penalidades</span><small class="muted">1</small><strong style="color:#ff9b9b">-20</strong></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-2 mt-16">
+              <div class="card">
+                <div class="chart-head"><div><h3>Pódio da campanha</h3><p>Primeiro lugar ao centro, seguido do segundo e terceiro.</p></div><button class="btn btn-ghost btn-sm" data-game-tab="game-ranking">Ranking completo</button></div>
+                <div class="campaign-podium">
+                  <div class="campaign-podium-place second"><div class="person"><strong>Guilherme Lanza</strong><small>1.480 pts • 92%</small></div><div class="campaign-podium-block">2</div></div>
+                  <div class="campaign-podium-place first"><div class="person"><strong>Isabella Nogueira</strong><small>1.780 pts • 108%</small></div><div class="campaign-podium-block">1</div></div>
+                  <div class="campaign-podium-place third"><div class="person"><strong>Ana Luiza</strong><small>1.320 pts • 85%</small></div><div class="campaign-podium-block">3</div></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="chart-head"><div><h3>Missões em andamento</h3><p>Marcos complementares da campanha.</p></div><button class="btn btn-ghost btn-sm" data-game-tab="game-missions">Ver todas</button></div>
+                <div class="mission-card card" style="padding:15px"><div class="flex between"><strong>Rota Consistente</strong><span class="tag blue">+150 pts</span></div><p class="muted small">Realize uma reunião durante cinco dias consecutivos.</p><div class="mission-meta"><span>3 de 5 dias</span><span>60%</span></div><div class="progress"><span style="width:60%"></span></div></div>
+                <div class="mission-card card mt-16" style="padding:15px"><div class="flex between"><strong>Fechamento Perfeito</strong><span class="tag orange">+300 pts</span></div><p class="muted small">Feche três vendas sem pendências nos registros.</p><div class="mission-meta"><span>2 de 3 vendas</span><span>67%</span></div><div class="progress"><span style="width:67%"></span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="game-ranking">
+            <div class="card filters"><select class="select"><option>Ranking geral</option><option>Minha equipe</option><option>SDR</option><option>Closer</option></select><select class="select"><option>Campanha completa</option><option>Esta semana</option><option>Este mês</option></select><select class="select"><option>Todas as unidades</option><option>Belo Horizonte</option><option>Contagem</option></select><button class="btn btn-primary btn-sm" onclick="showToast('Filtros do ranking aplicados.')">Aplicar</button></div>
+            <div class="card mt-16">
+              <div class="chart-head"><div><h3>Ranking da Rota do Fechamento</h3><p>Sua posição permanece destacada durante toda a campanha.</p></div><span class="tag blue">Atualizado agora</span></div>
+              <div class="table-wrap"><table id="gameRankingTable"><thead><tr><th>Posição</th><th>Participante</th><th>Cargo</th><th>Equipe</th><th>Meta</th><th>Pontos</th><th>Distância</th><th>Ação</th></tr></thead><tbody>
+                <tr onclick="openParticipant('Isabella Nogueira')"><td><strong>1º</strong></td><td>Isabella Nogueira</td><td>Closer</td><td>Horizonte</td><td><span class="tag green">108%</span></td><td><strong>1.780</strong></td><td>Líder</td><td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openParticipant('Isabella Nogueira')">Detalhes</button></td></tr>
+                <tr class="rank-self" onclick="openParticipant('Guilherme Lanza')"><td><strong>2º</strong></td><td>Guilherme Lanza <span class="tag blue">Você</span></td><td>Closer</td><td>Horizonte</td><td><span class="tag blue">92%</span></td><td><strong>1.480</strong></td><td>300 pts do 1º</td><td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openParticipant('Guilherme Lanza')">Detalhes</button></td></tr>
+                <tr onclick="openParticipant('Ana Luiza')"><td><strong>3º</strong></td><td>Ana Luiza</td><td>Closer</td><td>Norte</td><td><span class="tag orange">85%</span></td><td><strong>1.320</strong></td><td>160 pts do 2º</td><td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openParticipant('Ana Luiza')">Detalhes</button></td></tr>
+                <tr onclick="openParticipant('Mauricio Brzezinski')"><td><strong>4º</strong></td><td>Mauricio Brzezinski</td><td>Closer</td><td>Norte</td><td>78%</td><td><strong>1.160</strong></td><td>160 pts do 3º</td><td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openParticipant('Mauricio Brzezinski')">Detalhes</button></td></tr>
+                <tr onclick="openParticipant('Paula Nunes')"><td><strong>5º</strong></td><td>Paula Nunes</td><td>Closer</td><td>Horizonte</td><td>73%</td><td><strong>1.040</strong></td><td>120 pts do 4º</td><td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openParticipant('Paula Nunes')">Detalhes</button></td></tr>
+              </tbody></table></div>
+              <div class="projection-box mt-16">Você está em <strong>2º lugar</strong>. Faltam <strong>300 pontos</strong> para alcançar a liderança.</div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="game-missions">
+            <div class="section-head"><div><h3>Missões da campanha</h3><p>Pequenos marcos que ajudam a avançar na rota principal.</p></div><span class="tag blue">2 de 4 concluídas</span></div>
+            <div class="mission-grid">
+              <div class="card mission-card"><span class="tag green">Concluído</span><h3 class="mt-16">Primeiro Marco</h3><p class="muted">Realize 20 ligações em um único dia.</p><div class="mission-meta"><span>20 de 20 ligações</span><strong>+50 pontos</strong></div><div class="progress"><span style="width:100%"></span></div></div>
+              <div class="card mission-card"><span class="tag blue">Em andamento</span><h3 class="mt-16">Rota Consistente</h3><p class="muted">Realize pelo menos uma reunião durante cinco dias consecutivos.</p><div class="mission-meta"><span>3 de 5 dias</span><strong>+150 pontos</strong></div><div class="progress"><span style="width:60%"></span></div></div>
+              <div class="card mission-card"><span class="tag gray">Não iniciado</span><h3 class="mt-16">Especialista da Semana</h3><p class="muted">Conclua uma aula da Universidade Bússola.</p><div class="mission-meta"><span>0 de 1 aula</span><strong>+100 pontos</strong></div><div class="progress"><span style="width:0%"></span></div><button class="btn btn-ghost btn-sm mt-16" data-go="universidade">Ir para Universidade</button></div>
+              <div class="card mission-card"><span class="tag orange">Quase lá</span><h3 class="mt-16">Fechamento Perfeito</h3><p class="muted">Feche três vendas sem pendências nos registros.</p><div class="mission-meta"><span>2 de 3 vendas</span><strong>+300 pontos</strong></div><div class="progress"><span style="width:67%"></span></div></div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="game-achievements">
+            <div class="section-head"><div><h3>Conquistas e medalhas</h3><p>Reconhecimentos permanentes que acompanham sua jornada.</p></div><button class="btn btn-secondary btn-sm" onclick="showToast('Conquistas compartilhadas no perfil.')">Compartilhar perfil</button></div>
+            <div class="achievement-grid">
+              <div class="card achievement-card"><div class="achievement-seal">PV</div><div><h3>Primeira venda</h3><p class="muted small">Conquistada em 04/02/2026 • +50 pontos</p></div></div>
+              <div class="card achievement-card"><div class="achievement-seal silver">T3</div><div><h3>Top 3 da semana</h3><p class="muted small">Rota do Fechamento • 28/06/2026 • +200 pontos</p></div></div>
+              <div class="card achievement-card"><div class="achievement-seal">100</div><div><h3>Meta alcançada</h3><p class="muted small">Rota dos 100% • 31/05/2026 • +700 pontos</p></div></div>
+              <div class="card achievement-card"><div class="achievement-seal blue">7D</div><div><h3>Sequência de sete dias</h3><p class="muted small">Consistência comercial • +150 pontos</p></div></div>
+              <div class="card achievement-card"><div class="achievement-seal blue">UB</div><div><h3>Especialista da Universidade</h3><p class="muted small">Trilha concluída • +100 pontos</p></div></div>
+              <div class="card achievement-card"><div class="achievement-seal silver">EV</div><div><h3>Melhor evolução do mês</h3><p class="muted small">Crescimento de 24% • +300 pontos</p></div></div>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="game-journey">
+            <div class="gamification-summary">
+              <div class="card metric"><span class="metric-label">Campanhas participadas</span><div class="metric-value">8</div><span class="trend neutral">Desde janeiro</span></div>
+              <div class="card metric"><span class="metric-label">Campanhas vencidas</span><div class="metric-value">2</div><span class="trend up">Melhor posição: 1º</span></div>
+              <div class="card metric"><span class="metric-label">Pontos acumulados</span><div class="metric-value">7.840</div><span class="trend up">+18% no trimestre</span></div>
+              <div class="card metric"><span class="metric-label">Medalhas</span><div class="metric-value">11</div><span class="trend neutral">3 raras</span></div>
+            </div>
+            <div class="grid grid-2 mt-16">
+              <div class="card chart-card"><div class="chart-head"><div><h3>Evolução mensal de pontos</h3><p>Todos os valores possuem rótulos.</p></div><span class="tag blue">Acima da mediana</span></div><canvas id="gameJourneyLine" height="250"></canvas></div>
+              <div class="card chart-card"><div class="chart-head"><div><h3>Comparação com a equipe</h3><p>Pontos acumulados no período.</p></div></div><canvas id="gameMedianBar" height="250"></canvas></div>
+            </div>
+            <div class="card mt-16"><div class="chart-head"><div><h3>Histórico de campanhas</h3><p>Resultados preservados após o encerramento.</p></div></div><div class="table-wrap"><table><thead><tr><th>Campanha</th><th>Período</th><th>Colocação</th><th>Pontos</th><th>Meta</th><th>Conquista</th></tr></thead><tbody><tr><td>Rota dos 100%</td><td>Mai/2026</td><td>1º</td><td>1.920</td><td>124%</td><td>Campeão</td></tr><tr><td>Desafio de Prospecção</td><td>Abr/2026</td><td>4º</td><td>1.280</td><td>91%</td><td>Melhor evolução</td></tr><tr><td>Universidade em Movimento</td><td>Mar/2026</td><td>2º</td><td>860</td><td>100%</td><td>Especialista</td></tr></tbody></table></div></div>
+          </div>
+
+          <div class="tab-pane" id="game-admin">
+            <div class="section-head"><div><h3>Central de Campanhas</h3><p>Crie, publique e acompanhe as jornadas da operação.</p></div><div class="section-actions"><button class="btn btn-secondary" onclick="openModal('pointsAdjustmentModal')">Ajustar pontos</button><button class="btn btn-primary" onclick="openModal('campaignModal')">+ Criar campanha</button></div></div>
+            <div class="gamification-summary">
+              <div class="card metric"><span class="metric-label">Participantes</span><div class="metric-value">32</div><span class="trend up">29 ativos</span></div>
+              <div class="card metric"><span class="metric-label">Engajamento</span><div class="metric-value">86%</div><span class="trend up">+9 p.p.</span></div>
+              <div class="card metric"><span class="metric-label">Média de pontos</span><div class="metric-value">1.126</div><span class="trend neutral">Campanha atual</span></div>
+              <div class="card metric"><span class="metric-label">Meta alcançada</span><div class="metric-value">9</div><span class="trend up">28% dos participantes</span></div>
+            </div>
+            <div class="card mt-16"><div class="chart-head"><div><h3>Campanhas</h3><p>Gerenciamento de status, resultados e comunicação.</p></div><button class="btn btn-secondary btn-sm" onclick="exportGamificationExcel()">Exportar relatório</button></div><div class="table-wrap"><table><thead><tr><th>Campanha</th><th>Período</th><th>Participantes</th><th>Status</th><th>Engajamento</th><th>Ações</th></tr></thead><tbody>
+              <tr><td><strong>Rota do Fechamento</strong></td><td>01 a 31/07</td><td>32</td><td><span class="tag green">Ativa</span></td><td>86%</td><td><div class="campaign-table-actions"><button class="btn btn-ghost btn-sm" onclick="showToast('Campanha aberta para edição.')">Editar</button><button class="btn btn-ghost btn-sm" onclick="showToast('Campanha duplicada como rascunho.')">Duplicar</button><button class="btn btn-ghost btn-sm" onclick="showToast('Dashboard da campanha aberto.')">Resultados</button></div></td></tr>
+              <tr><td><strong>Desafio de Prospecção</strong></td><td>01 a 15/07</td><td>18</td><td><span class="tag green">Ativa</span></td><td>72%</td><td><div class="campaign-table-actions"><button class="btn btn-ghost btn-sm" onclick="showToast('Campanha aberta para edição.')">Editar</button><button class="btn btn-ghost btn-sm" onclick="showToast('Campanha pausada temporariamente.')">Pausar</button><button class="btn btn-ghost btn-sm" onclick="showToast('Dashboard da campanha aberto.')">Resultados</button></div></td></tr>
+              <tr><td><strong>Universidade em Movimento</strong></td><td>01 a 30/06</td><td>45</td><td><span class="tag gray">Encerrada</span></td><td>91%</td><td><div class="campaign-table-actions"><button class="btn btn-ghost btn-sm" onclick="showToast('Campanha duplicada como rascunho.')">Duplicar</button><button class="btn btn-ghost btn-sm" onclick="navigate('news');showToast('Resultado preparado para publicação na NEWS.')">Publicar na NEWS</button></div></td></tr>
+            </tbody></table></div></div>
+            <div class="admin-chart-grid mt-16">
+              <div class="card chart-card"><div class="chart-head"><div><h3>Engajamento por equipe</h3><p>Percentual de participantes ativos.</p></div></div><canvas id="campaignEngagementBar" height="240"></canvas></div>
+              <div class="card chart-card"><div class="chart-head"><div><h3>Evolução diária de pontos</h3><p>Média diária da campanha.</p></div></div><canvas id="campaignDailyLine" height="240"></canvas></div>
+            </div>
+            <div class="grid grid-2 mt-16">
+              <div class="card"><div class="chart-head"><div><h3>Ajustes e auditoria</h3><p>Toda alteração manual exige justificativa.</p></div><button class="btn btn-ghost btn-sm" onclick="openModal('pointsAdjustmentModal')">Novo ajuste</button></div><div class="audit-item"><small class="muted">01/07 • 10:42</small><div><strong>+100 pontos — Guilherme Lanza</strong><div class="muted small">Correção de venda não processada • por Eloise Machado</div></div><span class="tag green">Aprovado</span></div><div class="audit-item"><small class="muted">30/06 • 16:10</small><div><strong>-20 pontos — Ana Luiza</strong><div class="muted small">Registro duplicado • por Mauricio Brzezinski</div></div><span class="tag orange">Revisado</span></div></div>
+              <div class="card"><h3>Regras de justiça</h3><div class="campaign-rules mt-16"><div class="campaign-rule">Limites diários para ações repetitivas.</div><div class="campaign-rule">Bloqueio de registros duplicados.</div><div class="campaign-rule">Metas proporcionais para carteiras diferentes.</div><div class="campaign-rule">Histórico preservado após o encerramento.</div></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RELATÓRIOS -->
+        <section class="view" id="view-relatorios" data-title="Relatórios">
+          <div class="section-head"><div><span class="eyebrow">Análises sob medida</span><h2>Construtor de Relatórios</h2><p>Escolha fontes, campos, filtros e gráficos sem precisar programar.</p></div><div class="section-actions"><button class="btn btn-secondary" onclick="exportReportExcel()">Exportar Excel</button><button class="btn btn-secondary" onclick="window.print()">Exportar PDF</button><button class="btn btn-primary" onclick="showToast('Relatório salvo com sucesso.')">Salvar relatório</button></div></div>
+          <div class="report-builder">
+            <aside class="card builder-sidebar">
+              <div><h3>Fontes de dados</h3><p class="muted small">Selecione uma origem.</p></div>
+              <div class="data-source active"><strong>Indicadores comerciais</strong><small>Metas, vendas e conversões</small></div>
+              <div class="data-source"><strong>Chamados</strong><small>Status, SLA e categorias</small></div>
+              <div class="data-source"><strong>Conversa de Norte</strong><small>Notas, ações e gargalos</small></div>
+              <div class="data-source"><strong>Universidade</strong><small>Cursos, avaliações e certificados</small></div>
+              <div class="data-source"><strong>Gamificação</strong><small>Campanhas, pontos, ranking e missões</small></div>
+              <div class="divider"></div>
+              <label>Período<select class="select"><option>Últimos 30 dias</option><option>Mês atual</option><option>Trimestre</option><option>Personalizado</option></select></label>
+              <label>Agrupar por<select class="select"><option>Vendedor</option><option>Equipe</option><option>Mês</option><option>Status</option></select></label>
+              <label>Métrica<select class="select"><option>Contratos assinados</option><option>Receita</option><option>Conversão</option><option>Meta atingida</option></select></label>
+              <button class="btn btn-primary" onclick="updateReportPreview()">Atualizar análise</button>
+            </aside>
+            <div class="report-canvas">
+              <div class="card filters"><input class="field" value="Performance comercial por vendedor" aria-label="Nome do relatório"/><select class="select"><option>Gráfico de barras</option><option>Gráfico de linha</option><option>Tabela</option><option>Funil</option></select><button class="btn btn-ghost btn-sm" onclick="addReportBlock()">+ Adicionar bloco</button></div>
+              <div class="builder-grid mt-16" id="reportGrid">
+                <div class="builder-block"><div class="block-actions"><button class="mini-action">⋮</button></div><div class="chart-head"><div><h3>Contratos por vendedor</h3><p>Resultado filtrado do período.</p></div></div><canvas id="reportBar" height="180"></canvas></div>
+                <div class="builder-block"><div class="block-actions"><button class="mini-action">⋮</button></div><div class="chart-head"><div><h3>Meta atingida</h3><p>Percentual por equipe.</p></div></div><canvas id="reportLine" height="180"></canvas></div>
+                <div class="builder-block span-2"><div class="block-actions"><button class="mini-action">⋮</button></div><div class="chart-head"><div><h3>Dados detalhados</h3><p>Base utilizada na visualização.</p></div></div><div class="table-wrap"><table id="reportTable"><thead><tr><th>Vendedor</th><th>Equipe</th><th>Ligações</th><th>Reuniões</th><th>Contratos</th><th>Meta</th></tr></thead><tbody><tr><td>Mariana Costa</td><td>Horizonte</td><td>624</td><td>31</td><td>18</td><td>112%</td></tr><tr><td>Lucas Alves</td><td>Horizonte</td><td>580</td><td>28</td><td>16</td><td>101%</td></tr><tr><td>Rafael Lima</td><td>Norte</td><td>492</td><td>24</td><td>12</td><td>86%</td></tr><tr><td>Ana Souza</td><td>Norte</td><td>451</td><td>21</td><td>10</td><td>74%</td></tr></tbody></table></div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN -->
+        <section class="view" id="view-administracao" data-title="Administração">
+          <div class="section-head"><div><span class="eyebrow">Configurações</span><h2>Administração</h2><p>Gerencie estrutura, conteúdos, permissões e auditoria.</p></div><button class="btn btn-primary" onclick="showToast('Novo usuário criado como rascunho.')">+ Novo usuário</button></div>
+          <div class="grid grid-4">
+            <div class="card card-hover"><span class="tag blue">Estrutura</span><h3 class="mt-16">Usuários e equipes</h3><p class="muted">Gerencie colaboradores, gestores, equipes, cargos e operações.</p><button class="btn btn-ghost btn-sm">Gerenciar</button></div>
+            <div class="card card-hover"><span class="tag purple">Universidade</span><h3 class="mt-16">Cursos e certificados</h3><p class="muted">Configure conteúdos, avaliações, modelos e critérios de emissão.</p><button class="btn btn-ghost btn-sm">Gerenciar</button></div>
+            <div class="card card-hover"><span class="tag orange">Chamados</span><h3 class="mt-16">Filas e categorias</h3><p class="muted">Defina responsáveis, SLAs, prioridades e respostas prontas.</p><button class="btn btn-ghost btn-sm">Gerenciar</button></div>
+            <div class="card card-hover"><span class="tag green">Segurança</span><h3 class="mt-16">Perfis e permissões</h3><p class="muted">Controle o acesso aos módulos e aos dados da organização.</p><button class="btn btn-ghost btn-sm">Gerenciar</button></div>
+            <div class="card card-hover"><span class="tag orange">Gamificação</span><h3 class="mt-16">Campanhas e pontuação</h3><p class="muted">Configure regras, metas, premiações, rankings e auditoria.</p><button class="btn btn-ghost btn-sm" data-go="gamificacao">Gerenciar</button></div>
+          </div>
+          <div class="card mt-16"><div class="chart-head"><div><h3>Auditoria recente</h3><p>Últimas alterações relevantes realizadas no sistema.</p></div></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Módulo</th><th>Detalhes</th></tr></thead><tbody><tr><td>01/07/2026 09:12</td><td>Eloise Machado</td><td>Publicou curso</td><td>Universidade</td><td>Diagnóstico Comercial na Prática</td></tr><tr><td>01/07/2026 08:47</td><td>Vinicius Barreto</td><td>Alterou permissão</td><td>Administração</td><td>Perfil Gestor Comercial</td></tr><tr><td>30/06/2026 17:32</td><td>Mariana Costa</td><td>Concluiu avaliação</td><td>Universidade</td><td>Nota 9,0</td></tr></tbody></table></div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL CHAMADO -->
+  <div class="modal-backdrop" id="ticketModal" role="dialog" aria-modal="true" aria-labelledby="ticketTitle">
+    <div class="modal">
+      <div class="modal-head"><div><h3 id="ticketTitle" class="mb-0">Abrir novo chamado</h3><span class="muted small">Sua solicitação entrará na rota de atendimento.</span></div><button class="close-modal" data-close>×</button></div>
+      <form id="ticketForm">
+        <div class="modal-body">
+          <div class="wizard"><div class="wizard-step active">1. Categoria</div><div class="wizard-step">2. Detalhes</div><div class="wizard-step">3. Prioridade</div><div class="wizard-step">4. Revisão</div></div>
+          <div class="grid grid-2 mt-24"><label>Categoria<select class="select" required><option value="">Selecione</option><option>CRM externo</option><option>OPENS</option><option>Contorno de objeções</option><option>Dúvidas comerciais</option><option>Universidade Bússola</option><option>Acesso e permissões</option></select></label><label>Subcategoria<select class="select" required><option value="">Selecione</option><option>Dificuldade de acesso</option><option>Dados divergentes</option><option>Objeção de preço</option><option>Certificado não gerado</option></select></label></div>
+          <label class="mt-16">Título<input class="field" required placeholder="Resuma o que aconteceu" /></label>
+          <label class="mt-16">Descrição detalhada<textarea required placeholder="Conte o contexto, o que aconteceu e o resultado esperado"></textarea></label>
+          <div class="grid grid-2 mt-16"><label>Prioridade<select class="select"><option>Baixa</option><option selected>Média</option><option>Alta</option><option>Crítica</option></select></label><label>Equipe<select class="select"><option>Equipe Horizonte</option><option>Equipe Norte</option></select></label></div>
+          <label class="mt-16">Anexos<input type="file" class="field" multiple /></label>
+        </div>
+        <div class="modal-foot"><button type="button" class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" type="submit">Enviar chamado</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CONVERSA -->
+  <div class="modal-backdrop" id="conversationModal" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-head"><div><h3 class="mb-0">Iniciar Conversa de Norte</h3><span class="muted small">Defina o ponto de partida da conversa.</span></div><button class="close-modal" data-close>×</button></div>
+      <form id="conversationForm"><div class="modal-body"><div class="grid grid-2"><label>Colaborador<select class="select" required><option>Mariana Costa</option><option>Lucas Alves</option><option>Rafael Lima</option></select></label><label>Tipo de conversa<select class="select"><option>Mensal</option><option>Desenvolvimento</option><option>Reconhecimento</option><option>Plano de recuperação</option></select></label><label>Período avaliado<input type="month" class="field" value="2026-07" /></label><label>Data da reunião<input type="date" class="field" value="2026-07-03" /></label></div><label class="mt-16">Objetivo principal<select class="select"><option>Reconhecer boa performance</option><option>Trabalhar um gargalo</option><option>Melhorar comportamento e postura</option><option>Acompanhar plano de recuperação</option></select></label></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" type="submit">Iniciar conversa</button></div></form>
+    </div>
+  </div>
+
+  <!-- MODAL NEWS -->
+  <div class="modal-backdrop" id="newsModal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3 class="mb-0">Nova publicação</h3><button class="close-modal" data-close>×</button></div><form id="newsForm"><div class="modal-body"><div class="grid grid-2"><label>Categoria<select class="select"><option>Comunicado</option><option>Reconhecimento</option><option>Universidade</option><option>Resultado</option></select></label><label>Público<select class="select"><option>Toda a operação</option><option>Gestores</option><option>Equipe Horizonte</option></select></label></div><label class="mt-16">Título<input class="field" required /></label><label class="mt-16">Conteúdo<textarea required></textarea></label></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" type="submit">Publicar</button></div></form></div></div>
+
+  <!-- MODAL AVALIAÇÃO -->
+  <div class="modal-backdrop" id="assessmentModal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><div><h3 class="mb-0">Avaliação — Diagnóstico Comercial</h3><span class="muted small">Questão 1 de 10</span></div><button class="close-modal" data-close>×</button></div><form id="assessmentForm"><div class="modal-body"><div class="progress"><span style="width:10%"></span></div><h3 class="mt-24">Qual é a primeira etapa de um diagnóstico comercial consistente?</h3><label class="question"><input type="radio" name="assessment" required /> Apresentar o preço imediatamente</label><label class="question"><input type="radio" name="assessment" /> Investigar contexto, dor e impacto</label><label class="question"><input type="radio" name="assessment" /> Enviar a proposta sem perguntas</label><label class="question"><input type="radio" name="assessment" /> Falar somente sobre o produto</label></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close>Sair</button><button class="btn btn-primary" type="submit">Responder</button></div></form></div></div>
+
+  <!-- MODAL CERTIFICADO -->
+  <div class="modal-backdrop" id="certificateModal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h3 class="mb-0">Certificado</h3><button class="close-modal" data-close>×</button></div><div class="modal-body"><div class="certificate card" id="certificatePreview"><span class="eyebrow">Universidade Bússola</span><h2>Certificado de Conclusão</h2><p>Certificamos que <strong>Eloise Machado</strong> concluiu o curso <strong id="certCourseName">Contorno de Objeções na Prática</strong>, com carga horária de 6 horas.</p><div class="flex between items-center mt-24 wrap"><div><strong>01 de julho de 2026</strong><div class="muted small">Código: BVC-2026-0712</div></div><div class="right"><strong>VendasComCiência</strong><div class="muted small">O norte da sua evolução.</div></div></div></div></div><div class="modal-foot"><button class="btn btn-secondary" onclick="window.print()">Baixar PDF</button><button class="btn btn-primary" data-close>Concluir</button></div></div></div>
+
+
+  <!-- MODAL REGRAS DA CAMPANHA -->
+  <div class="modal-backdrop" id="campaignRulesModal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><div><h3 class="mb-0">Regras — Rota do Fechamento</h3><span class="muted small">Critérios claros para uma competição justa.</span></div><button class="close-modal" data-close>×</button></div><div class="modal-body"><div class="campaign-rules"><div class="campaign-rule">Venda fechada: 150 pontos, sem limite.</div><div class="campaign-rule">Proposta enviada: 20 pontos, validada uma única vez.</div><div class="campaign-rule">Meta de 80%: bônus de 300 pontos.</div><div class="campaign-rule">Meta de 100%: bônus de 700 pontos.</div><div class="campaign-rule">Pendência superior a 48 horas: penalidade de 30 pontos.</div><div class="campaign-rule">Desempate por percentual da meta, receita e horário de alcance.</div></div></div><div class="modal-foot"><button class="btn btn-primary" data-close>Entendi</button></div></div></div>
+
+  <!-- MODAL CRIAR CAMPANHA -->
+  <div class="modal-backdrop" id="campaignModal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><div><h3 class="mb-0">Criar nova campanha</h3><span class="muted small">Configure a rota, as regras e a premiação.</span></div><button class="close-modal" data-close>×</button></div><form id="campaignForm"><div class="modal-body"><div class="wizard"><div class="wizard-step active">1. Informações</div><div class="wizard-step">2. Público</div><div class="wizard-step">3. Objetivos</div><div class="wizard-step">4. Pontuação</div><div class="wizard-step">5. Ranking</div><div class="wizard-step">6. Prêmios</div><div class="wizard-step">7. Comunicação</div></div><div class="grid grid-2 mt-24"><label>Nome da campanha<input class="field" required value="Rota dos 100%"></label><label>Responsável<select class="select"><option>Eloise Machado</option><option>Mauricio Brzezinski</option></select></label><label>Data de início<input type="date" class="field" value="2026-07-01"></label><label>Data de encerramento<input type="date" class="field" value="2026-07-31"></label><label>Formato<select class="select"><option>Individual</option><option>Por equipe</option></select></label><label>Visibilidade<select class="select"><option>Pública</option><option>Restrita</option><option>Ranking oculto</option></select></label></div><label class="mt-16">Descrição<textarea>Campanha criada para reconhecer vendedores que alcançarem ou superarem a meta comercial.</textarea></label><div class="grid grid-2 mt-16"><label>Público participante<select class="select"><option>Todos os Closers</option><option>Todos os SDRs</option><option>Equipes específicas</option><option>Usuários específicos</option></select></label><label>Indicador principal<select class="select"><option>Percentual da meta</option><option>Vendas fechadas</option><option>Receita gerada</option><option>Conversão</option><option>Aulas concluídas</option></select></label><label>Pontos por venda<input type="number" class="field" value="150"></label><label>Atualização do ranking<select class="select"><option>Tempo real</option><option>Diária</option><option>Semanal</option></select></label><label>Critério de desempate<select class="select"><option>Maior percentual de meta</option><option>Maior receita</option><option>Quem pontuou primeiro</option></select></label><label>Premiação do 1º lugar<input class="field" value="Vale-presente"></label></div><label class="mt-16">Regulamento<textarea placeholder="Descreva limites, penalidades, bônus e critérios de validação."></textarea></label></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close>Salvar rascunho</button><button type="submit" class="btn btn-primary">Criar campanha</button></div></form></div></div>
+
+  <!-- MODAL AJUSTE DE PONTOS -->
+  <div class="modal-backdrop" id="pointsAdjustmentModal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><div><h3 class="mb-0">Ajuste manual de pontos</h3><span class="muted small">A alteração será registrada na auditoria.</span></div><button class="close-modal" data-close>×</button></div><form id="pointsAdjustmentForm"><div class="modal-body"><div class="grid grid-2"><label>Participante<select class="select"><option>Guilherme Lanza</option><option>Isabella Nogueira</option><option>Ana Luiza</option><option>Mauricio Brzezinski</option></select></label><label>Campanha<select class="select"><option>Rota do Fechamento</option><option>Desafio de Prospecção</option></select></label><label>Tipo<select class="select"><option>Adicionar pontos</option><option>Remover pontos</option></select></label><label>Quantidade<input type="number" class="field" value="100" required></label></div><label class="mt-16">Motivo<input class="field" value="Correção de evento não processado" required></label><label class="mt-16">Evidência ou observação<textarea required>Venda validada no relatório operacional.</textarea></label></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close>Cancelar</button><button type="submit" class="btn btn-primary">Registrar ajuste</button></div></form></div></div>
+
+  <!-- MODAL PARTICIPANTE -->
+  <div class="modal-backdrop" id="participantModal" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><div><h3 class="mb-0" id="participantName">Participante</h3><span class="muted small">Pontuação detalhada e histórico de alterações.</span></div><button class="close-modal" data-close>×</button></div><div class="modal-body"><div class="grid grid-3"><div class="card metric"><span class="metric-label">Posição</span><div class="metric-value">2º</div></div><div class="card metric"><span class="metric-label">Pontos</span><div class="metric-value">1.480</div></div><div class="card metric"><span class="metric-label">Meta</span><div class="metric-value">92%</div></div></div><div class="table-wrap mt-16"><table><thead><tr><th>Data</th><th>Ação</th><th>Quantidade</th><th>Pontos</th><th>Origem</th></tr></thead><tbody><tr><td>01/07</td><td>Venda fechada</td><td>1</td><td>+150</td><td>Integração</td></tr><tr><td>01/07</td><td>Reunião realizada</td><td>2</td><td>+60</td><td>Importação</td></tr><tr><td>30/06</td><td>Ajuste manual</td><td>1</td><td>+100</td><td>Eloise Machado</td></tr></tbody></table></div></div><div class="modal-foot"><button class="btn btn-secondary" onclick="openModal('pointsAdjustmentModal')">Ajustar pontos</button><button class="btn btn-primary" data-close>Fechar</button></div></div></div>
+
+  <div class="toast" id="toast">Ação concluída.</div>
+
+  <script>
+    const viewNames = { inicio:'Início', dashboards:'Dashboards', news:'News', chamados:'Chamados', conversa:'Conversa de Norte', universidade:'Universidade', gamificacao:'Gamificação', relatorios:'Relatórios', administracao:'Administração' };
+    const navButtons = [...document.querySelectorAll('.nav-btn[data-view]')];
+    const views = [...document.querySelectorAll('.view')];
+    const crumbTitle = document.getElementById('crumbTitle');
+    const sidebar = document.getElementById('sidebar');
+
+    function navigate(view) {
+      views.forEach(v => v.classList.toggle('active', v.id === `view-${view}`));
+      navButtons.forEach(b => b.classList.toggle('active', b.dataset.view === view));
+      crumbTitle.textContent = viewNames[view] || view;
+      sidebar.classList.remove('open');
+      window.scrollTo({top:0, behavior:'smooth'});
+      history.replaceState(null, '', `#${view}`);
+      setTimeout(drawAllCharts, 120);
+    }
+
+    navButtons.forEach(btn => btn.addEventListener('click', () => navigate(btn.dataset.view)));
+    document.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => navigate(btn.dataset.go)));
+    document.querySelectorAll('[data-game-tab]').forEach(btn => btn.addEventListener('click', () => { const target = btn.dataset.gameTab; const tab = document.querySelector(`#view-gamificacao .tab-btn[data-tab="${target}"]`); if (tab) tab.click(); }));
+
+    const notificationsWrap = document.getElementById('notificationsWrap');
+    const notificationsButton = document.getElementById('notificationsButton');
+    const notificationMenu = document.getElementById('notificationMenu');
+    const notificationCount = document.getElementById('notificationCount');
+    const notificationSummary = document.getElementById('notificationSummary');
+
+    function updateNotificationCounter() {
+      const unread = notificationMenu.querySelectorAll('.notification-item:not(.read)').length;
+      notificationCount.textContent = unread;
+      notificationCount.style.display = unread ? 'grid' : 'none';
+      notificationSummary.textContent = unread ? `${unread} ${unread === 1 ? 'não lida' : 'não lidas'}` : 'Todas visualizadas';
+    }
+
+    function toggleNotifications(force) {
+      const shouldOpen = typeof force === 'boolean' ? force : !notificationMenu.classList.contains('open');
+      notificationMenu.classList.toggle('open', shouldOpen);
+      notificationsButton.setAttribute('aria-expanded', String(shouldOpen));
+      if (shouldOpen) notificationMenu.querySelector('.notification-item')?.focus();
+    }
+
+    function openRelatedTab(view, tabId) {
+      navigate(view);
+      if (!tabId) return;
+      window.setTimeout(() => {
+        const viewEl = document.getElementById(`view-${view}`);
+        const tabButton = viewEl?.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+        if (tabButton) tabButton.click();
+      }, 60);
+    }
+
+    notificationsButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleNotifications();
+    });
+
+    notificationMenu.querySelectorAll('.notification-item').forEach(item => item.addEventListener('click', () => {
+      item.classList.add('read');
+      updateNotificationCounter();
+      toggleNotifications(false);
+      openRelatedTab(item.dataset.notificationView, item.dataset.notificationTab);
+    }));
+
+    document.getElementById('markAllRead').addEventListener('click', (event) => {
+      event.stopPropagation();
+      notificationMenu.querySelectorAll('.notification-item').forEach(item => item.classList.add('read'));
+      updateNotificationCounter();
+      showToast('Todas as notificações foram marcadas como lidas.');
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!notificationsWrap.contains(event.target)) toggleNotifications(false);
+    });
+
+    document.getElementById('mobileMenu').addEventListener('click', () => sidebar.classList.toggle('open'));
+    document.querySelectorAll('.data-source').forEach(source => source.addEventListener('click', () => {
+      document.querySelectorAll('.data-source').forEach(item => item.classList.remove('active'));
+      source.classList.add('active');
+      showToast(`Fonte selecionada: ${source.querySelector('strong').textContent}.`);
+    }));
+
+    document.querySelectorAll('[data-tabs]').forEach(tabset => {
+      tabset.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+        tabset.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const scope = tabset.parentElement;
+        scope.querySelectorAll(':scope > .tab-pane').forEach(p => p.classList.toggle('active', p.id === btn.dataset.tab));
+        setTimeout(drawAllCharts, 100);
+      }));
+    });
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModals() { document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('open')); }
+    document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModals));
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModals(); toggleNotifications(false); } });
+
+    let toastTimer;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    document.getElementById('ticketForm').addEventListener('submit', e => { e.preventDefault(); closeModals(); showToast('Chamado #1051 enviado. Sua solicitação entrou na rota de atendimento.'); });
+    document.getElementById('conversationForm').addEventListener('submit', e => { e.preventDefault(); closeModals(); showToast('Conversa de Norte iniciada e salva como rascunho.'); });
+    document.getElementById('newsForm').addEventListener('submit', e => { e.preventDefault(); closeModals(); showToast('Publicação criada com sucesso.'); });
+    document.getElementById('assessmentForm').addEventListener('submit', e => { e.preventDefault(); closeModals(); showToast('Resposta salva. Próxima questão liberada.'); });
+    document.getElementById('checkinForm').addEventListener('submit', e => { e.preventDefault(); showToast('Check-in enviado. Sua rota foi registrada.'); });
+    document.getElementById('campaignForm').addEventListener('submit', e => { e.preventDefault(); closeModals(); showToast('Campanha criada e publicada na Central de Campanhas.'); });
+    document.getElementById('pointsAdjustmentForm').addEventListener('submit', e => { e.preventDefault(); closeModals(); showToast('Ajuste registrado com justificativa e trilha de auditoria.'); });
+
+    const tickets = [
+      ['#1048','Certificado não foi gerado','Universidade','Alta','Joana Ribeiro','Em atendimento','Hoje, 09:18'],
+      ['#1047','Indicador divergente no painel','Dashboards','Média','Carlos Nunes','Em análise','Hoje, 08:42'],
+      ['#1043','Dúvida sobre objeção de preço','Contorno de objeções','Alta','Mariana Freitas','Aguardando solicitante','Ontem, 16:10'],
+      ['#1039','Acesso bloqueado no OPENS','OPENS','Crítica','Rafael Dias','Resolvido','30/06, 14:25'],
+      ['#1035','Solicitação de nova aula','Universidade','Baixa','Eloise Machado','Aberto','29/06, 11:05']
+    ];
+    const ticketStatusClass = {'Em atendimento':'purple','Em análise':'blue','Aguardando solicitante':'orange','Resolvido':'green','Aberto':'gray'};
+    document.getElementById('ticketsTable').innerHTML = tickets.map(t => `<tr><td><strong>${t[0]}</strong></td><td>${t[1]}</td><td>${t[2]}</td><td><span class="tag ${t[3]==='Crítica'?'red':t[3]==='Alta'?'orange':'gray'}">${t[3]}</span></td><td>${t[4]}</td><td><span class="tag ${ticketStatusClass[t[5]]}">${t[5]}</span></td><td>${t[6]}</td><td><button class="btn btn-ghost btn-sm" onclick="showToast('Detalhes do chamado ${t[0]} abertos.')">Ver</button></td></tr>`).join('');
+
+    const checkinQuestions = [
+      'Sinto que posso contar com meus colegas quando preciso de apoio.',
+      'Tenho contribuído positivamente para os resultados da equipe.',
+      'A comunicação da equipe é clara, respeitosa e suficiente.',
+      'Tenho abertura para conversar com meu gestor sobre dificuldades.',
+      'Tenho clareza sobre minhas prioridades e responsabilidades.',
+      'Consigo organizar minha rotina e cumprir os prazos.',
+      'Tenho me sentido motivado e com energia para trabalhar.',
+      'O ambiente favorece respeito, colaboração e desenvolvimento.',
+      'Sinto que estou aprendendo e evoluindo profissionalmente.',
+      'Tenho os recursos, informações e apoio necessários.'
+    ];
+    document.getElementById('checkinQuestions').innerHTML = checkinQuestions.map((q,i) => `<div class="question"><h4>${i+1}. ${q}</h4><div class="scale">${['Discordo totalmente','Discordo parcialmente','Neutro','Concordo parcialmente','Concordo totalmente'].map((s,j)=>`<label><input type="radio" name="q${i}" value="${j+1}" ${j===3?'checked':''}><span>${s}</span></label>`).join('')}</div></div>`).join('');
+
+    const courses = [
+      {title:'Contorno de Objeções na Prática',meta:'7 aulas • 6h',progress:72,cover:'',tag:'Recomendado'},
+      {title:'Diagnóstico Comercial de Alto Impacto',meta:'5 aulas • 4h',progress:48,cover:'green',tag:'Em andamento'},
+      {title:'Organização Comercial e Rotina',meta:'6 aulas • 3h',progress:86,cover:'orange',tag:'Obrigatório'}
+    ];
+    function courseCard(c) { return `<article class="card course-card card-hover"><div class="course-cover ${c.cover}"><h3>${c.title}</h3></div><div class="course-body"><span class="tag purple">${c.tag}</span><div class="course-meta mt-16"><span>${c.meta}</span><span>${c.progress}%</span></div><div class="progress"><span style="width:${c.progress}%"></span></div><div class="course-actions"><span class="muted small">Continue sua rota</span><button class="btn btn-primary btn-sm" onclick="showToast('Curso aberto no ponto onde você parou.')">Continuar</button></div></div></article>`; }
+    document.getElementById('courseCards').innerHTML = courses.map(courseCard).join('');
+    document.getElementById('allCourseCards').innerHTML = [...courses, {title:'Fundamentos do OPENS',meta:'4 aulas • 2h',progress:100,cover:'green',tag:'Concluído'}, {title:'Follow-up que Converte',meta:'8 aulas • 5h',progress:0,cover:'orange',tag:'Novo'}, {title:'Liderança com Direção',meta:'10 aulas • 8h',progress:20,cover:'',tag:'Trilha de liderança'}].map(courseCard).join('');
+
+    const certificates = [
+      ['Contorno de Objeções na Prática','6h','9,2','BVC-2026-0712'],
+      ['Fundamentos do OPENS','2h','8,8','BVC-2026-0644'],
+      ['Onboarding Comercial','12h','9,5','BVC-2026-0521']
+    ];
+    document.getElementById('certificateCards').innerHTML = certificates.map(c => `<article class="card certificate"><span class="tag green">Disponível</span><h3 class="mt-16">${c[0]}</h3><p>Carga horária: ${c[1]}<br>Nota final: ${c[2]}<br>Código: ${c[3]}</p><div class="flex gap-8 wrap"><button class="btn btn-primary btn-sm" onclick="openCertificate('${c[0]}')">Visualizar</button><button class="btn btn-secondary btn-sm" onclick="showToast('Certificado preparado para impressão em PDF.')">Baixar PDF</button></div></article>`).join('');
+    function openCertificate(course) { document.getElementById('certCourseName').textContent = course; openModal('certificateModal'); }
+
+    const team = [
+      ['Mariana Costa','SDR','8,7','Alta performance','↑ 0,8','Conversão'],
+      ['Lucas Alves','Consultor','7,4','Dentro do esperado','↑ 0,2','Follow-up'],
+      ['Rafael Lima','SDR','5,8','Em atenção','↓ 0,6','Organização'],
+      ['Ana Souza','Closer','8,1','Dentro do esperado','↑ 0,4','Fechamento'],
+      ['João Martins','SDR','4,7','Plano de recuperação','↓ 0,9','Disciplina'],
+      ['Paula Nunes','Consultora','7,9','Dentro do esperado','↑ 0,3','Diagnóstico']
+    ];
+    document.getElementById('teamCards').innerHTML = team.map((p,i)=>`<div class="card"><div class="flex items-center gap-12"><div class="avatar">${p[0].split(' ').map(n=>n[0]).slice(0,2).join('')}</div><div><h3 class="mb-0">${p[0]}</h3><span class="muted small">${p[1]}</span></div></div><div class="divider"></div><div class="flex between"><span class="muted">Nota atual</span><strong style="font-size:24px">${p[2]}</strong></div><div class="flex between mt-16"><span class="tag ${p[3]==='Alta performance'?'green':p[3]==='Plano de recuperação'?'red':p[3]==='Em atenção'?'orange':'blue'}">${p[3]}</span><span class="trend ${p[4].includes('↑')?'up':'down'}">${p[4]}</span></div><p class="small mt-16"><span class="muted">Principal foco:</span> ${p[5]}</p><button class="btn btn-ghost btn-sm" onclick="showToast('Perfil de ${p[0]} aberto.')">Ver jornada</button></div>`).join('');
+
+    function openParticipant(name) {
+      document.getElementById('participantName').textContent = name;
+      openModal('participantModal');
+    }
+
+    function exportGamificationExcel() {
+      const rows = [
+        ['Posição','Participante','Meta','Pontos'],
+        ['1','Isabella Nogueira','108%','1780'],
+        ['2','Guilherme Lanza','92%','1480'],
+        ['3','Ana Luiza','85%','1320'],
+        ['4','Mauricio Brzezinski','78%','1160']
+      ];
+      const csv = rows.map(r => r.join(';')).join('\n');
+      const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ranking-rota-do-fechamento.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Ranking exportado em formato compatível com Excel.');
+    }
+
+    function setupCanvas(canvas) {
+      if (!canvas || canvas.offsetParent === null) return null;
+      const ratio = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth;
+      const height = Number(canvas.getAttribute('height')) || 240;
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+      canvas.style.height = `${height}px`;
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio,0,0,ratio,0,0);
+      return {ctx,width,height};
+    }
+
+    function formatChartValue(v) {
+      return Number.isInteger(v) ? String(v) : String(v).replace('.', ',');
+    }
+
+    function drawBar(id, labels, values, max=null) {
+      const c = setupCanvas(document.getElementById(id)); if (!c) return;
+      const {ctx,width,height}=c; ctx.clearRect(0,0,width,height);
+      const pad={l:36,r:14,t:18,b:42}; const chartH=height-pad.t-pad.b; const chartW=width-pad.l-pad.r; const m=max||Math.max(...values)*1.15;
+      ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.fillStyle='#7f8da1'; ctx.font='11px Inter, sans-serif';
+      for(let i=0;i<5;i++){const y=pad.t+chartH*(i/4);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke(); const val=Math.round(m*(1-i/4));ctx.fillText(val,3,y+4)}
+      const gap=12; const bw=(chartW-gap*(values.length-1))/values.length;
+      values.forEach((v,i)=>{const bh=chartH*(v/m); const x=pad.l+i*(bw+gap); const y=pad.t+chartH-bh; const grad=ctx.createLinearGradient(0,y,0,y+bh);grad.addColorStop(0,'#39bdf8');grad.addColorStop(1,'#2563eb');ctx.fillStyle=grad;roundRect(ctx,x,y,bw,bh,7);ctx.fill();ctx.fillStyle='#F8FAFC';ctx.textAlign='center';ctx.font='12px Inter, sans-serif';ctx.fillText(formatChartValue(v),x+bw/2,Math.max(pad.t+12,y-8));ctx.fillStyle='#95a3b7';ctx.font='11px Inter, sans-serif';ctx.fillText(labels[i],x+bw/2,height-15);ctx.textAlign='left';});
+    }
+
+    function drawLine(id, labels, values) {
+      const c=setupCanvas(document.getElementById(id)); if(!c)return; const {ctx,width,height}=c;ctx.clearRect(0,0,width,height);
+      const pad={l:32,r:18,t:20,b:38};const cw=width-pad.l-pad.r,ch=height-pad.t-pad.b;const max=Math.max(...values)*1.15,min=Math.min(...values)*.85;
+      ctx.strokeStyle='rgba(255,255,255,.07)';ctx.fillStyle='#7f8da1';ctx.font='11px Inter, sans-serif';
+      for(let i=0;i<5;i++){const y=pad.t+ch*i/4;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(width-pad.r,y);ctx.stroke();}
+      const pts=values.map((v,i)=>({x:pad.l+cw*(i/(values.length-1)),y:pad.t+ch*(1-(v-min)/(max-min))}));
+      const grad=ctx.createLinearGradient(0,pad.t,0,height-pad.b);grad.addColorStop(0,'rgba(56,189,248,.25)');grad.addColorStop(1,'rgba(56,189,248,0)');ctx.beginPath();ctx.moveTo(pts[0].x,height-pad.b);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(pts[pts.length-1].x,height-pad.b);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+      ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#39bdf8';ctx.lineWidth=3;ctx.stroke();
+      pts.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle='#0d1722';ctx.fill();ctx.strokeStyle='#39bdf8';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#F8FAFC';ctx.font='12px Inter, sans-serif';ctx.textAlign='center';ctx.fillText(formatChartValue(values[i]),p.x,p.y-10);ctx.fillStyle='#95a3b7';ctx.font='11px Inter, sans-serif';ctx.fillText(labels[i],p.x,height-14);});ctx.textAlign='left';
+    }
+
+    function drawRadar(id, labels, values) {
+      const c=setupCanvas(document.getElementById(id));if(!c)return;const{ctx,width,height}=c;ctx.clearRect(0,0,width,height);const cx=width/2,cy=height/2+8,r=Math.min(width,height)*.34,n=labels.length;
+      for(let level=1;level<=5;level++){ctx.beginPath();for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;const rr=r*level/5;const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.strokeStyle='rgba(255,255,255,.09)';ctx.stroke();}
+      labels.forEach((label,i)=>{const a=-Math.PI/2+i*2*Math.PI/n;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.strokeStyle='rgba(255,255,255,.08)';ctx.stroke();ctx.fillStyle='#8fa0b4';ctx.font='10px Inter';ctx.textAlign=Math.cos(a)>.25?'left':Math.cos(a)<-.25?'right':'center';ctx.fillText(label,cx+Math.cos(a)*(r+16),cy+Math.sin(a)*(r+16));});
+      const points = values.map((v,i)=>{const a=-Math.PI/2+i*2*Math.PI/n;const rr=r*v/5;return {x:cx+Math.cos(a)*rr,y:cy+Math.sin(a)*rr,v};});
+      ctx.beginPath();points.forEach((p,i)=>{i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});ctx.closePath();ctx.fillStyle='rgba(56,189,248,.2)';ctx.fill();ctx.strokeStyle='#39bdf8';ctx.lineWidth=2;ctx.stroke();
+      points.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,Math.PI*2);ctx.fillStyle='#39bdf8';ctx.fill();ctx.fillStyle='#F8FAFC';ctx.font='11px Inter';ctx.textAlign='center';ctx.fillText(formatChartValue(p.v),p.x,p.y-8);});
+      ctx.textAlign='left';
+    }
+
+    function roundRect(ctx,x,y,w,h,r){const rr=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+rr,y);ctx.arcTo(x+w,y,x+w,y+h,rr);ctx.arcTo(x+w,y+h,x,y+h,rr);ctx.arcTo(x,y+h,x,y,rr);ctx.arcTo(x,y,x+w,y,rr);ctx.closePath();}
+
+    function renderFunnel(){const el=document.getElementById('funnel');if(!el)return;const data=[['Ligações',2480,100],['Aberturas',1080,84],['Agendadas',486,68],['Realizadas',342,54],['Contratos',126,38]];el.innerHTML=data.map((d,i)=>`<div style="margin:10px auto;width:${d[2]}%;min-width:180px"><div class="flex between small"><span>${d[0]}</span><strong>${d[1]}</strong></div><div style="height:34px;margin-top:5px;border-radius:9px;background:linear-gradient(90deg,rgba(37,99,235,${.75-i*.09}),rgba(56,189,248,${.45-i*.05}));border:1px solid rgba(56,189,248,.16)"></div></div>`).join('');}
+    function renderRanking(){const el=document.getElementById('rankingBars');if(!el)return;const data=[['Mariana',18],['Lucas',16],['Rafael',12],['Ana',10],['João',8]];const max=18;el.innerHTML=data.map((d,i)=>`<div style="margin-bottom:15px"><div class="flex between small"><span>${i+1}. ${d[0]}</span><strong>${d[1]}</strong></div><div class="progress" style="height:10px;margin-top:7px"><span style="width:${d[1]/max*100}%"></span></div></div>`).join('');}
+
+    function drawAllCharts(){
+      drawBar('barChart',['S1','S2','S3','S4'],[24,29,34,39],45);
+      drawLine('lineChart',['Fev','Mar','Abr','Mai','Jun','Jul'],[72,81,78,94,110,126]);
+      drawLine('conversationLine',['Fev','Mar','Abr','Mai','Jun','Jul'],[6.9,7.1,7.0,7.5,7.4,7.8]);
+      drawLine('journeyLine',['Jan','Fev','Mar','Abr','Mai','Jun'],[6.4,6.8,7.2,7.5,7.9,8.3]);
+      drawRadar('radarChart',['Equipe','Colab.','Comun.','Lider.','Direção','Org.','Motiv.','Ambiente','Aprend.','Apoio'],[4.4,4.2,3.8,4.3,4.1,3.7,3.9,4.5,4.2,4.0]);
+      drawLine('learningLine',['Fev','Mar','Abr','Mai','Jun','Jul'],[3,5,4,8,7,11]);
+      drawLine('gameJourneyLine',['Fev','Mar','Abr','Mai','Jun','Jul'],[780,920,1180,1280,1640,1480]);
+      drawBar('gameMedianBar',['Guilherme','Mediana equipe'],[1480,1210],1700);
+      drawBar('campaignEngagementBar',['Horizonte','Norte','SDR','Closer'],[92,78,84,88],100);
+      drawLine('campaignDailyLine',['1 Jul','5 Jul','10 Jul','15 Jul','20 Jul','25 Jul'],[160,310,540,720,930,1126]);
+      drawBar('reportBar',['Mariana','Lucas','Rafael','Ana'],[18,16,12,10],20);
+      drawLine('reportLine',['Equipe H','Equipe N','Geral'],[106,80,93]);
+      renderFunnel(); renderRanking();
+    }
+
+    function addReportBlock(){const grid=document.getElementById('reportGrid');const block=document.createElement('div');block.className='builder-block';block.innerHTML='<div class="block-actions"><button class="mini-action" onclick="this.closest(\'.builder-block\').remove()">×</button></div><div class="empty-state"><div class="empty-icon">＋</div><h3>Novo bloco</h3><p>Selecione uma métrica e uma visualização.</p></div>';grid.appendChild(block);showToast('Novo bloco adicionado ao relatório.');}
+    function updateReportPreview(){drawBar('reportBar',['Mariana','Lucas','Rafael','Ana'],[19,15,13,11],21);drawLine('reportLine',['Equipe H','Equipe N','Geral'],[108,84,96]);showToast('Análise atualizada com os filtros selecionados.');}
+
+    function exportTableAsExcel(tableId, filename){const table=document.getElementById(tableId);const html=`<html><head><meta charset="UTF-8"></head><body>${table.outerHTML}</body></html>`;const blob=new Blob([html],{type:'application/vnd.ms-excel'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+    function exportReportExcel(){exportTableAsExcel('reportTable','relatorio-bussola.xls');showToast('Relatório exportado em formato compatível com Excel.');}
+    function exportDashboardExcel(){const rows=[['Indicador','Valor'],['Ligações',2480],['Reuniões realizadas',342],['Contratos assinados',126],['Conversão geral','5,1%']];const csv=rows.map(r=>r.join(';')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='dashboard-bussola.csv';a.click();URL.revokeObjectURL(url);showToast('Indicadores exportados para Excel/CSV.');}
+
+    function attachClickable(el, target, label='') {
+      if (!el) return;
+      el.classList.add('is-clickable');
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      if (label) el.setAttribute('aria-label', label);
+      const handler = (e) => {
+        if (e.target.closest('button, a, input, select, textarea, canvas')) return;
+        navigate(target);
+      };
+      el.addEventListener('click', handler);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigate(target);
+        }
+      });
+    }
+
+    function makePrototypeCardsClickable() {
+      document.querySelectorAll('#view-inicio .metric').forEach((el, i) => attachClickable(el, ['dashboards','dashboards','dashboards','conversa','universidade'][i] || 'dashboards'));
+      attachClickable(document.querySelector('#view-inicio .podium-card'), 'gamificacao', 'Abrir Gamificação e ranking da operação');
+      document.querySelectorAll('#view-inicio .news-stack .news-card').forEach((el, i) => attachClickable(el, i === 2 ? 'universidade' : 'news'));
+      document.querySelectorAll('#view-inicio > .grid.grid-3 .news-card').forEach((el, i) => attachClickable(el, i === 2 ? 'universidade' : 'news'));
+
+      document.querySelectorAll('#view-dashboards .metric').forEach(el => attachClickable(el, 'relatorios'));
+      document.querySelectorAll('#view-dashboards .chart-card').forEach(el => attachClickable(el, 'relatorios'));
+
+      document.querySelectorAll('#view-news article.card').forEach(el => attachClickable(el, 'news'));
+
+      document.querySelectorAll('#view-chamados .metric, #view-chamados .timeline-item, #view-chamados .table-wrap tbody tr').forEach(el => attachClickable(el, 'chamados'));
+      document.querySelectorAll('#view-chamados .card').forEach((el) => { if (!el.closest('.modal, .section-head, .filters')) attachClickable(el, 'chamados'); });
+
+      document.querySelectorAll('#view-conversa .metric, #view-conversa .card, #view-conversa .timeline-item, #view-conversa .table-wrap tbody tr').forEach(el => {
+        if (!el.closest('.modal, .section-head')) attachClickable(el, 'conversa');
+      });
+
+      document.querySelectorAll('#view-universidade .metric, #view-universidade .card, #view-universidade .timeline-item, #view-universidade .table-wrap tbody tr').forEach(el => {
+        if (!el.closest('.modal, .section-head')) attachClickable(el, 'universidade');
+      });
+
+      document.querySelectorAll('#view-gamificacao .metric, #view-gamificacao .mission-card, #view-gamificacao .achievement-card, #view-gamificacao .point-row').forEach(el => {
+        if (!el.closest('.modal, .section-head')) attachClickable(el, 'gamificacao');
+      });
+
+      document.querySelectorAll('#view-relatorios .metric, #view-relatorios .card, #view-relatorios .builder-block, #view-relatorios .table-wrap tbody tr').forEach(el => {
+        if (!el.closest('.modal, .section-head')) attachClickable(el, 'relatorios');
+      });
+
+      document.querySelectorAll('#view-administracao .card, #view-administracao .table-wrap tbody tr').forEach(el => {
+        if (!el.closest('.modal, .section-head')) attachClickable(el, 'administracao');
+      });
+    }
+
+    window.addEventListener('resize',()=>{clearTimeout(window.__chartTimer);window.__chartTimer=setTimeout(drawAllCharts,120)});
+    makePrototypeCardsClickable();
+    updateNotificationCounter();
+    const hash=location.hash.replace('#','');if(viewNames[hash])navigate(hash);else drawAllCharts();
+  </script>
+</body>
+</html>

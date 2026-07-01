@@ -2,46 +2,40 @@
 
 import {
   BarChart3,
-  Bell,
-  ChevronLeft,
-  ChevronRight,
+  FileBarChart,
   GraduationCap,
   HelpCircle,
   Home,
   LayoutDashboard,
-  Menu,
   MessageSquare,
   Newspaper,
-  FileBarChart,
   Settings,
   Trophy,
   User,
-  X,
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/platform/brand-logo";
-import { CommandMenuProvider, useSidebarState } from "@/components/platform/command-menu";
+import { CommandMenuProvider } from "@/components/platform/command-menu";
 import { TopbarActions } from "@/components/platform/topbar-actions";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
-import { Button } from "@/components/ui/button";
-import { filterModules } from "@/lib/navigation";
+import { filterModules, detectModuleFromPath } from "@/lib/navigation";
 import { platformRoutes } from "@/lib/routes";
 import type { OrganizationSummary } from "@/modules/core/auth/session";
 import { cn } from "@/lib/utils";
 
 const MODULE_ICONS: Record<string, React.ReactNode> = {
-  home: <Home className="h-5 w-5" />,
-  dashboards: <LayoutDashboard className="h-5 w-5" />,
-  news: <Newspaper className="h-5 w-5" />,
-  support: <MessageSquare className="h-5 w-5" />,
-  "north-conversation": <BarChart3 className="h-5 w-5" />,
-  learning: <GraduationCap className="h-5 w-5" />,
-  gamification: <Trophy className="h-5 w-5" />,
-  reports: <FileBarChart className="h-5 w-5" />,
-  admin: <Settings className="h-5 w-5" />,
+  home: <Home className="h-4 w-4" strokeWidth={2} />,
+  dashboards: <LayoutDashboard className="h-4 w-4" strokeWidth={2} />,
+  news: <Newspaper className="h-4 w-4" strokeWidth={2} />,
+  support: <MessageSquare className="h-4 w-4" strokeWidth={2} />,
+  "north-conversation": <BarChart3 className="h-4 w-4" strokeWidth={2} />,
+  learning: <GraduationCap className="h-4 w-4" strokeWidth={2} />,
+  gamification: <Trophy className="h-4 w-4" strokeWidth={2} />,
+  reports: <FileBarChart className="h-4 w-4" strokeWidth={2} />,
+  admin: <Settings className="h-4 w-4" strokeWidth={2} />,
 };
 
 export type PlatformLayoutSession = {
@@ -62,9 +56,15 @@ export function PlatformLayoutClient({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { collapsed, toggleCollapsed } = useSidebarState();
   const modules = filterModules(session.permissions);
   const displayName = session.fullName ?? session.email;
+  const initials = displayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  const activeModule = detectModuleFromPath(pathname);
+  const crumbTitle = activeModule?.label ?? "Início";
 
   useEffect(() => {
     if (mobileOpen) document.body.style.overflow = "hidden";
@@ -74,162 +74,120 @@ export function PlatformLayoutClient({
     };
   }, [mobileOpen]);
 
-  const sidebarContent = (
-    <>
-      <div className={cn("border-b border-[var(--border)] px-3 py-4", collapsed && "flex justify-center")}>
-        <Link href={platformRoutes.home}>
-          <BrandLogo collapsed={collapsed} />
-        </Link>
-      </div>
-
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2" aria-label="Menu principal">
-        {modules.map((mod) => {
-          const isActive =
-            mod.id === "home"
-              ? pathname === mod.href
-              : pathname === mod.href || pathname.startsWith(`${mod.href}/`);
-          return (
-            <Link
-              key={mod.id}
-              href={mod.href}
-              title={collapsed ? mod.label : undefined}
-              onClick={() => setMobileOpen(false)}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-[var(--primary)]/10 text-[var(--primary)] ring-1 ring-[var(--primary)]/25"
-                  : "text-[var(--foreground-secondary)] hover:bg-[var(--panel-secondary)] hover:text-[var(--foreground)]",
-                collapsed && "justify-center px-2",
-              )}
-            >
-              <span className="shrink-0">{MODULE_ICONS[mod.id] ?? <Home className="h-5 w-5" />}</span>
-              {!collapsed && <span className="truncate">{mod.label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="mt-auto border-t border-[var(--border)] p-2">
-        {!collapsed && (
-          <div className="mb-2 space-y-0.5">
-            <Link
-              href={platformRoutes.notifications}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--foreground-secondary)] hover:bg-[var(--card-elevated)]"
-            >
-              <Bell className="h-4 w-4" /> Notificações
-            </Link>
-            <Link
-              href={platformRoutes.support.knowledge}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--foreground-secondary)] hover:bg-[var(--card-elevated)]"
-            >
-              <HelpCircle className="h-4 w-4" /> Ajuda
-            </Link>
-          </div>
-        )}
-        <details className="relative">
-          <summary
-            className={cn(
-              "flex cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2 hover:bg-[var(--card-elevated)]",
-              collapsed && "justify-center",
-            )}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-blue-600 text-sm font-medium text-white">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{displayName}</p>
-                <p className="truncate text-xs text-[var(--foreground-muted)]">{session.tenantName}</p>
-              </div>
-            )}
-          </summary>
-          <div className="absolute bottom-full left-0 z-20 mb-1 w-48 rounded-lg border border-[var(--border)] bg-[var(--card)] py-1 shadow-xl">
-            <Link
-              href={platformRoutes.profile}
-              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--card-elevated)]"
-            >
-              <User className="h-4 w-4" /> Perfil
-            </Link>
-            <SignOutButton />
-          </div>
-        </details>
-        {!collapsed && (
-          <p className="mt-3 px-3 text-[10px] text-[var(--foreground-disabled)]">
-            Desenvolvido por VendasComCiência
-          </p>
-        )}
-      </div>
-    </>
-  );
+  const closeMobile = () => setMobileOpen(false);
 
   return (
     <CommandMenuProvider permissions={session.permissions}>
-      <div className="flex min-h-screen flex-col bg-[var(--background)]">
-      <a
-        href="#conteudo-principal"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[var(--primary)] focus:px-4 focus:py-2 focus:text-[#041018]"
-      >
-        Ir para o conteúdo
-      </a>
-
-      <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background-secondary)]/95 backdrop-blur">
-        <div className="flex h-14 items-center gap-2 px-3 sm:px-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
-            onClick={() => setMobileOpen((v) => !v)}
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden lg:inline-flex"
-            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-            onClick={toggleCollapsed}
-          >
-            {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-          </Button>
-
-          <div className="ml-auto flex items-center gap-2">
-            <TopbarActions />
-            <OrganizationSwitcher organizations={session.organizations} activeTenantId={session.tenantId} />
-          </div>
-        </div>
-      </header>
-
-      <div className="flex flex-1">
-        <aside
-          className={cn(
-            "hidden shrink-0 flex-col border-r border-[var(--border)] bg-[var(--background-secondary)] lg:flex",
-            collapsed ? "w-16" : "w-64",
-          )}
+      <div className="dark-executive-app">
+        <a
+          href="#conteudo-principal"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[var(--blue)] focus:px-4 focus:py-2 focus:text-[#041018]"
         >
-          {sidebarContent}
-        </aside>
+          Ir para o conteúdo
+        </a>
 
-        {mobileOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-              aria-hidden
+        <div className="app">
+          <aside className={cn("sidebar", mobileOpen && "open")} id="sidebar" aria-label="Menu lateral">
+            <BrandLogo />
+
+            <div>
+              <div className="menu-label">Navegação</div>
+              <nav className="nav" aria-label="Menu principal">
+                {modules.map((mod) => {
+                  const isActive =
+                    mod.id === "home"
+                      ? pathname === mod.href
+                      : pathname === mod.href || pathname.startsWith(`${mod.href}/`);
+                  return (
+                    <Link
+                      key={mod.id}
+                      href={mod.href}
+                      className={cn("nav-btn", isActive && "active")}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={closeMobile}
+                    >
+                      <span className="icon">{MODULE_ICONS[mod.id] ?? <Home className="h-4 w-4" />}</span>
+                      <span>{mod.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="sidebar-bottom">
+              <Link href={platformRoutes.support.knowledge} className="nav-btn" onClick={closeMobile}>
+                <span className="icon">
+                  <HelpCircle className="h-4 w-4" strokeWidth={2} />
+                </span>
+                <span>Ajuda</span>
+              </Link>
+
+              <details className="relative">
+                <summary className="profile-mini cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                  <div className="avatar" aria-hidden>
+                    {initials}
+                  </div>
+                  <div>
+                    <strong>{displayName}</strong>
+                    <small>{session.tenantName}</small>
+                  </div>
+                  <span className="muted" aria-hidden>
+                    ⋮
+                  </span>
+                </summary>
+                <div className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-[14px] border border-[var(--border-soft)] bg-[var(--panel)] p-2 shadow-[var(--shadow)]">
+                  <Link href={platformRoutes.profile} className="nav-btn">
+                    <span className="icon">
+                      <User className="h-4 w-4" strokeWidth={2} />
+                    </span>
+                    <span>Perfil</span>
+                  </Link>
+                  <SignOutButton className="nav-btn w-full text-[var(--red)]" />
+                </div>
+              </details>
+
+              <p className="muted small" style={{ padding: "0 12px" }}>
+                Desenvolvido por VendasComCiência
+              </p>
+            </div>
+          </aside>
+
+          {mobileOpen && (
+            <button
+              type="button"
+              className="fixed inset-0 z-[55] bg-black/60 lg:hidden"
+              aria-label="Fechar menu"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-[var(--border)] bg-[var(--background-secondary)] pt-14 shadow-xl lg:hidden">
-              {sidebarContent}
-            </aside>
-          </>
-        )}
+          )}
 
-        <main id="conteudo-principal" className="flex-1 overflow-auto px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
-          {children}
-        </main>
+          <main className="main">
+            <header className="topbar">
+              <div className="topbar-left">
+                <button
+                  type="button"
+                  className="mobile-menu"
+                  aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+                  onClick={() => setMobileOpen((v) => !v)}
+                >
+                  ☰
+                </button>
+                <div className="crumb">
+                  Bússola / <strong>{crumbTitle}</strong>
+                </div>
+              </div>
+              <div className="topbar-actions">
+                <TopbarActions />
+                <OrganizationSwitcher organizations={session.organizations} activeTenantId={session.tenantId} />
+              </div>
+            </header>
+
+            <div className="content" id="conteudo-principal">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
     </CommandMenuProvider>
   );
 }

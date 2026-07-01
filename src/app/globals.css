@@ -1,35 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  --background: #070b10;
-  --background-secondary: #09111b;
+  --background: #070a0f;
+  --background-secondary: #0b1018;
   --panel: #101722;
-  --panel-secondary: #111a27;
-  --panel-tertiary: #142031;
+  --panel-secondary: #151e2b;
+  --panel-tertiary: #1a2635;
   --card: #101722;
-  --card-elevated: #111a27;
-  --card-highlight: #142031;
+  --card-elevated: #151e2b;
+  --card-highlight: #1a2635;
   --foreground: #f8fafc;
   --foreground-secondary: #cbd5e1;
-  --foreground-muted: #91a2b7;
-  --foreground-disabled: #6f8299;
-  --muted: #91a2b7;
-  --muted-secondary: #6f8299;
-  --border: rgba(88, 112, 140, 0.28);
-  --border-soft: rgba(255, 255, 255, 0.07);
-  --border-active: rgba(53, 182, 244, 0.45);
-  --primary: #35b6f4;
-  --primary-strong: #2388f5;
-  --primary-dark: #2388f5;
+  --foreground-muted: #98a7ba;
+  --foreground-disabled: #6f7e91;
+  --muted: #98a7ba;
+  --muted-secondary: #6f7e91;
+  --border: #263548;
+  --border-soft: rgba(255, 255, 255, 0.075);
+  --border-active: rgba(56, 189, 248, 0.45);
+  --primary: #39bdf8;
+  --primary-strong: #2563eb;
+  --primary-dark: #2563eb;
   --accent-orange: #f59e0b;
   --warning: #f59e0b;
-  --accent-green: #20c978;
-  --success: #20c978;
-  --accent-red: #f25f6b;
-  --danger: #f25f6b;
+  --accent-green: #22c55e;
+  --success: #22c55e;
+  --accent-red: #ef4444;
+  --danger: #ef4444;
   --accent-purple: #8b5cf6;
   --purple: #8b5cf6;
-  --ring: #35b6f4;
+  --ring: #39bdf8;
+  --radius: 18px;
+  --sidebar: 272px;
+  --shadow: 0 18px 55px rgba(0, 0, 0, 0.32);
 }
 
 @theme inline {
@@ -38,14 +41,14 @@
   --color-card: var(--card);
   --color-border: var(--border);
   --color-primary: var(--primary);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 @media (prefers-reduced-motion: reduce) {

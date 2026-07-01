@@ -12,17 +12,19 @@ export function TopbarActions() {
   const unreadCount = DEMO_NOTIFICATIONS.filter((n) => !n.read).length;
 
   return (
-    <div className="flex items-center gap-2">
+    <>
       <TopbarActionButton label="Pesquisar" onClick={open}>
         <Search className="h-[18px] w-[18px]" strokeWidth={1.75} />
       </TopbarActionButton>
-      <TopbarActionButton
-        label="Abrir notificações"
-        href={platformRoutes.notifications}
-        badge={unreadCount}
-      >
-        <NotificationCompassIcon />
-      </TopbarActionButton>
-    </div>
+      <div className="notifications-wrap">
+        <TopbarActionButton
+          label="Abrir notificações"
+          href={platformRoutes.notifications}
+          badge={unreadCount}
+        >
+          <NotificationCompassIcon />
+        </TopbarActionButton>
+      </div>
+    </>
   );
 }

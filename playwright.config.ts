@@ -27,6 +27,7 @@ const baseURL =
   "http://localhost:3000";
 
 const isRemoteBase = !baseURL.includes("localhost") && !baseURL.includes("127.0.0.1");
+const skipWebServer = isRemoteBase || process.env.PLAYWRIGHT_SKIP_WEBSERVER === "1";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -42,7 +43,7 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 720 } } }],
-  ...(isRemoteBase
+  ...(skipWebServer
     ? {}
     : {
         webServer: {

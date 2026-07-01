@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/platform/page-header";
 import { MetricCard } from "@/components/platform/metric-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select } from "@/components/ui/input";
+import { FilterBar } from "@/components/platform/filter-bar";
+import { FilterSelect } from "@/components/platform/filter-select";
 import { DEMO_REPORTS } from "@/modules/demo-data";
 import { platformRoutes } from "@/lib/routes";
 import { Star } from "lucide-react";
@@ -36,11 +37,13 @@ export default function RelatoriosPage() {
         <MetricCard label="Modelos" value={3} variant="purple" />
       </section>
 
-      <Select value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" aria-label="Tipo">
-        <option value="todos">Todos</option>
-        <option value="modelo">Modelos</option>
-        <option value="personalizado">Personalizados</option>
-      </Select>
+      <FilterBar className="max-w-xl">
+        <FilterSelect value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Tipo">
+          <option value="todos">Todos</option>
+          <option value="modelo">Modelos</option>
+          <option value="personalizado">Personalizados</option>
+        </FilterSelect>
+      </FilterBar>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {reports.map((r) => (

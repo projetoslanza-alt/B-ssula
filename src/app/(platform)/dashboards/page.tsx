@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { DemoBanner } from "@/components/platform/demo-banner";
 import { PageHeader } from "@/components/platform/page-header";
 import { MetricCard } from "@/components/platform/metric-card";
-import { Select } from "@/components/ui/input";
+import { FilterSelect } from "@/components/platform/filter-select";
 import {
   BarChartWidget,
   FunnelChartWidget,
@@ -38,19 +38,19 @@ export default function DashboardsPage() {
         title="Dashboards"
         description="Indicadores comerciais e operacionais da sua operação. Dados importados de sistemas integrados e planilhas."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Select value={period} onChange={(e) => setPeriod(e.target.value)} aria-label="Período">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <FilterSelect value={period} onChange={(e) => setPeriod(e.target.value)} aria-label="Período">
               <option value="mes_atual">Mês atual</option>
               <option value="ultimos_7">Últimos 7 dias</option>
               <option value="ultimos_30">Últimos 30 dias</option>
               <option value="trimestre">Trimestre</option>
-            </Select>
-            <Select value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Equipe">
+            </FilterSelect>
+            <FilterSelect value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Equipe">
               <option value="todas">Todas as equipes</option>
               {DEMO_TEAMS.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
-            </Select>
+            </FilterSelect>
           </div>
         }
       />

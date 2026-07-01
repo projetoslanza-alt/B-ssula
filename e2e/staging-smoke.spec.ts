@@ -62,7 +62,7 @@ test.describe("Smoke pós-deploy staging", () => {
     await adminLogin(page);
     await page.goto("/inicio");
     await expect(page.getByText(/todo time precisa de um/i)).toBeVisible();
-    await expect(page.getByText(/pódio de vendedores/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pódio de vendedores", exact: true })).toBeVisible();
   });
 
   test("administração: cards e auditoria", async ({ page }) => {

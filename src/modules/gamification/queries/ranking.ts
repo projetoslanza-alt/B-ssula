@@ -10,21 +10,32 @@ export type RankingEntry = {
 type SnapshotRow = { fullName: string; points: number; userId?: string };
 
 export async function getCampaignRanking(
-  campaignSlug: string,
+  campaignSlug = "rota-do-fechamento",
   limit = 10,
 ): Promise<{ campaignName: string; entries: RankingEntry[] } | null> {
   const supabase = await createClient();
 
-  const { data: campaign } = await supabase
+  let { data: campaign } = await supabase
     .from("gamification_campaigns")
     .select("id, name, settings")
     .eq("slug", campaignSlug)
     .eq("status", "published")
     .maybeSingle();
 
+  if (!campaign) {
+    const { data: fallback } = await supabase
+      .from("gamification_campaigns")
+      .select("id, name, settings")
+      .eq("status", "published")
+      .order("start_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    campaign = fallback;
+  }
+
   if (!campaign) return null;
 
-  const { data: snapshot } = await supabase
+  const { data: snapshot, error: snapshotError } = await supabase
     .from("gamification_rank_snapshots")
     .select("rankings")
     .eq("campaign_id", campaign.id)
@@ -32,17 +43,19 @@ export async function getCampaignRanking(
     .limit(1)
     .maybeSingle();
 
-  if (snapshot?.rankings && Array.isArray(snapshot.rankings)) {
+  if (!snapshotError && snapshot?.rankings && Array.isArray(snapshot.rankings)) {
     const rows = snapshot.rankings as SnapshotRow[];
-    return {
-      campaignName: campaign.name,
-      entries: rows.slice(0, limit).map((r, i) => ({
-        userId: r.userId ?? `snapshot-${i}`,
-        fullName: r.fullName,
-        points: r.points,
-        position: i + 1,
-      })),
-    };
+    if (rows.length > 0) {
+      return {
+        campaignName: campaign.name,
+        entries: rows.slice(0, limit).map((r, i) => ({
+          userId: r.userId ?? `snapshot-${i}`,
+          fullName: r.fullName,
+          points: r.points,
+          position: i + 1,
+        })),
+      };
+    }
   }
 
   const { data: ledger } = await supabase
@@ -67,6 +80,8 @@ export async function getCampaignRanking(
       points: v.points,
       position: i + 1,
     }));
+
+  if (sorted.length === 0) return { campaignName: campaign.name, entries: [] };
 
   return { campaignName: campaign.name, entries: sorted };
 }

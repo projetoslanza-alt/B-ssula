@@ -8,7 +8,9 @@ import { MetricCard } from "@/components/platform/metric-card";
 import { DataTable, DataTableCell, DataTableRow } from "@/components/platform/data-table";
 import { StatusBadge } from "@/components/platform/status-badge";
 import { Button } from "@/components/ui/button";
-import { Input, Select } from "@/components/ui/input";
+import { FilterBar } from "@/components/platform/filter-bar";
+import { FilterSelect } from "@/components/platform/filter-select";
+import { Input } from "@/components/ui/input";
 import { DEMO_TICKETS } from "@/modules/demo-data";
 import { platformRoutes } from "@/lib/routes";
 import { EmptyState } from "@/components/feedback/states";
@@ -91,34 +93,34 @@ export function SupportHub() {
       </section>
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4">
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
+        <FilterBar className="mb-4 border-0 bg-transparent p-0">
+          <div className="relative min-w-[200px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
             <Input
               placeholder="Pesquisar protocolo, título ou solicitante"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="h-[42px] pl-9"
               aria-label="Pesquisar chamados"
             />
           </div>
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Status" className="lg:max-w-[180px]">
+          <FilterSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Status">
             <option value="todos">Todos os status</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
               <option key={k} value={k}>
                 {v.label}
               </option>
             ))}
-          </Select>
-          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Categorias" className="lg:max-w-[200px]">
+          </FilterSelect>
+          <FilterSelect value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} aria-label="Categorias">
             <option value="todos">Todas as categorias</option>
             {categories.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
             ))}
-          </Select>
-        </div>
+          </FilterSelect>
+        </FilterBar>
 
         {filtered.length === 0 ? (
           <EmptyState

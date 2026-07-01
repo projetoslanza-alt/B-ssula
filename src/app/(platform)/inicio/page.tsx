@@ -87,7 +87,7 @@ export default async function InicioPage() {
           </Button>
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+        <div className="grid gap-[18px] lg:grid-cols-[1.25fr_0.95fr]">
           <RankingPodium entries={ranking?.entries ?? []} />
           <div className="grid gap-3">
             {sidebarNews.map((item) => (

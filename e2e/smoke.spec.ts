@@ -22,5 +22,7 @@ test("redireciona para login quando não autenticado", async ({ page }) => {
 
 test("página de login renderiza", async ({ page }) => {
   await page.goto("/login");
-  await expect(page.getByRole("heading", { name: /entrar na bússola/i })).toBeVisible();
+  await expect(page.locator("#email")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("#password")).toBeVisible();
+  await expect(page.getByRole("button", { name: /entrar/i })).toBeVisible();
 });

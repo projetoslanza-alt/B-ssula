@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/platform/page-header";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CHECKIN_QUESTIONS, classifyCheckIn } from "@/modules/demo-data";
+import { CHECKIN_QUESTIONS, classifyCheckIn } from "@/modules/north-conversation/domain/check-in";
+import { submitRouteCheckInAction } from "@/modules/north-conversation/actions/check-in-actions";
 import { platformRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -22,17 +23,35 @@ export function CheckInForm() {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [feeling, setFeeling] = useState("");
+  const [wantsConversation, setWantsConversation] = useState("nao");
+  const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   const allAnswered = CHECKIN_QUESTIONS.every((q) => answers[q.id]);
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const values = CHECKIN_QUESTIONS.map((q) => answers[q.id]);
-    const avg = values.reduce((a, b) => a + b, 0) / values.length;
-    setResult(classifyCheckIn(avg));
-    setSubmitted(true);
+    setError(null);
+    const fd = new FormData();
+    for (const q of CHECKIN_QUESTIONS) {
+      fd.set(`answer_${q.id}`, String(answers[q.id]));
+    }
+    fd.set("feeling", feeling);
+    fd.set("wantsConversation", wantsConversation === "sim" ? "true" : "false");
+    fd.set("comment", comment);
+
+    startTransition(async () => {
+      const res = await submitRouteCheckInAction(fd);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setResult(res.classification ?? classifyCheckIn(res.average ?? 0));
+      setSubmitted(true);
+    });
   }
 
   if (submitted) {
@@ -57,6 +76,8 @@ export function CheckInForm() {
         description="Uma leitura rápida sobre comportamento, colaboração e ambiente de trabalho."
         backHref={platformRoutes.northConversation.root}
       />
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {CHECKIN_QUESTIONS.map((q) => (
         <Card key={q.id}>
@@ -85,7 +106,9 @@ export function CheckInForm() {
       ))}
 
       <Card>
-        <CardHeader><CardTitle>Perguntas complementares</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Perguntas complementares</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium">Como você está se sentindo?</label>
@@ -99,7 +122,7 @@ export function CheckInForm() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Gostaria de conversar com seu gestor?</label>
-            <Select defaultValue="nao">
+            <Select value={wantsConversation} onChange={(e) => setWantsConversation(e.target.value)}>
               <option value="sim">Sim</option>
               <option value="nao">Não</option>
               <option value="talvez">Talvez</option>
@@ -107,13 +130,18 @@ export function CheckInForm() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Algo que gostaria de compartilhar?</label>
-            <Textarea rows={3} placeholder="Opcional" />
+            <Textarea
+              rows={3}
+              placeholder="Opcional"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
           </div>
         </CardContent>
       </Card>
 
-      <Button type="submit" disabled={!allAnswered} className="w-full">
-        Enviar check-in
+      <Button type="submit" disabled={!allAnswered || pending} className="w-full">
+        {pending ? "Enviando..." : "Enviar check-in"}
       </Button>
     </form>
   );

@@ -31,8 +31,8 @@ test.describe("Login com redirect", () => {
 
   test("redireciona para rota protegida após login", async ({ page }) => {
     await page.goto("/login?redirect=%2Fchamados");
-    await page.getByLabel(/e-mail/i).fill(QA_USERS.adminNorth);
-    await page.getByLabel(/senha/i).fill(qaPassword("user.admin.north"));
+    await page.locator("#email").fill(QA_USERS.adminNorth);
+    await page.locator("#password").fill(qaPassword("user.admin.north"));
     await page.getByRole("button", { name: /entrar/i }).click();
     await expect(page).toHaveURL(/chamados/, { timeout: 20_000 });
   });

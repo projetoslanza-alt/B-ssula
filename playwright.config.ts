@@ -24,7 +24,7 @@ const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ??
   process.env.BASE_URL ??
   process.env.NEXT_PUBLIC_APP_URL ??
-  "http://localhost:3000";
+  (process.env.CI ? "http://localhost:3099" : "http://localhost:3000");
 
 const isRemoteBase = !baseURL.includes("localhost") && !baseURL.includes("127.0.0.1");
 const skipWebServer = isRemoteBase || process.env.PLAYWRIGHT_SKIP_WEBSERVER === "1";
@@ -47,8 +47,8 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
-          command: "npm run dev",
-          url: "http://localhost:3000/api/health",
+          command: process.env.CI ? "npm run dev -- -p 3099" : "npm run dev",
+          url: process.env.CI ? "http://localhost:3099/api/health" : "http://localhost:3000/api/health",
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },

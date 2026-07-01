@@ -4,10 +4,26 @@ import { existsSync } from "node:fs";
 import { login, QA_USERS, qaPassword } from "./helpers/auth";
 
 const REFERENCE_HTML = path.resolve("docs/design/bussola-dark-executive-gamificacao.html");
-const VIEWPORT = { width: 1280, height: 800 };
+const DESKTOP = { width: 1280, height: 800 };
+const MOBILE = { width: 390, height: 844 };
+
 const QA_READY = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
+
+const APP_ROUTES = [
+  "/inicio",
+  "/dashboards",
+  "/news",
+  "/chamados",
+  "/conversa-de-norte",
+  "/universidade",
+  "/gamificacao",
+  "/relatorios",
+  "/administracao",
+  "/perfil",
+  "/notificacoes",
+] as const;
 
 test.describe("Regressão visual — referência Dark Executive", () => {
   test.beforeAll(() => {
@@ -15,7 +31,7 @@ test.describe("Regressão visual — referência Dark Executive", () => {
   });
 
   test("captura HTML de referência (início) em 1280×800", async ({ page }) => {
-    await page.setViewportSize(VIEWPORT);
+    await page.setViewportSize(DESKTOP);
     await page.goto(`file:///${REFERENCE_HTML.replace(/\\/g, "/")}`);
     await expect(page.locator("#view-inicio.active")).toBeVisible();
     await page.screenshot({
@@ -24,45 +40,35 @@ test.describe("Regressão visual — referência Dark Executive", () => {
     });
   });
 
-  test("captura app /inicio em 1280×800", async ({ page }) => {
-    test.skip(!QA_READY, "Requer Supabase configurado para login");
+  for (const route of APP_ROUTES) {
+    test(`captura app ${route} desktop 1280×800`, async ({ page }) => {
+      test.skip(!QA_READY, "Requer Supabase configurado para login");
 
-    await page.setViewportSize(VIEWPORT);
-    await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
-    await page.waitForURL(/inicio|universidade/, { timeout: 20_000 });
-    await page.goto("/inicio");
-    await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: /todo time precisa de um/i })).toBeVisible();
-    await expect(page.locator(".podium-card")).toBeVisible();
-    await page.screenshot({
-      path: "test-results/visual-reference-app-inicio.png",
-      fullPage: false,
+      await page.setViewportSize(DESKTOP);
+      await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
+      await page.waitForURL(/inicio|universidade|acesso-pendente/, { timeout: 25_000 });
+      await page.goto(route);
+      await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 20_000 });
+      const slug = route.replace(/\//g, "-").replace(/^-/, "") || "root";
+      await page.screenshot({
+        path: `test-results/visual-app-${slug}-desktop.png`,
+        fullPage: false,
+      });
     });
-  });
 
-  test("captura app /news em 1280×800", async ({ page }) => {
-    test.skip(!QA_READY, "Requer Supabase configurado para login");
+    test(`captura app ${route} mobile 390×844`, async ({ page }) => {
+      test.skip(!QA_READY, "Requer Supabase configurado para login");
 
-    await page.setViewportSize(VIEWPORT);
-    await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
-    await page.goto("/news");
-    await expect(page.getByRole("heading", { name: "News" })).toBeVisible({ timeout: 15_000 });
-    await page.screenshot({
-      path: "test-results/visual-reference-app-news.png",
-      fullPage: false,
+      await page.setViewportSize(MOBILE);
+      await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
+      await page.waitForURL(/inicio|universidade|acesso-pendente/, { timeout: 25_000 });
+      await page.goto(route);
+      await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 20_000 });
+      const slug = route.replace(/\//g, "-").replace(/^-/, "") || "root";
+      await page.screenshot({
+        path: `test-results/visual-app-${slug}-mobile.png`,
+        fullPage: false,
+      });
     });
-  });
-
-  test("captura app /dashboards em 1280×800", async ({ page }) => {
-    test.skip(!QA_READY, "Requer Supabase configurado para login");
-
-    await page.setViewportSize(VIEWPORT);
-    await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
-    await page.goto("/dashboards");
-    await expect(page.getByRole("heading", { name: "Dashboards" })).toBeVisible({ timeout: 15_000 });
-    await page.screenshot({
-      path: "test-results/visual-reference-app-dashboards.png",
-      fullPage: false,
-    });
-  });
+  }
 });

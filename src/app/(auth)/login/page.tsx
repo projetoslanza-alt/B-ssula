@@ -1,13 +1,15 @@
-import { Suspense } from "react";
 import { LoginForm } from "./login-form";
-import { LoadingState } from "@/components/feedback/states";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string; reason?: string }>;
+}) {
+  const params = await searchParams;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-4">
-      <Suspense fallback={<LoadingState />}>
-        <LoginForm />
-      </Suspense>
+      <LoginForm redirectParam={params.redirect} logoutReason={params.reason === "logout"} />
     </div>
   );
 }

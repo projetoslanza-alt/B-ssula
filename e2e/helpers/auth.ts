@@ -55,8 +55,8 @@ export async function login(
 ) {
   const pwd = password ?? (fixtureKey && isStaging ? loadStagingPassword(fixtureKey) : LOCAL_PASSWORD);
   await page.goto("/login");
-  await page.getByLabel(/e-mail/i).fill(email);
-  await page.getByLabel(/senha/i).fill(pwd);
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(pwd);
   await page.getByRole("button", { name: /entrar/i }).click();
 }
 

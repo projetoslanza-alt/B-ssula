@@ -47,14 +47,14 @@ const ADMIN_MODULES = [
     badgeTone: "warning" as const,
     title: "Campanhas e pontuação",
     description: "Configure regras, metas, premiações, rankings e auditoria.",
-    href: platformRoutes.gamification.admin,
+    href: `${platformRoutes.gamification.root}?tab=central`,
     permission: "gamification.campaign.create",
   },
 ];
 
 export default async function AdministracaoPage() {
   const session = await requireAnyPermission(["platform.users.manage", "platform.organization.manage"]);
-  const auditEvents = await getRecentAuditEvents(5);
+  const auditEvents = await getRecentAuditEvents(session.tenantId, 5);
   const visibleModules = ADMIN_MODULES.filter((mod) => hasPermission(session, mod.permission));
   const canCreateUser = hasPermission(session, "platform.users.manage");
 
@@ -86,9 +86,14 @@ export default async function AdministracaoPage() {
 
       <Card className="border-[var(--border)] bg-[var(--panel)]">
         <CardContent className="space-y-4 p-4 sm:p-5">
-          <div>
-            <h2 className="text-base font-bold text-[var(--foreground)]">Auditoria recente</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Últimas alterações relevantes realizadas no sistema.</p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[var(--foreground)]">Auditoria recente</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">Últimas alterações relevantes realizadas no sistema.</p>
+            </div>
+            <Link href={platformRoutes.admin.audit} className="text-sm text-sky-400 hover:underline">
+              Ver tudo
+            </Link>
           </div>
           {auditEvents.length === 0 ? (
             <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-8 text-center text-sm text-[var(--muted)]">

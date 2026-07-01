@@ -12,7 +12,7 @@ export default async function NovoChamadoPage() {
     redirect("/acesso-negado");
   }
 
-  const categories = await listSupportCategories(session.tenantId);
+  const categories = await listSupportCategories(session.tenantId, true);
 
   return (
     <div className="space-y-6">

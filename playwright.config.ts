@@ -25,7 +25,9 @@ const isCiE2e =
   process.env.CI === "1" ||
   process.env.CI === "true";
 
-const baseURL = isCiE2e
+const isStagingRun = process.env.PLAYWRIGHT_BASE_URL?.includes("bussola-staging") ?? false;
+
+const baseURL = isCiE2e && !isStagingRun
   ? "http://localhost:3099"
   : (process.env.PLAYWRIGHT_BASE_URL ??
     process.env.BASE_URL ??
@@ -38,6 +40,7 @@ const skipWebServer = isRemoteBase || process.env.PLAYWRIGHT_SKIP_WEBSERVER === 
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
+  ...(isCiE2e && !isStagingRun ? { testIgnore: ["**/staging-smoke.spec.ts"] } : {}),
   workers: 1,
   timeout: 60_000,
   forbidOnly: isCiE2e,

@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ci": "node scripts/run-e2e-ci.mjs",
+    "test:e2e:staging": "node scripts/run-e2e-staging.mjs",
     "test:visual": "playwright test e2e/visual-reference.spec.ts",
     "test:rls": "tsx scripts/test-rls.ts",
     "test:rls:sql": "supabase test db",

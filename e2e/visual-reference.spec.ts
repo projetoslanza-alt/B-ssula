@@ -50,8 +50,8 @@ test.describe("Regressão visual — referência Dark Executive", () => {
       await page.goto(route);
       await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 20_000 });
       const slug = route.replace(/\//g, "-").replace(/^-/, "") || "root";
-      await page.screenshot({
-        path: `test-results/visual-app-${slug}-desktop.png`,
+      await expect(page).toHaveScreenshot(`${slug}-desktop.png`, {
+        maxDiffPixelRatio: 0.02,
         fullPage: false,
       });
     });
@@ -65,8 +65,8 @@ test.describe("Regressão visual — referência Dark Executive", () => {
       await page.goto(route);
       await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 20_000 });
       const slug = route.replace(/\//g, "-").replace(/^-/, "") || "root";
-      await page.screenshot({
-        path: `test-results/visual-app-${slug}-mobile.png`,
+      await expect(page).toHaveScreenshot(`${slug}-mobile.png`, {
+        maxDiffPixelRatio: 0.08,
         fullPage: false,
       });
     });

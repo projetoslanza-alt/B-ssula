@@ -24,7 +24,7 @@ export default async function PermissoesPage() {
       <PageHeader
         title="Matriz de permissões"
         subtitle="Alterações impactam todos os usuários do grupo. Confirme antes de salvar."
-        backHref={platformRoutes.admin.groups}
+        backHref={platformRoutes.admin.root}
       />
       {(groups ?? []).map((g) => (
         <Card key={g.id}>

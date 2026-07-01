@@ -143,6 +143,86 @@ async function main() {
     snapshot_at: new Date().toISOString(),
   });
 
+  const MISSIONS = [
+    { key: "calls", title: "50 ligações qualificadas", target: 50, sort: 0 },
+    { key: "meetings", title: "10 reuniões realizadas", target: 10, sort: 1 },
+    { key: "wins", title: "3 contratos assinados", target: 3, sort: 2 },
+  ];
+
+  for (const m of MISSIONS) {
+    const missionId = `77777777-7777-7777-7777-7777777777${String(m.sort).padStart(2, "0")}`;
+    await admin.from("gamification_missions").upsert(
+      {
+        id: missionId,
+        tenant_id: tenantId,
+        campaign_id: campaignId,
+        title: m.title,
+        description: `Missão QA — ${m.title}`,
+        target_points: m.target,
+        sort_order: m.sort,
+        settings: { origin: "crm_activity", fixture_key: `qa.mission.${m.key}` },
+        is_active: true,
+      },
+      { onConflict: "id" },
+    );
+
+    for (const entry of PODIUM) {
+      const userId = await resolveUserId(admin, entry.name, entry.emailHint);
+      if (!userId) continue;
+      const progress = m.key === "calls" ? 42 : m.key === "meetings" ? 8 : 2;
+      const status = progress >= m.target ? "completed" : "in_progress";
+      await admin.from("gamification_mission_progress").upsert(
+        {
+          tenant_id: tenantId,
+          mission_id: missionId,
+          user_id: userId,
+          status,
+          progress_value: progress,
+          completed_at: status === "completed" ? new Date().toISOString() : null,
+        },
+        { onConflict: "mission_id,user_id" },
+      );
+    }
+  }
+
+  const ACHIEVEMENTS = [
+    { code: "qa-first-win", title: "Primeira vitória", rarity: "comum", points: 100 },
+    { code: "qa-streak", title: "Sequência de ouro", rarity: "rara", points: 250 },
+    { code: "qa-closer", title: "Closer da semana", rarity: "epica", points: 500 },
+  ];
+
+  for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+    const a = ACHIEVEMENTS[i]!;
+    const achId = `66666666-6666-6666-6666-6666666666${String(i).padStart(2, "0")}`;
+    await admin.from("gamification_achievements").upsert(
+      {
+        id: achId,
+        tenant_id: tenantId,
+        campaign_id: campaignId,
+        code: a.code,
+        title: a.title,
+        description: `Conquista QA — ${a.title}`,
+        points_reward: a.points,
+        settings: { rarity: a.rarity },
+        is_active: true,
+      },
+      { onConflict: "id" },
+    );
+
+    const unlockedUser = await resolveUserId(admin, PODIUM[i]?.name ?? PODIUM[0]!.name, PODIUM[i]?.emailHint);
+    if (unlockedUser) {
+      await admin.from("gamification_user_achievements").upsert(
+        {
+          tenant_id: tenantId,
+          achievement_id: achId,
+          user_id: unlockedUser,
+          unlocked_at: new Date().toISOString(),
+        },
+        { onConflict: "achievement_id,user_id" },
+      );
+    }
+  }
+
   console.log(`Campanha QA provisionada: ${campaignId} (${participantCount} participantes)`);
 }
 

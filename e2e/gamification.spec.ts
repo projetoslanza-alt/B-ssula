@@ -1,0 +1,30 @@
+import { test, expect } from "@playwright/test";
+import { login, QA_USERS, qaPassword } from "./helpers/auth";
+
+const QA_READY = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+);
+
+test.describe("Gamificação", () => {
+  test.skip(!QA_READY, "Requer Supabase configurado");
+
+  test("hub carrega campanha ativa e abas", async ({ page }) => {
+    await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
+    await page.waitForURL(/inicio|universidade/, { timeout: 20_000 });
+    await page.goto("/gamificacao");
+    await expect(page.getByRole("heading", { name: "Gamificação" })).toBeVisible();
+    await expect(page.getByText("Campanha ativa").first()).toBeVisible();
+  });
+
+  test("aba missões carrega conteúdo", async ({ page }) => {
+    await login(page, QA_USERS.studentNorth, qaPassword("user.student.north"));
+    await page.goto("/gamificacao?tab=missions");
+    await expect(page.getByRole("heading", { name: "Gamificação" })).toBeVisible();
+  });
+
+  test("SDR não vê central de campanhas", async ({ page }) => {
+    await login(page, QA_USERS.studentNorth, qaPassword("user.student.north"));
+    await page.goto("/gamificacao?tab=admin");
+    await expect(page.getByText(/não possui permissão/i)).toBeVisible();
+  });
+});

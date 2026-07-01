@@ -1,99 +1,74 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TICKET_CATEGORIES } from "@/modules/demo-data";
 import { platformRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { createTicketAction } from "@/modules/support/actions/ticket-actions";
 
 const PRIORITIES = [
-  { value: "baixa", label: "Baixa", desc: "Não impede o trabalho. Pode aguardar." },
-  { value: "media", label: "Média", desc: "Impacta parcialmente a rotina." },
-  { value: "alta", label: "Alta", desc: "Impede atividades importantes." },
-  { value: "critica", label: "Crítica", desc: "Bloqueia totalmente a operação." },
+  { value: "low", label: "Baixa", desc: "Não impede o trabalho. Pode aguardar." },
+  { value: "medium", label: "Média", desc: "Impacta parcialmente a rotina." },
+  { value: "high", label: "Alta", desc: "Impede atividades importantes." },
+  { value: "urgent", label: "Crítica", desc: "Bloqueia totalmente a operação." },
 ];
 
 const STEPS = ["Categoria", "Detalhes", "Prioridade", "Revisão"];
 
+type CategoryRow = {
+  id: string;
+  name: string;
+  slug: string;
+  support_subcategories: { id: string; name: string; slug: string }[] | null;
+};
+
 type FormData = {
   categoryId: string;
-  subcategory: string;
+  subcategoryId: string;
   title: string;
   description: string;
-  trying: string;
-  happened: string;
-  expected: string;
-  blocksWork: string;
-  related: string;
-  unit: string;
-  team: string;
-  contact: string;
   priority: string;
 };
 
 const initial: FormData = {
   categoryId: "",
-  subcategory: "",
+  subcategoryId: "",
   title: "",
   description: "",
-  trying: "",
-  happened: "",
-  expected: "",
-  blocksWork: "nao",
-  related: "",
-  unit: "",
-  team: "",
-  contact: "email",
-  priority: "media",
+  priority: "medium",
 };
 
-export function TicketWizard() {
-  const router = useRouter();
+export function TicketWizard({ categories }: { categories: CategoryRow[] }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(initial);
-  const [submitted, setSubmitted] = useState(false);
-  const [protocol, setProtocol] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
-  const category = TICKET_CATEGORIES.find((c) => c.id === form.categoryId);
+  const category = categories.find((c) => c.id === form.categoryId);
+  const subcategories = category?.support_subcategories ?? [];
 
   function update(field: keyof FormData, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
   function handleSubmit() {
-    const proto = `CH-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-    setProtocol(proto);
-    setSubmitted(true);
-  }
-
-  if (submitted) {
-    return (
-      <Card className="mx-auto max-w-lg border-emerald-500/30">
-        <CardContent className="space-y-4 p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
-            <Check className="h-6 w-6 text-emerald-400" />
-          </div>
-          <h2 className="text-xl font-semibold">Chamado enviado</h2>
-          <p className="text-[var(--foreground-muted)]">
-            Sua solicitação já está em nossa rota de atendimento.
-          </p>
-          <p className="text-lg font-mono text-sky-400">{protocol}</p>
-          <div className="flex justify-center gap-2">
-            <Button asChild>
-              <Link href={platformRoutes.support.root}>Ver chamados</Link>
-            </Button>
-            <Button variant="outline" onClick={() => router.push(platformRoutes.support.mine)}>
-              Meus chamados
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    setError(null);
+    const fd = new FormData();
+    fd.set("title", form.title);
+    fd.set("description", form.description);
+    fd.set("priority", form.priority);
+    fd.set("categoryId", form.categoryId);
+    fd.set("subcategoryId", form.subcategoryId);
+    startTransition(async () => {
+      try {
+        await createTicketAction(fd);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Não foi possível enviar o chamado.");
+      }
+    });
   }
 
   return (
@@ -116,39 +91,49 @@ export function TicketWizard() {
         ))}
       </div>
 
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
       {step === 0 && (
         <Card>
-          <CardHeader><CardTitle>Etapa 1 — Categoria</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Etapa 1 — Categoria</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 sm:grid-cols-2">
-              {TICKET_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    update("categoryId", cat.id);
-                    update("subcategory", cat.subcategories[0] ?? "");
-                  }}
-                  className={cn(
-                    "rounded-lg border p-3 text-left text-sm transition-colors",
-                    form.categoryId === cat.id
-                      ? "border-sky-500/50 bg-sky-500/10"
-                      : "border-[var(--border)] hover:border-[var(--border-active)]",
-                  )}
-                >
-                  <span className="font-medium">{cat.label}</span>
-                  {"description" in cat && cat.description && (
-                    <p className="mt-1 text-xs text-[var(--foreground-muted)]">{cat.description}</p>
-                  )}
-                </button>
-              ))}
-            </div>
-            {category && (
+            {categories.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">Nenhuma categoria configurada para este tenant.</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      update("categoryId", cat.id);
+                      update("subcategoryId", cat.support_subcategories?.[0]?.id ?? "");
+                    }}
+                    className={cn(
+                      "rounded-lg border p-3 text-left text-sm transition-colors",
+                      form.categoryId === cat.id
+                        ? "border-sky-500/50 bg-sky-500/10"
+                        : "border-[var(--border)] hover:border-[var(--border-active)]",
+                    )}
+                  >
+                    <span className="font-medium">{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {subcategories.length > 0 && (
               <div>
                 <label className="mb-1 block text-sm font-medium">Subcategoria</label>
-                <Select value={form.subcategory} onChange={(e) => update("subcategory", e.target.value)}>
-                  {category.subcategories.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                <Select
+                  value={form.subcategoryId}
+                  onChange={(e) => update("subcategoryId", e.target.value)}
+                >
+                  {subcategories.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
                   ))}
                 </Select>
               </div>
@@ -159,7 +144,9 @@ export function TicketWizard() {
 
       {step === 1 && (
         <Card>
-          <CardHeader><CardTitle>Etapa 2 — Detalhes</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Etapa 2 — Detalhes</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium">Título</label>
@@ -167,31 +154,12 @@ export function TicketWizard() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Descrição</label>
-              <Textarea value={form.description} onChange={(e) => update("description", e.target.value)} rows={3} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">O que estava tentando fazer?</label>
-              <Textarea value={form.trying} onChange={(e) => update("trying", e.target.value)} rows={2} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">O que aconteceu?</label>
-              <Textarea value={form.happened} onChange={(e) => update("happened", e.target.value)} rows={2} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">O que deveria acontecer?</label>
-              <Textarea value={form.expected} onChange={(e) => update("expected", e.target.value)} rows={2} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">O problema impede o trabalho?</label>
-              <Select value={form.blocksWork} onChange={(e) => update("blocksWork", e.target.value)}>
-                <option value="nao">Não</option>
-                <option value="parcialmente">Parcialmente</option>
-                <option value="sim">Sim, totalmente</option>
-              </Select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Cliente ou oportunidade relacionada</label>
-              <Input value={form.related} onChange={(e) => update("related", e.target.value)} placeholder="Opcional — sistema externo" />
+              <Textarea
+                value={form.description}
+                onChange={(e) => update("description", e.target.value)}
+                rows={4}
+                required
+              />
             </div>
           </CardContent>
         </Card>
@@ -199,7 +167,9 @@ export function TicketWizard() {
 
       {step === 2 && (
         <Card>
-          <CardHeader><CardTitle>Etapa 3 — Prioridade</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Etapa 3 — Prioridade</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-3">
             {PRIORITIES.map((p) => (
               <button
@@ -223,39 +193,52 @@ export function TicketWizard() {
 
       {step === 3 && (
         <Card>
-          <CardHeader><CardTitle>Etapa 4 — Revisão</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Etapa 4 — Revisão</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p><span className="text-[var(--foreground-muted)]">Categoria:</span> {category?.label}</p>
-            <p><span className="text-[var(--foreground-muted)]">Subcategoria:</span> {form.subcategory}</p>
-            <p><span className="text-[var(--foreground-muted)]">Título:</span> {form.title}</p>
-            <p><span className="text-[var(--foreground-muted)]">Prioridade:</span> {form.priority}</p>
-            <p><span className="text-[var(--foreground-muted)]">Descrição:</span> {form.description}</p>
+            <p>
+              <span className="text-[var(--foreground-muted)]">Categoria:</span> {category?.name}
+            </p>
+            <p>
+              <span className="text-[var(--foreground-muted)]">Título:</span> {form.title}
+            </p>
+            <p>
+              <span className="text-[var(--foreground-muted)]">Prioridade:</span>{" "}
+              {PRIORITIES.find((p) => p.value === form.priority)?.label}
+            </p>
+            <p>
+              <span className="text-[var(--foreground-muted)]">Descrição:</span> {form.description}
+            </p>
           </CardContent>
         </Card>
       )}
 
       <div className="flex justify-between">
-        <Button variant="outline" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+        <Button variant="outline" disabled={step === 0 || pending} onClick={() => setStep((s) => s - 1)}>
           Voltar
         </Button>
         <div className="flex gap-2">
           {step < 3 ? (
             <Button
-              disabled={step === 0 && !form.categoryId}
+              disabled={(step === 0 && !form.categoryId) || (step === 1 && (!form.title || !form.description))}
               onClick={() => setStep((s) => s + 1)}
             >
               Avançar
             </Button>
           ) : (
-            <>
-              <Button variant="outline" onClick={() => router.push(platformRoutes.support.root)}>
-                Salvar rascunho
-              </Button>
-              <Button onClick={handleSubmit}>Enviar chamado</Button>
-            </>
+            <Button onClick={handleSubmit} disabled={pending}>
+              {pending ? "Enviando..." : "Enviar chamado"}
+            </Button>
           )}
         </div>
       </div>
+
+      <p className="text-center text-sm">
+        <Link href={platformRoutes.support.root} className="text-[var(--blue)] hover:underline">
+          Cancelar
+        </Link>
+      </p>
     </div>
   );
 }

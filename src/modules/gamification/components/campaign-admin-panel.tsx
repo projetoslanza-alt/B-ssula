@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/platform/status-badge";
 import { DataTable, DataTableCell, DataTableRow } from "@/components/platform/data-table";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import type { CampaignAdminRow } from "@/modules/gamification/domain/types";
+import type { CampaignParticipant } from "@/modules/gamification/queries/participants";
 import {
   adjustPointsAction,
   createCampaignAction,
@@ -19,6 +20,7 @@ type CampaignAdminPanelProps = {
   campaigns: CampaignAdminRow[];
   activeCampaignId?: string;
   canAdjustPoints: boolean;
+  participants: CampaignParticipant[];
 };
 
 const STATUS_LABELS: Record<string, { label: string; tone: "default" | "success" | "warning" | "info" | "danger" }> = {
@@ -28,10 +30,23 @@ const STATUS_LABELS: Record<string, { label: string; tone: "default" | "success"
   closed: { label: "Encerrada", tone: "info" },
 };
 
-export function CampaignAdminPanel({ campaigns, activeCampaignId, canAdjustPoints }: CampaignAdminPanelProps) {
+export function CampaignAdminPanel({
+  campaigns,
+  activeCampaignId,
+  canAdjustPoints,
+  participants,
+}: CampaignAdminPanelProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [participantSearch, setParticipantSearch] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
+
+  const filteredParticipants = useMemo(() => {
+    const q = participantSearch.trim().toLowerCase();
+    if (!q) return participants;
+    return participants.filter((p) => p.fullName.toLowerCase().includes(q));
+  }, [participantSearch, participants]);
 
   function runAction(fn: () => Promise<{ error?: string; success?: boolean }>) {
     startTransition(async () => {
@@ -98,16 +113,36 @@ export function CampaignAdminPanel({ campaigns, activeCampaignId, canAdjustPoint
                       </Button>
                     )}
                     {c.status === "published" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() => runAction(() => updateCampaignStatusAction(c.id, "paused"))}
+                        >
+                          Pausar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() => runAction(() => updateCampaignStatusAction(c.id, "closed"))}
+                        >
+                          Encerrar
+                        </Button>
+                      </>
+                    )}
+                    {c.status === "paused" && (
                       <Button
                         size="sm"
                         variant="outline"
                         disabled={pending}
-                        onClick={() => runAction(() => updateCampaignStatusAction(c.id, "paused"))}
+                        onClick={() => runAction(() => updateCampaignStatusAction(c.id, "published"))}
                       >
-                        Pausar
+                        Retomar
                       </Button>
                     )}
-                    {c.status !== "closed" && (
+                    {c.status !== "closed" && c.status !== "published" && c.status !== "paused" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -148,13 +183,63 @@ export function CampaignAdminPanel({ campaigns, activeCampaignId, canAdjustPoint
           <h3>Ajuste de pontuação</h3>
           <p className="muted">Lançamentos compensatórios via ledger imutável — não altera totais diretamente.</p>
           <form
-            className="mt-4 grid gap-3 sm:grid-cols-3"
+            className="mt-4 grid gap-3"
             action={(formData) => runAction(() => adjustPointsAction(activeCampaignId, formData))}
           >
-            <Input name="userId" placeholder="UUID do participante" required />
-            <Input name="pointsDelta" type="number" placeholder="Pontos (+/-)" required />
-            <Input name="reason" placeholder="Motivo do ajuste" required />
-            <Button type="submit" className="sm:col-span-3" disabled={pending}>
+            <div>
+              <label className="mb-1 block text-sm font-medium" htmlFor="participant-search">
+                Participante
+              </label>
+              <Input
+                id="participant-search"
+                list="campaign-participants"
+                placeholder="Buscar por nome..."
+                value={participantSearch}
+                onChange={(e) => {
+                  setParticipantSearch(e.target.value);
+                  const match = participants.find(
+                    (p) => p.fullName.toLowerCase() === e.target.value.trim().toLowerCase(),
+                  );
+                  setSelectedUserId(match?.userId ?? "");
+                }}
+                aria-autocomplete="list"
+              />
+              <datalist id="campaign-participants">
+                {filteredParticipants.map((p) => (
+                  <option key={p.userId} value={p.fullName}>
+                    {p.teamName ? `${p.fullName} (${p.teamName})` : p.fullName}
+                  </option>
+                ))}
+              </datalist>
+              <select
+                name="userId"
+                required
+                className="field mt-2 w-full"
+                value={selectedUserId}
+                onChange={(e) => {
+                  setSelectedUserId(e.target.value);
+                  const p = participants.find((x) => x.userId === e.target.value);
+                  if (p) setParticipantSearch(p.fullName);
+                }}
+                aria-label="Selecionar participante"
+              >
+                <option value="">Selecione um participante</option>
+                {filteredParticipants.map((p) => (
+                  <option key={p.userId} value={p.userId}>
+                    {p.fullName}
+                    {p.teamName ? ` — ${p.teamName}` : ""}
+                  </option>
+                ))}
+              </select>
+              {participants.length === 0 && (
+                <p className="mt-2 text-sm text-[var(--muted)]">Nenhum participante ativo nesta campanha.</p>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input name="pointsDelta" type="number" placeholder="Pontos (+/-)" required />
+              <Input name="reason" placeholder="Motivo do ajuste" required />
+            </div>
+            <Button type="submit" disabled={pending || !selectedUserId}>
               Registrar ajuste
             </Button>
           </form>

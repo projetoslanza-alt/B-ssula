@@ -7,20 +7,61 @@ import { StatusBadge } from "@/components/platform/status-badge";
 import { DeTabPanel, DeTabs } from "@/components/platform/de-tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DEMO_COURSES, DEMO_PATHS } from "@/modules/demo-data";
+import { EmptyState } from "@/components/feedback/states";
 import { platformRoutes } from "@/lib/routes";
 import { ArrowRight, GraduationCap } from "lucide-react";
 import { LEARNING_TABS, type LearningTabId } from "@/modules/learning/tabs";
+import type { CatalogCourse } from "@/modules/learning/queries/catalog";
+
+function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+type PathRow = {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  workload_minutes: number | null;
+};
+
+type EnrollmentContinue = {
+  id: string;
+  status: string;
+  progress_percentage: number | null;
+  course_versions: { title: string } | { title: string }[] | null;
+  courses: { slug: string } | { slug: string }[] | null;
+};
 
 type LearningHubProps = {
   activeTab: LearningTabId;
+  stats: { inProgress: number; completed: number; overdue: number };
+  hoursStudied: number;
+  catalog: CatalogCourse[];
+  paths: PathRow[];
+  continueStudying: EnrollmentContinue[];
 };
 
-export function LearningHub({ activeTab }: LearningHubProps) {
+function courseTitle(enrollment: EnrollmentContinue) {
+  const version = unwrapOne(enrollment.course_versions);
+  return version?.title ?? "Curso";
+}
 
-  const inProgress = DEMO_COURSES.filter((c) => c.status === "em_andamento");
-  const completed = DEMO_COURSES.filter((c) => c.status === "concluido");
-  const mandatory = DEMO_COURSES.filter((c) => c.mandatory);
+function courseSlug(enrollment: EnrollmentContinue) {
+  const course = unwrapOne(enrollment.courses);
+  return course?.slug;
+}
+
+export function LearningHub({
+  activeTab,
+  stats,
+  hoursStudied,
+  catalog,
+  paths,
+  continueStudying,
+}: LearningHubProps) {
+  const mandatory = catalog.filter((c) => c.mandatory);
 
   return (
     <div className="space-y-8">
@@ -45,69 +86,94 @@ export function LearningHub({ activeTab }: LearningHubProps) {
       <DeTabs tabs={[...LEARNING_TABS]} activeTab={activeTab} basePath={platformRoutes.learning.root} />
 
       <DeTabPanel id="inicio" activeTab={activeTab}>
-          <div className="space-y-6">
-            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricCard label="Cursos em andamento" value={inProgress.length} variant="purple" />
-              <MetricCard label="Concluídos" value={completed.length} variant="success" />
-              <MetricCard label="Obrigatórios pendentes" value={mandatory.filter((c) => c.progress < 100).length} variant="warning" />
-              <MetricCard label="Horas estudadas" value="18h" variant="info" />
-            </section>
-            <section>
-              <h3 className="mb-3 font-medium">Continue de onde parou</h3>
+        <div className="space-y-6">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard label="Cursos em andamento" value={stats.inProgress} variant="purple" />
+            <MetricCard label="Concluídos" value={stats.completed} variant="success" />
+            <MetricCard
+              label="Obrigatórios pendentes"
+              value={mandatory.filter((c) => (c.progressPercentage ?? 0) < 100).length}
+              variant="warning"
+            />
+            <MetricCard label="Horas estudadas" value={`${hoursStudied}h`} variant="info" />
+          </section>
+          <section>
+            <h3 className="mb-3 font-medium">Continue de onde parou</h3>
+            {continueStudying.length === 0 ? (
+              <EmptyState title="Nenhum curso em andamento" description="Explore o catálogo para iniciar." />
+            ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {inProgress.map((c) => (
-                  <Card key={c.id}>
-                    <CardContent className="p-4">
-                      <h4 className="font-medium">{c.title}</h4>
-                      <div className="mt-2 h-2 rounded-full bg-[var(--card-elevated)]">
-                        <div className="h-2 rounded-full bg-violet-500" style={{ width: `${c.progress}%` }} />
-                      </div>
-                      <p className="mt-1 text-xs text-[var(--foreground-muted)]">{c.progress}% concluído</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                {continueStudying.map((e) => {
+                  const slug = courseSlug(e);
+                  const pct = e.progress_percentage ?? 0;
+                  return (
+                    <Card key={e.id}>
+                      <CardContent className="p-4">
+                        <h4 className="font-medium">{courseTitle(e)}</h4>
+                        <div className="mt-2 h-2 rounded-full bg-[var(--card-elevated)]">
+                          <div className="h-2 rounded-full bg-violet-500" style={{ width: `${pct}%` }} />
+                        </div>
+                        <p className="mt-1 text-xs text-[var(--foreground-muted)]">{pct}% concluído</p>
+                        {slug && (
+                          <Button variant="link" className="mt-2 h-auto p-0" asChild>
+                            <Link href={platformRoutes.learning.catalogCourse(slug)}>Continuar</Link>
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
-            </section>
-          </div>
+            )}
+          </section>
+        </div>
       </DeTabPanel>
 
       <DeTabPanel id="cursos" activeTab={activeTab}>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {DEMO_COURSES.map((c) => (
-            <Card key={c.id}>
-              <CardContent className="p-4">
-                <div className="flex justify-between">
-                  <h4 className="font-medium">{c.title}</h4>
-                  <StatusBadge label={c.status.replace(/_/g, " ")} tone={c.status === "concluido" ? "success" : "info"} />
-                </div>
-                <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-                  {c.instructor} · {c.workloadHours}h
-                </p>
-                <Button variant="link" className="mt-2 h-auto p-0" asChild>
-                  <Link href={platformRoutes.learning.catalog}>Acessar</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {catalog.length === 0 ? (
+          <EmptyState title="Nenhum curso disponível" description="Cursos publicados aparecerão aqui." />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {catalog.map((c) => (
+              <Card key={c.id}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between">
+                    <h4 className="font-medium">{c.title}</h4>
+                    <StatusBadge
+                      label={c.enrollmentStatus?.replace(/_/g, " ") ?? "disponível"}
+                      tone={c.enrollmentStatus === "completed" ? "success" : "info"}
+                    />
+                  </div>
+                  <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+                    {c.categoryName ?? "Curso"} · {Math.round(c.workloadMinutes / 60)}h
+                  </p>
+                  <Button variant="link" className="mt-2 h-auto p-0" asChild>
+                    <Link href={platformRoutes.learning.catalogCourse(c.slug)}>Acessar</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </DeTabPanel>
 
       <DeTabPanel id="trilhas" activeTab={activeTab}>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {DEMO_PATHS.map((p) => (
-            <Card key={p.id}>
-              <CardContent className="p-5">
-                <h4 className="font-medium">{p.title}</h4>
-                <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-                  {p.courses} cursos · {p.workloadHours}h
-                </p>
-                <div className="mt-3 h-2 rounded-full bg-[var(--card-elevated)]">
-                  <div className="h-2 rounded-full bg-violet-500" style={{ width: `${p.progress}%` }} />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {paths.length === 0 ? (
+          <EmptyState title="Nenhuma trilha" description="Trilhas publicadas aparecerão aqui." />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {paths.map((p) => (
+              <Card key={p.id}>
+                <CardContent className="p-5">
+                  <h4 className="font-medium">{p.title}</h4>
+                  <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+                    {p.workload_minutes ? `${Math.round(p.workload_minutes / 60)}h` : "—"}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </DeTabPanel>
 
       <DeTabPanel id="aulas" activeTab={activeTab}>

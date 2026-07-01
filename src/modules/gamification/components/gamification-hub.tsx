@@ -13,9 +13,12 @@ import { DataTable, DataTableCell, DataTableRow } from "@/components/platform/da
 import { DeTabPanel, DeTabs } from "@/components/platform/de-tabs";
 import { platformRoutes } from "@/lib/routes";
 import type { RankingEntry } from "@/modules/gamification/queries/ranking";
+import type { RankingFilters } from "@/modules/gamification/queries/ranking";
+import type { CampaignParticipant } from "@/modules/gamification/queries/participants";
 import { formatPodiumValue } from "@/components/platform/ranking-podium";
 import { GAMIFICATION_TABS, type GamificationTabId } from "@/modules/gamification/tabs";
 import { CampaignAdminPanel } from "@/modules/gamification/components/campaign-admin-panel";
+import { exportRankingCsvAction } from "@/modules/gamification/actions/export-ranking";
 import type {
   AchievementRow,
   CampaignAdminRow,
@@ -28,14 +31,17 @@ type GamificationHubProps = {
   activeTab: GamificationTabId;
   campaign: GamificationCampaign | null;
   entries: RankingEntry[];
+  rankingFilters: RankingFilters;
   missions: MissionProgressRow[];
   achievements: AchievementRow[];
   journey: JourneySummary;
   adminCampaigns: CampaignAdminRow[];
+  participants: CampaignParticipant[];
   currentUserId: string;
   userPosition?: number;
   canManageCampaigns?: boolean;
   canAdjustPoints?: boolean;
+  canExportRanking?: boolean;
 };
 
 const RARITY_TONE: Record<string, "default" | "info" | "success" | "warning" | "purple"> = {
@@ -53,10 +59,13 @@ export function GamificationHub({
   achievements,
   journey,
   adminCampaigns,
+  participants,
   currentUserId,
   userPosition,
   canManageCampaigns = false,
   canAdjustPoints = false,
+  canExportRanking = false,
+  rankingFilters,
 }: GamificationHubProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,7 +75,7 @@ export function GamificationHub({
   const activeMissions = missions.filter((m) => m.status !== "completed");
 
   const tabs = GAMIFICATION_TABS.map((t) =>
-    t.id === "admin" && !canManageCampaigns ? { ...t, hidden: true } : t,
+    t.id === "central" && !canManageCampaigns ? { ...t, hidden: true } : t,
   );
 
   function updateRankingParams(updates: Record<string, string | undefined>) {
@@ -81,8 +90,19 @@ export function GamificationHub({
     });
   }
 
-  const scope = searchParams.get("scope") ?? "geral";
-  const period = searchParams.get("period") ?? "completa";
+  function handleExportRanking() {
+    startTransition(async () => {
+      const result = await exportRankingCsvAction(rankingFilters);
+      if (result.error || !result.dataUrl) return;
+      const link = document.createElement("a");
+      link.href = result.dataUrl;
+      link.download = result.fileName ?? "ranking.csv";
+      link.click();
+    });
+  }
+
+  const scope = searchParams.get("scope") ?? rankingFilters.scope ?? "geral";
+  const period = searchParams.get("period") ?? rankingFilters.period ?? "completa";
 
   return (
     <div className="space-y-6">
@@ -93,7 +113,7 @@ export function GamificationHub({
         actions={
           <div className="section-actions">
             {canManageCampaigns ? (
-              <Link href={`${platformRoutes.gamification.root}?tab=admin`} className="btn btn-primary btn-sm">
+              <Link href={`${platformRoutes.gamification.root}?tab=central`} className="btn btn-primary btn-sm">
                 + Criar campanha
               </Link>
             ) : null}
@@ -103,7 +123,7 @@ export function GamificationHub({
 
       <DeTabs tabs={tabs} activeTab={activeTab} basePath={platformRoutes.gamification.root} />
 
-      <DeTabPanel id="active" activeTab={activeTab}>
+      <DeTabPanel id="campanha" activeTab={activeTab}>
         <div className="card campaign-hero">
           <div className="flex flex-wrap gap-2">
             <StatusBadge label={campaign?.status === "published" ? "Campanha ativa" : "Sem campanha ativa"} tone="success" />
@@ -167,7 +187,7 @@ export function GamificationHub({
                 ))}
               </ul>
             )}
-            <Link href={`${platformRoutes.gamification.root}?tab=missions`} className="btn btn-secondary btn-sm mt-16">
+            <Link href={`${platformRoutes.gamification.root}?tab=missoes`} className="btn btn-secondary btn-sm mt-16">
               Ver todas
             </Link>
           </div>
@@ -213,6 +233,11 @@ export function GamificationHub({
               <p>Posições consolidadas da campanha ativa.</p>
             </div>
             <StatusBadge label="Atualizado agora" tone="info" />
+            {canExportRanking ? (
+              <button type="button" className="btn btn-secondary btn-sm" disabled={pending} onClick={handleExportRanking}>
+                Exportar CSV
+              </button>
+            ) : null}
           </div>
           {entries.length === 0 ? (
             <div className="empty-state">
@@ -246,7 +271,7 @@ export function GamificationHub({
         </div>
       </DeTabPanel>
 
-      <DeTabPanel id="missions" activeTab={activeTab}>
+      <DeTabPanel id="missoes" activeTab={activeTab}>
         {missions.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon" aria-hidden>
@@ -285,7 +310,7 @@ export function GamificationHub({
         )}
       </DeTabPanel>
 
-      <DeTabPanel id="achievements" activeTab={activeTab}>
+      <DeTabPanel id="conquistas" activeTab={activeTab}>
         {achievements.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon" aria-hidden>
@@ -312,7 +337,7 @@ export function GamificationHub({
         )}
       </DeTabPanel>
 
-      <DeTabPanel id="journey" activeTab={activeTab}>
+      <DeTabPanel id="jornada" activeTab={activeTab}>
         <div className="grid grid-4">
           <MetricCard label="Campanhas" value={journey.campaignsParticipated} />
           <MetricCard label="Pontos totais" value={journey.totalPoints.toLocaleString("pt-BR")} variant="info" />
@@ -344,12 +369,13 @@ export function GamificationHub({
         </div>
       </DeTabPanel>
 
-      <DeTabPanel id="admin" activeTab={activeTab}>
+      <DeTabPanel id="central" activeTab={activeTab}>
         {canManageCampaigns ? (
           <CampaignAdminPanel
             campaigns={adminCampaigns}
             activeCampaignId={campaign?.id}
             canAdjustPoints={canAdjustPoints}
+            participants={participants}
           />
         ) : (
           <div className="empty-state">

@@ -146,10 +146,51 @@ export async function getUniversityHomeData(session: SessionContext) {
     mandatory: enrollments?.filter((e) => e.mandatory && e.status !== "completed") ?? [],
     recommended: enrollments?.filter((e) => !e.mandatory && e.status === "not_started") ?? [],
     newCourses: catalog.slice(0, 6),
+    catalog,
     stats: {
       inProgress: inProgressCount ?? 0,
       completed: completedCount ?? 0,
       overdue: overdueCount ?? 0,
     },
+  };
+}
+
+export async function getLearningPaths(session: SessionContext) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("learning_paths")
+    .select("id, title, slug, status, workload_minutes")
+    .or(`tenant_id.eq.${session.tenantId},is_global.eq.true`)
+    .eq("status", "published")
+    .limit(20);
+  return data ?? [];
+}
+
+export async function getLearningProgressSummary(session: SessionContext) {
+  const supabase = await createClient();
+  const home = await getUniversityHomeData(session);
+
+  const { count: certCount } = await supabase
+    .from("certificates")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.userId)
+    .eq("status", "valid");
+
+  const { count: attemptCount } = await supabase
+    .from("assessment_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.userId);
+
+  const totalMinutes = home.catalog.reduce((sum, c) => {
+    const pct = c.progressPercentage ?? 0;
+    return sum + Math.round((c.workloadMinutes * pct) / 100);
+  }, 0);
+
+  return {
+    ...home.stats,
+    certificates: certCount ?? 0,
+    attempts: attemptCount ?? 0,
+    hoursStudied: Math.round(totalMinutes / 60),
+    catalog: home.catalog,
   };
 }

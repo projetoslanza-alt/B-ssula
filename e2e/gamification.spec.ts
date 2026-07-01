@@ -18,13 +18,13 @@ test.describe("Gamificação", () => {
 
   test("aba missões carrega conteúdo", async ({ page }) => {
     await login(page, QA_USERS.studentNorth, qaPassword("user.student.north"));
-    await page.goto("/gamificacao?tab=missions");
+    await page.goto("/gamificacao?tab=missoes");
     await expect(page.getByRole("heading", { name: "Gamificação" })).toBeVisible();
   });
 
   test("SDR não vê central de campanhas", async ({ page }) => {
     await login(page, QA_USERS.studentNorth, qaPassword("user.student.north"));
-    await page.goto("/gamificacao?tab=admin");
+    await page.goto("/gamificacao?tab=central");
     await expect(page.getByText(/não possui permissão/i)).toBeVisible();
   });
 });

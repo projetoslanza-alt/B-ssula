@@ -13,7 +13,7 @@ import { platformRoutes } from "@/lib/routes";
 export default async function InicioPage() {
   const session = await requirePageSession();
   const [ranking, featured, homeNews, dashboard] = await Promise.all([
-    getCampaignRanking("rota-do-fechamento", 3),
+    getCampaignRanking(session.tenantId, session.userId, session.teamId, { campaignSlug: "rota-do-fechamento" }, 3),
     getFeaturedPublication(session.tenantId),
     getHomeNewsPublications(session.tenantId, 3),
     getCommercialDashboardOverview(session, { period: "mes_atual" }).catch(() => null),

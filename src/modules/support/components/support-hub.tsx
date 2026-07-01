@@ -10,7 +10,6 @@ import { StatusBadge } from "@/components/platform/status-badge";
 import { FilterBar } from "@/components/platform/filter-bar";
 import { FilterSelect } from "@/components/platform/filter-select";
 import { Input } from "@/components/ui/input";
-import { DEMO_TICKETS } from "@/modules/demo-data";
 import { platformRoutes } from "@/lib/routes";
 import { EmptyState } from "@/components/feedback/states";
 
@@ -52,60 +51,34 @@ export function SupportHub({ tickets = [], overview, canCreate = true }: Support
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
 
-  const useDemoFallback = tickets.length === 0;
-
-  const rows = useMemo(() => {
-    if (useDemoFallback) {
-      return DEMO_TICKETS.map((t) => ({
-        id: t.id,
-        ticket_number: t.protocol,
-        title: t.title,
-        status: t.status,
-        priority: t.priority,
-        opened_at: t.updatedAt,
-        category: t.category,
-      }));
-    }
-    return tickets.map((t) => ({ ...t, category: "—" }));
-  }, [tickets, useDemoFallback]);
-
   const stats = useMemo(() => {
-    if (overview && !useDemoFallback) {
-      const resolved = rows.filter((t) => ["resolved", "closed"].includes(t.status)).length;
-      const inProgress = rows.filter((t) => t.status === "in_progress").length;
-      const waiting = rows.filter((t) =>
-        ["waiting_requester", "waiting_third_party", "new"].includes(t.status),
-      ).length;
-      return {
-        abertos: overview.open,
-        aguardando: waiting,
-        emAndamento: inProgress,
-        resolvidos: resolved,
-        tempoMedio: overview.outOfSla > 0 ? `${overview.outOfSla} fora SLA` : "—",
-      };
-    }
+    const resolved = tickets.filter((t) => ["resolved", "closed"].includes(t.status)).length;
+    const inProgress = tickets.filter((t) => t.status === "in_progress").length;
+    const waiting = tickets.filter((t) =>
+      ["waiting_requester", "waiting_third_party", "new"].includes(t.status),
+    ).length;
     return {
-      abertos: DEMO_TICKETS.filter((t) => t.status === "aberto" || t.status === "aguardando_triagem").length,
-      aguardando: DEMO_TICKETS.filter((t) => t.status === "aguardando_triagem" || t.status === "aguardando_solicitante").length,
-      emAndamento: DEMO_TICKETS.filter((t) => ["em_analise", "em_atendimento", "in_progress"].includes(t.status)).length,
-      resolvidos: DEMO_TICKETS.filter((t) => t.status === "resolvido").length,
-      tempoMedio: "3h 18m",
+      abertos: overview?.open ?? tickets.filter((t) => !["resolved", "closed", "cancelled"].includes(t.status)).length,
+      aguardando: waiting,
+      emAndamento: inProgress,
+      resolvidos: resolved,
+      tempoMedio: overview && overview.outOfSla > 0 ? `${overview.outOfSla} fora SLA` : "—",
     };
-  }, [overview, rows, useDemoFallback]);
+  }, [overview, tickets]);
 
   const filtered = useMemo(() => {
-    return rows.filter((t) => {
+    return tickets.filter((t) => {
       if (statusFilter !== "todos" && t.status !== statusFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         return (
-          t.ticket_number.toLowerCase().includes(q) ||
+          String(t.ticket_number).toLowerCase().includes(q) ||
           t.title.toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [rows, search, statusFilter]);
+  }, [tickets, search, statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -155,7 +128,11 @@ export function SupportHub({ tickets = [], overview, canCreate = true }: Support
         {filtered.length === 0 ? (
           <EmptyState
             title="Nenhum chamado encontrado"
-            description="Ajuste os filtros ou abra um novo chamado."
+            description={
+              tickets.length === 0
+                ? "Ainda não há chamados registrados. Abra o primeiro chamado para iniciar o atendimento."
+                : "Ajuste os filtros ou abra um novo chamado."
+            }
             action={
               canCreate ? (
                 <Link href={platformRoutes.support.new} className="btn btn-primary btn-sm">

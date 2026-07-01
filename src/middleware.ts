@@ -51,11 +51,14 @@ export async function middleware(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
-  if (!user && !isPublic && pathname !== "/") {
+  if (!user) {
+    if (isPublic) {
+      return supabaseResponse;
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
-    if (isSafeReturnPath(pathname)) {
+    if (pathname !== "/" && isSafeReturnPath(pathname)) {
       url.searchParams.set("redirect", pathname);
     }
     return NextResponse.redirect(url);

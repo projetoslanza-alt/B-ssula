@@ -23,7 +23,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/platform/brand-logo";
-import { CommandMenu, useSidebarState } from "@/components/platform/command-menu";
+import { CommandMenuProvider, useSidebarState } from "@/components/platform/command-menu";
+import { TopbarActions } from "@/components/platform/topbar-actions";
 import { OrganizationSwitcher } from "@/components/layout/organization-switcher";
 import { Button } from "@/components/ui/button";
 import { filterModules } from "@/lib/navigation";
@@ -97,8 +98,8 @@ export function PlatformLayoutClient({
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-sky-500/10 text-sky-400 ring-1 ring-sky-500/20"
-                  : "text-[var(--foreground-secondary)] hover:bg-[var(--card-elevated)] hover:text-[var(--foreground)]",
+                  ? "bg-[var(--primary)]/10 text-[var(--primary)] ring-1 ring-[var(--primary)]/25"
+                  : "text-[var(--foreground-secondary)] hover:bg-[var(--panel-secondary)] hover:text-[var(--foreground)]",
                 collapsed && "justify-center px-2",
               )}
             >
@@ -163,18 +164,17 @@ export function PlatformLayoutClient({
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--background)]">
+    <CommandMenuProvider permissions={session.permissions}>
+      <div className="flex min-h-screen flex-col bg-[var(--background)]">
       <a
         href="#conteudo-principal"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-sky-500 focus:px-4 focus:py-2 focus:text-slate-950"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[var(--primary)] focus:px-4 focus:py-2 focus:text-[#041018]"
       >
         Ir para o conteúdo
       </a>
 
-      <CommandMenu permissions={session.permissions} />
-
       <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--background-secondary)]/95 backdrop-blur">
-        <div className="flex h-14 items-center gap-2 px-3 sm:px-4">
+        <div className="flex h-14 items-center gap-2 px-3 sm:px-6">
           <Button
             variant="ghost"
             size="icon"
@@ -196,6 +196,7 @@ export function PlatformLayoutClient({
           </Button>
 
           <div className="ml-auto flex items-center gap-2">
+            <TopbarActions />
             <OrganizationSwitcher organizations={session.organizations} activeTenantId={session.tenantId} />
           </div>
         </div>
@@ -224,11 +225,12 @@ export function PlatformLayoutClient({
           </>
         )}
 
-        <main id="conteudo-principal" className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+        <main id="conteudo-principal" className="flex-1 overflow-auto px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
           {children}
         </main>
       </div>
     </div>
+    </CommandMenuProvider>
   );
 }
 

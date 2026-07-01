@@ -1,37 +1,59 @@
 import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/platform/status-badge";
 
 type MetricCardProps = {
   label: string;
   value: string | number;
   hint?: string;
+  footer?: React.ReactNode;
+  badge?: { label: string; tone?: "default" | "success" | "warning" | "danger" | "info" | "purple" };
+  trend?: { label: string; direction?: "up" | "down"; tone?: "success" | "danger" | "muted" };
   variant?: "default" | "success" | "warning" | "danger" | "info" | "purple";
   className?: string;
 };
 
-const variantStyles = {
-  default: "border-[var(--border)] bg-[var(--card)]",
-  success: "border-emerald-500/30 bg-emerald-500/5",
-  warning: "border-amber-500/30 bg-amber-500/5",
-  danger: "border-red-500/30 bg-red-500/5",
-  info: "border-sky-500/30 bg-sky-500/5",
-  purple: "border-violet-500/30 bg-violet-500/5",
-};
+export function MetricCard({
+  label,
+  value,
+  hint,
+  footer,
+  badge,
+  trend,
+  variant = "default",
+  className,
+}: MetricCardProps) {
+  const trendColor =
+    trend?.tone === "danger"
+      ? "text-[var(--danger)]"
+      : trend?.tone === "success" || trend?.direction === "up" || trend?.direction === "down"
+        ? "text-[var(--success)]"
+        : "text-[var(--muted)]";
 
-const valueStyles = {
-  default: "text-[var(--foreground)]",
-  success: "text-emerald-400",
-  warning: "text-amber-400",
-  danger: "text-red-400",
-  info: "text-sky-400",
-  purple: "text-violet-400",
-};
-
-export function MetricCard({ label, value, hint, variant = "default", className }: MetricCardProps) {
   return (
-    <div className={cn("rounded-xl border p-5 transition-colors hover:border-[var(--border-active)]", variantStyles[variant], className)}>
-      <p className="text-sm font-medium text-[var(--foreground-muted)]">{label}</p>
-      <p className={cn("mt-2 text-3xl font-semibold tabular-nums", valueStyles[variant])}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-[var(--foreground-disabled)]">{hint}</p>}
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 sm:p-5",
+        className,
+      )}
+    >
+      <div
+        className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-20 rounded-full bg-[var(--primary)]/10 blur-2xl"
+        aria-hidden
+      />
+      <p className="text-xs font-medium text-[var(--muted)] sm:text-sm">{label}</p>
+      <p className="mt-2 text-[1.65rem] font-extrabold leading-none tabular-nums text-[var(--foreground)] sm:text-[1.85rem]">
+        {value}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {badge && <StatusBadge label={badge.label} tone={badge.tone ?? variant} />}
+        {trend && (
+          <span className={cn("text-xs font-semibold", trendColor)}>
+            {trend.direction === "down" ? "↓" : trend.direction === "up" ? "↑" : ""} {trend.label}
+          </span>
+        )}
+        {hint && !badge && !trend && <p className="text-xs text-[var(--muted-secondary)]">{hint}</p>}
+        {footer}
+      </div>
     </div>
   );
 }

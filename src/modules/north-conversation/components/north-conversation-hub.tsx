@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { DemoBanner } from "@/components/platform/demo-banner";
 import { PageHeader } from "@/components/platform/page-header";
 import { MetricCard } from "@/components/platform/metric-card";
+import { ChartCard } from "@/components/platform/chart-card";
+import { Timeline } from "@/components/platform/timeline";
 import { StatusBadge } from "@/components/platform/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DEMO_CONVERSATIONS } from "@/modules/demo-data";
 import { platformRoutes } from "@/lib/routes";
-import { BarChartWidget } from "@/components/charts/chart-widgets";
+import { LineChartWidget } from "@/components/charts/chart-widgets";
 
 const STATUS_MAP: Record<string, { label: string; tone: "info" | "success" | "warning" | "default" }> = {
   programada: { label: "Programada", tone: "info" },
@@ -20,36 +21,57 @@ const STATUS_MAP: Record<string, { label: string; tone: "info" | "success" | "wa
   pendente: { label: "Pendente", tone: "warning" },
 };
 
-export function NorthConversationHub() {
+const EVOLUTION_DATA = [
+  { mes: "Fev", nota: 7.1 },
+  { mes: "Mar", nota: 7.3 },
+  { mes: "Abr", nota: 7.5 },
+  { mes: "Mai", nota: 7.4 },
+  { mes: "Jun", nota: 7.7 },
+  { mes: "Jul", nota: 7.8 },
+];
+
+type NorthConversationHubProps = {
+  canCreateMeeting?: boolean;
+};
+
+export function NorthConversationHub({ canCreateMeeting = false }: NorthConversationHubProps) {
   const [tab, setTab] = useState("overview");
+
+  const completed = DEMO_CONVERSATIONS.filter((c) => c.status === "concluida");
+  const scores = completed.map((c) => c.score).filter((s): s is number => typeof s === "number");
+  const mediaEquipe = scores.length
+    ? scores.reduce((sum, n) => sum + n, 0) / scores.length
+    : null;
 
   const stats = {
     programadas: DEMO_CONVERSATIONS.filter((c) => c.status === "programada").length,
-    realizadas: DEMO_CONVERSATIONS.filter((c) => c.status === "concluida").length,
-    pendentes: DEMO_CONVERSATIONS.filter((c) => c.status === "pendente").length,
-    atencao: DEMO_CONVERSATIONS.filter((c) => c.classification === "Em atenção").length,
-    recuperacao: 1,
-    acoesAbertas: 8,
-    acoesAtrasadas: 2,
-    mediaEquipe: 7.6,
+    realizadas: completed.length,
+    acoesAbertas: DEMO_CONVERSATIONS.filter((c) => c.status === "pendente").length,
+    acoesAtrasadas: DEMO_CONVERSATIONS.filter((c) => c.classification === "Em atenção").length,
+    mediaEquipe,
   };
 
-  const performanceData = DEMO_CONVERSATIONS.filter((c) => c.score).map((c) => ({
-    name: c.employee.split(" ")[0],
-    nota: c.score,
-  }));
+  const upcoming = DEMO_CONVERSATIONS.filter((c) => c.status === "programada" || c.status === "pendente")
+    .slice(0, 3)
+    .map((c, i) => ({
+      id: c.id,
+      title: c.employee,
+      subtitle: `${c.date} • ${c.type}`,
+      tone: (i === 0 ? "success" : i === 1 ? "info" : "default") as "success" | "info" | "default",
+    }));
 
   return (
-    <div className="space-y-8">
-      <DemoBanner />
+    <div className="space-y-6">
       <PageHeader
-        subtitle="One a One de performance e desenvolvimento"
+        eyebrow="DESENVOLVIMENTO"
         title="Conversa de Norte"
-        description="Uma conversa estruturada para reconhecer avanços, analisar resultados, identificar desvios e definir os próximos passos da jornada."
+        description="Reconheça avanços, identifique desvios e defina os próximos passos."
         actions={
-          <Button asChild>
-            <Link href={platformRoutes.northConversation.new}>+ Nova conversa</Link>
-          </Button>
+          canCreateMeeting ? (
+            <Button asChild>
+              <Link href={platformRoutes.northConversation.new}>+ Iniciar conversa</Link>
+            </Button>
+          ) : undefined
         }
       />
 
@@ -64,40 +86,61 @@ export function NorthConversationHub() {
         </TabsList>
 
         <TabsContent value="overview">
-          <div className="mt-6 space-y-6">
-            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricCard label="Conversas programadas" value={stats.programadas} variant="info" />
-              <MetricCard label="Realizadas" value={stats.realizadas} variant="success" />
-              <MetricCard label="Pendentes" value={stats.pendentes} variant="warning" />
-              <MetricCard label="Em atenção" value={stats.atencao} variant="danger" />
-              <MetricCard label="Planos de recuperação" value={stats.recuperacao} />
-              <MetricCard label="Ações abertas" value={stats.acoesAbertas} />
-              <MetricCard label="Ações atrasadas" value={stats.acoesAtrasadas} variant="danger" />
-              <MetricCard label="Média da equipe" value={stats.mediaEquipe} variant="success" />
+          <div className="mt-4 space-y-4">
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard label="Programadas" value={stats.programadas} hint="Próximos 15 dias" />
+              <MetricCard
+                label="Realizadas"
+                value={stats.realizadas}
+                trend={stats.realizadas > 0 ? { label: "92% no prazo", direction: "up" } : undefined}
+              />
+              <MetricCard
+                label="Ações abertas"
+                value={stats.acoesAbertas}
+                trend={stats.acoesAtrasadas > 0 ? { label: `${stats.acoesAtrasadas} atrasadas`, direction: "down", tone: "danger" } : undefined}
+              />
+              <MetricCard
+                label="Nota média"
+                value={
+                  stats.mediaEquipe != null
+                    ? stats.mediaEquipe.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                    : "—"
+                }
+                trend={stats.mediaEquipe != null ? { label: "0,4", direction: "up" } : undefined}
+              />
             </section>
-            <BarChartWidget
-              title="Performance por colaborador"
-              data={performanceData}
-              dataKey="nota"
-              xKey="name"
-            />
+
+            <section className="grid gap-3 lg:grid-cols-2">
+              <ChartCard title="Evolução da equipe" description="Nota média das Conversas de Norte.">
+                <LineChartWidget data={EVOLUTION_DATA} lines={[{ key: "nota", color: "#35B6F4", name: "Nota média" }]} xKey="mes" />
+              </ChartCard>
+              <ChartCard title="Próximas conversas" description="Agenda dos próximos dias.">
+                {upcoming.length === 0 ? (
+                  <p className="text-sm text-[var(--muted)]">Nenhuma conversa programada no momento.</p>
+                ) : (
+                  <Timeline items={upcoming} />
+                )}
+              </ChartCard>
+            </section>
           </div>
         </TabsContent>
 
         <TabsContent value="conversas">
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-3">
             {DEMO_CONVERSATIONS.map((c) => {
               const st = STATUS_MAP[c.status];
               return (
                 <Link key={c.id} href={platformRoutes.northConversation.conversation(c.id)}>
-                  <Card className="hover:border-sky-500/30">
+                  <Card className="border-[var(--border)] bg-[var(--panel)] hover:border-[var(--border-active)]">
                     <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
                       <div>
-                        <p className="font-medium">{c.employee}</p>
-                        <p className="text-sm text-[var(--foreground-muted)]">{c.type} · {c.date} · {c.manager}</p>
+                        <p className="font-semibold">{c.employee}</p>
+                        <p className="text-sm text-[var(--muted)]">
+                          {c.type} · {c.date} · {c.manager}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {c.score && <span className="text-lg font-semibold text-sky-400">{c.score}</span>}
+                        {c.score && <span className="text-lg font-bold text-[var(--primary)]">{c.score}</span>}
                         {c.classification && <StatusBadge label={c.classification} tone="info" />}
                         <StatusBadge label={st.label} tone={st.tone} />
                       </div>
@@ -110,10 +153,10 @@ export function NorthConversationHub() {
         </TabsContent>
 
         <TabsContent value="checkin">
-          <div className="mt-6">
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-[var(--foreground-muted)]">
+          <div className="mt-4">
+            <Card className="border-[var(--border)] bg-[var(--panel)]">
+              <CardContent className="p-5">
+                <p className="text-sm text-[var(--muted)]">
                   Uma leitura rápida sobre comportamento, colaboração e ambiente de trabalho.
                 </p>
                 <Button className="mt-4" asChild>
@@ -125,7 +168,7 @@ export function NorthConversationHub() {
         </TabsContent>
 
         <TabsContent value="planos">
-          <div className="mt-6">
+          <div className="mt-4">
             <Button variant="outline" asChild>
               <Link href={platformRoutes.northConversation.actionPlans}>Ver planos de ação</Link>
             </Button>
@@ -133,7 +176,7 @@ export function NorthConversationHub() {
         </TabsContent>
 
         <TabsContent value="jornada">
-          <div className="mt-6">
+          <div className="mt-4">
             <Button variant="outline" asChild>
               <Link href={platformRoutes.northConversation.myJourney}>Minha jornada</Link>
             </Button>
@@ -141,7 +184,7 @@ export function NorthConversationHub() {
         </TabsContent>
 
         <TabsContent value="equipe">
-          <div className="mt-6">
+          <div className="mt-4">
             <Button variant="outline" asChild>
               <Link href={platformRoutes.northConversation.team}>Mapa da equipe</Link>
             </Button>

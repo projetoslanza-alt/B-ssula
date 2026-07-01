@@ -1,41 +1,67 @@
 import Link from "next/link";
 import { requirePageSession } from "@/lib/auth/page-guard";
-import { ClickableMetricCard } from "@/components/platform/clickable-metric-card";
+import { Eyebrow } from "@/components/platform/eyebrow";
+import { HeroCompass } from "@/components/platform/hero-compass";
+import { NewsCard } from "@/components/platform/news-card";
 import { RankingPodium } from "@/components/platform/ranking-podium";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { StatusBadge } from "@/components/platform/status-badge";
 import { DEMO_HOME_METRICS, DEMO_NEWS } from "@/modules/demo-data";
 import { getCampaignRanking } from "@/modules/gamification/queries/ranking";
 import { platformRoutes } from "@/lib/routes";
-import { ArrowRight, Compass, TrendingUp, Trophy } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export default async function InicioPage() {
-  const session = await requirePageSession();
-  const firstName = session.fullName?.split(" ")[0] ?? "colaborador";
+  await requirePageSession();
   const metrics = DEMO_HOME_METRICS;
-  const newsPreview = DEMO_NEWS.slice(0, 4);
   const ranking = await getCampaignRanking("rota-do-fechamento", 3);
+  const leader = ranking?.entries[0];
+  const universityNews = DEMO_NEWS.find((n) => n.type === "universidade");
+  const moreNews = DEMO_NEWS.slice(0, 3);
+
+  const leaderName = leader?.fullName ?? "Equipe";
+  const sidebarNews = [
+    {
+      title: `${leaderName} lidera a semana`,
+      description: leader
+        ? `${leader.points.toLocaleString("pt-BR")} pontos na campanha ativa.`
+        : "Acompanhe o desempenho da equipe na gamificação.",
+      badge: "Destaque",
+      type: "reconhecimento",
+      href: platformRoutes.gamification.ranking,
+    },
+    {
+      title: `${metrics.metaAtingida}% da meta já foi alcançada`,
+      description: "A operação avança com ritmo consistente neste ciclo.",
+      badge: "Meta",
+      type: "resultado",
+      href: platformRoutes.dashboards.root,
+    },
+    {
+      title: universityNews?.title ?? "Já assistiu sua aula hoje?",
+      description: universityNews?.excerpt ?? "Reserve alguns minutos para evoluir na Universidade.",
+      badge: "Universidade",
+      type: "universidade",
+      href: universityNews ? platformRoutes.news.post(universityNews.id) : platformRoutes.learning.myUniversity,
+    },
+  ];
 
   return (
-    <div className="space-y-10">
-      <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--card)] via-[var(--card-elevated)] to-[#0a1628] p-8 sm:p-12">
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-sky-500/5 blur-3xl" />
-        <div className="absolute -bottom-10 left-1/3 h-40 w-40 rounded-full bg-blue-600/5 blur-2xl" />
-        <div className="relative grid gap-8 lg:grid-cols-2 lg:items-center">
-          <div className="space-y-5">
-            <p className="text-sm font-medium text-sky-400">Bem-vindo, {firstName}</p>
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)] sm:text-4xl">
-              Bem-vindo à Bússola
+    <div className="space-y-8">
+      <section className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-gradient-to-br from-[#0b1524] via-[var(--panel)] to-[#09111b] px-6 py-7 sm:px-8 sm:py-8">
+        <div className="absolute -right-16 top-0 h-48 w-48 rounded-full bg-[var(--primary)]/8 blur-3xl" aria-hidden />
+        <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="space-y-4">
+            <Eyebrow>BÚSSOLA BY VENDASCOMCIÊNCIA</Eyebrow>
+            <h1 className="text-[1.85rem] font-extrabold leading-[1.1] tracking-tight text-[var(--foreground)] sm:text-[2.35rem]">
+              Todo time precisa de um
+              <br />
+              <span className="text-[var(--primary)]">norte.</span>
             </h1>
-            <p className="text-lg text-[var(--foreground-secondary)]">
-              Todo time precisa de um norte. O seu começa aqui.
+            <p className="max-w-xl text-sm leading-relaxed text-[var(--muted)] sm:text-[15px]">
+              O norte da sua operação comercial. A Bússola reúne desempenho, aprendizado, desenvolvimento e gestão em
+              uma única jornada — da primeira ligação ao fechamento.
             </p>
-            <p className="max-w-xl text-[var(--foreground-muted)]">
-              O norte da sua operação comercial. A Bússola reúne desempenho, oportunidades,
-              aprendizado e gestão em uma única jornada — da primeira ligação ao fechamento.
-            </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 pt-1">
               <Button asChild>
                 <Link href={platformRoutes.dashboards.root}>
                   Ver indicadores <ArrowRight className="h-4 w-4" />
@@ -46,84 +72,59 @@ export default async function InicioPage() {
               </Button>
             </div>
           </div>
-          <div className="relative flex items-center justify-center">
-            <div className="relative h-56 w-56 sm:h-72 sm:w-72">
-              <div className="absolute inset-0 rounded-full border border-sky-500/20" />
-              <div className="absolute inset-4 rounded-full border border-sky-500/15" />
-              <div className="absolute inset-8 rounded-full border border-sky-500/10" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Compass className="h-24 w-24 text-sky-400/80 sm:h-32 sm:w-32" strokeWidth={1} />
-              </div>
-              {[0, 60, 120, 180, 240, 300].map((deg) => (
-                <div
-                  key={deg}
-                  className="absolute left-1/2 top-1/2 h-0.5 w-1/2 origin-left bg-gradient-to-r from-sky-400/40 to-transparent"
-                  style={{ transform: `rotate(${deg}deg)` }}
-                />
-              ))}
-              <div className="absolute right-4 top-8 h-2 w-2 rounded-full bg-sky-400 shadow-lg shadow-sky-400/50" />
-              <div className="absolute bottom-12 left-8 h-2 w-2 rounded-full bg-amber-400 shadow-lg shadow-amber-400/50" />
-              <div className="absolute right-12 bottom-8 h-2 w-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50" />
-            </div>
-          </div>
+          <HeroCompass />
         </div>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <ClickableMetricCard label="Meta atingida no mês" value={`${metrics.metaAtingida}%`} href={platformRoutes.dashboards.root} variant="success" />
-        <ClickableMetricCard label="Vendas realizadas" value={metrics.vendasRealizadas} href={platformRoutes.dashboards.root} variant="info" />
-        <ClickableMetricCard label="Reuniões realizadas" value={metrics.reunioesRealizadas} href={platformRoutes.dashboards.root} />
-        <ClickableMetricCard label="Ligações" value={metrics.ligacoes.toLocaleString("pt-BR")} href={platformRoutes.dashboards.root} />
-        <ClickableMetricCard label="Ações pendentes" value={metrics.acoesPendentes} href={platformRoutes.northConversation.actionPlans} variant="warning" />
-        <ClickableMetricCard label="Cursos em andamento" value={metrics.cursosEmAndamento} href={platformRoutes.learning.myUniversity} variant="purple" />
-        <ClickableMetricCard label="Chamados abertos" value={metrics.chamadosAbertos} href={platformRoutes.support.root} />
-        <ClickableMetricCard label="Próxima Conversa de Norte" value={metrics.proximaConversaNorte} href={platformRoutes.northConversation.root} variant="info" />
       </section>
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-sky-400" />
-            <h2 className="text-xl font-semibold text-[var(--foreground)]">
-              {ranking?.campaignName ?? "Rota do Fechamento"}
-            </h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-extrabold uppercase tracking-wide text-[var(--foreground)]">News</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Destaques, metas e novidades da operação.</p>
           </div>
-          <Link href={platformRoutes.gamification.ranking} className="text-sm text-sky-400 hover:underline">
-            Ver ranking <ArrowRight className="inline h-4 w-4" />
-          </Link>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={platformRoutes.news.root}>Ver central de News</Link>
+          </Button>
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <RankingPodium entries={ranking?.entries ?? []} />
-          </CardContent>
-        </Card>
+
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+          <RankingPodium entries={ranking?.entries ?? []} />
+          <div className="grid gap-3">
+            {sidebarNews.map((item) => (
+              <NewsCard
+                key={item.title}
+                title={item.title}
+                description={item.description}
+                badge={item.badge}
+                type={item.type}
+                href={item.href}
+                compact
+              />
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-sky-400" />
-            <h2 className="text-xl font-semibold text-[var(--foreground)]">News</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-extrabold text-[var(--foreground)]">Mais notícias</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Atualizações recentes da plataforma e da operação.</p>
           </div>
-          <Link href={platformRoutes.news.root} className="text-sm text-sky-400 hover:underline">
-            Ver todas <ArrowRight className="inline h-4 w-4" />
-          </Link>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={platformRoutes.news.root}>Ver todas</Link>
+          </Button>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {newsPreview.map((post) => (
-            <Link key={post.id} href={platformRoutes.news.post(post.id)}>
-              <Card className="h-full transition-colors hover:border-sky-500/30 hover:bg-[var(--card-elevated)]">
-                <CardContent className="space-y-3 p-5">
-                  <div className="flex items-center gap-2">
-                    <StatusBadge label={post.category} tone="info" />
-                    {post.pinned && <StatusBadge label="Fixado" tone="warning" />}
-                  </div>
-                  <h3 className="font-medium text-[var(--foreground)] line-clamp-2">{post.title}</h3>
-                  <p className="text-sm text-[var(--foreground-muted)] line-clamp-2">{post.excerpt}</p>
-                  <p className="text-xs text-[var(--foreground-disabled)]">{post.publishedAt}</p>
-                </CardContent>
-              </Card>
-            </Link>
+        <div className="grid gap-3 md:grid-cols-3">
+          {moreNews.map((post) => (
+            <NewsCard
+              key={post.id}
+              title={post.title}
+              description={post.excerpt}
+              badge={post.category}
+              type={post.type}
+              href={platformRoutes.news.post(post.id)}
+            />
           ))}
         </div>
       </section>

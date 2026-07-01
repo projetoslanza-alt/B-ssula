@@ -17,7 +17,7 @@ import {
   YAxis,
 } from "recharts";
 
-const CHART_COLORS = ["#38bdf8", "#2563eb", "#8b5cf6", "#f59e0b", "#22c55e", "#ef4444"];
+const CHART_COLORS = ["#35b6f4", "#2388f5", "#8b5cf6", "#f59e0b", "#20c978", "#f25f6b"];
 
 const tooltipStyle = {
   contentStyle: {
@@ -122,7 +122,7 @@ export function LineChartWidget({
               name={line.name ?? line.key}
               stroke={line.color ?? CHART_COLORS[i % CHART_COLORS.length]}
               strokeWidth={2}
-              dot={false}
+              dot={{ r: 3, fill: line.color ?? CHART_COLORS[i % CHART_COLORS.length] }}
             />
           ))}
         </LineChart>

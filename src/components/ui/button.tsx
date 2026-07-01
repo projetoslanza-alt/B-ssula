@@ -8,7 +8,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-sky-500 text-slate-950 hover:bg-sky-400 focus-visible:ring-sky-400",
+          "bg-[var(--primary)] text-[#041018] shadow-[0_0_24px_rgba(53,182,244,0.22)] hover:bg-[#4dc4f7] focus-visible:ring-[var(--primary)]",
         secondary:
           "bg-[var(--card-elevated)] text-[var(--foreground)] hover:bg-[var(--card-highlight)] focus-visible:ring-[var(--border)]",
         outline:

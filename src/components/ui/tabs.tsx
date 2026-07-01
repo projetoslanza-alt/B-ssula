@@ -34,7 +34,7 @@ export function TabsList({ children, className }: { children: React.ReactNode; c
     <div
       role="tablist"
       className={cn(
-        "flex flex-wrap gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] p-1",
+        "flex w-full gap-1 overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--panel)] p-1",
         className,
       )}
     >
@@ -54,10 +54,10 @@ export function TabsTrigger({ value, children }: { value: string; children: Reac
       aria-selected={active}
       onClick={() => ctx.onChange(value)}
       className={cn(
-        "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        "shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:text-sm",
         active
-          ? "bg-[var(--card-elevated)] text-sky-400 shadow-sm"
-          : "text-[var(--foreground-muted)] hover:text-[var(--foreground)]",
+          ? "bg-[var(--panel-secondary)] text-[var(--foreground)] shadow-sm"
+          : "text-[var(--muted)] hover:text-[var(--foreground-secondary)]",
       )}
     >
       {children}

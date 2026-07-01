@@ -29,7 +29,7 @@ export default function NotificacoesPage() {
       </div>
       <div className="space-y-2">
         {items.map((n) => (
-          <Link key={n.id} href={n.link ?? "#"}>
+          <Link key={n.id} href={n.link ?? platformRoutes.notifications}>
             <Card className={cn("hover:border-sky-500/30", !n.read && "border-sky-500/20 bg-sky-500/5")}>
               <CardContent className="flex items-start justify-between gap-4 p-4">
                 <div>

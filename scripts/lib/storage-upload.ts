@@ -16,7 +16,6 @@ export function uploadLargeFileToStorage(input: {
   const endpoint = `${input.supabaseUrl.replace(/\/$/, "")}/storage/v1/upload/resumable`;
 
   return new Promise((resolve, reject) => {
-    let uploaded = 0;
     const upload = new Upload(file, {
       endpoint,
       retryDelays: [0, 3000, 5000, 10000, 20000],
@@ -33,7 +32,6 @@ export function uploadLargeFileToStorage(input: {
         cacheControl: "3600",
       },
       onProgress: (sent) => {
-        uploaded = sent;
         input.onProgress?.(sent);
       },
       onError: (error) => reject(error),

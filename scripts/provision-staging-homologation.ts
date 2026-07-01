@@ -5,8 +5,6 @@ import { loadCloudEnv } from "./qa-env";
 import { SALES_COURSE_CONFIG } from "./data/sales-course-assessments";
 import { TENANTS } from "./qa-fixtures";
 
-const FIXTURE_KEY = "enrollment.homologation.gestor-north";
-
 async function resolveUser(admin: ReturnType<typeof createClient>) {
   for (const email of ["gestor.norte+qa@bussola.example.com", "gestor.norte@bussola.local"]) {
     const { data } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();

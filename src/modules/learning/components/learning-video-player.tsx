@@ -14,40 +14,30 @@ type LessonContent = {
   metadata?: Record<string, unknown>;
 };
 
-type Props = {
-  enrollmentId: string;
-  lessonId: string;
-  content: LessonContent;
-  initialPositionSeconds?: number;
-  initialWatchPercent?: number;
-  previewMode?: boolean;
-};
-
-function useSignedUrl(
-  content: LessonContent,
-  enrollmentId: string,
-  previewMode: boolean,
-): {
+type SignedUrlState = {
   url: string | null;
   loading: boolean;
   error: string | null;
   pending: { title: string; message: string; isDemoNote?: string } | null;
-  refresh: () => void;
-} {
-  const [url, setUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ title: string; message: string; isDemoNote?: string } | null>(null);
-  const [tick, setTick] = useState(0);
+};
 
-  const refresh = useCallback(() => setTick((t) => t + 1), []);
+const IDLE_SIGNED_URL_STATE: SignedUrlState = {
+  url: null,
+  loading: false,
+  error: null,
+  pending: null,
+};
 
+type SignedUrlFetcherProps = {
+  content: LessonContent;
+  enrollmentId: string;
+  onStateChange: (state: SignedUrlState) => void;
+};
+
+function SignedUrlFetcher({ content, enrollmentId, onStateChange }: SignedUrlFetcherProps) {
   useEffect(() => {
-    if (previewMode) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setPending(null);
+    onStateChange({ url: null, loading: true, error: null, pending: null });
 
     fetch("/api/learning/files", {
       method: "POST",
@@ -65,36 +55,59 @@ function useSignedUrl(
       .then((result) => {
         if (cancelled) return;
         if ("pending" in result && result.pending) {
-          setPending({
-            title: result.pending.title,
-            message: result.pending.message,
+          onStateChange({
+            url: null,
+            loading: false,
+            error: null,
+            pending: {
+              title: result.pending.title,
+              message: result.pending.message,
+            },
           });
-        } else if ("url" in result) {
-          setUrl(result.url);
-          if (result.isDemo) {
-            setPending({
-              title: "Demonstração de homologação",
-              message: "Prévia do conteúdo introdutório para validação da plataforma.",
-              isDemoNote: "Este clipe não conta para progresso nem certificado.",
-            });
-          }
+          return;
         }
-        setLoading(false);
+        if ("url" in result) {
+          onStateChange({
+            url: result.url,
+            loading: false,
+            error: null,
+            pending: result.isDemo
+              ? {
+                  title: "Demonstração de homologação",
+                  message: "Prévia do conteúdo introdutório para validação da plataforma.",
+                  isDemoNote: "Este clipe não conta para progresso nem certificado.",
+                }
+              : null,
+          });
+        }
       })
       .catch((e) => {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Erro ao carregar vídeo.");
-          setLoading(false);
+          onStateChange({
+            url: null,
+            loading: false,
+            error: e instanceof Error ? e.message : "Erro ao carregar vídeo.",
+            pending: null,
+          });
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [content.id, enrollmentId, previewMode, tick]);
+  }, [content.id, enrollmentId, onStateChange]);
 
-  return { url, loading, error, pending, refresh };
+  return null;
 }
+
+type Props = {
+  enrollmentId: string;
+  lessonId: string;
+  content: LessonContent;
+  initialPositionSeconds?: number;
+  initialWatchPercent?: number;
+  previewMode?: boolean;
+};
 
 export function LearningVideoPlayer({
   enrollmentId,
@@ -110,7 +123,12 @@ export function LearningVideoPlayer({
   const [, startTransition] = useTransition();
   const [watchPercent, setWatchPercent] = useState(initialWatchPercent);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const { url, loading, error, pending, refresh } = useSignedUrl(content, enrollmentId, previewMode);
+  const [fetchKey, setFetchKey] = useState(0);
+  const [signedUrlState, setSignedUrlState] = useState<SignedUrlState>(IDLE_SIGNED_URL_STATE);
+  const onSignedUrlStateChange = useCallback((next: SignedUrlState) => setSignedUrlState(next), []);
+  const refresh = useCallback(() => setFetchKey((key) => key + 1), []);
+
+  const { url, loading, error, pending } = previewMode ? IDLE_SIGNED_URL_STATE : signedUrlState;
 
   const persistProgress = useCallback(
     (duration: number, currentTime: number, delta: number) => {
@@ -174,57 +192,56 @@ export function LearningVideoPlayer({
     };
   }, [url, initialPositionSeconds, persistProgress, refresh]);
 
-  if (pending && !url) {
-    return <LearningContentPending title={pending.title} message={pending.message} isDemoNote={pending.isDemoNote} />;
-  }
-
-  if (loading) {
-    return (
-      <div className="flex aspect-video items-center justify-center rounded-lg bg-black/80">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
-      </div>
-    );
-  }
-
-  if (error || !url) {
-    return (
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 text-center">
-        <p className="text-sm text-[var(--foreground-muted)]">{error ?? "Vídeo indisponível."}</p>
-        <button
-          type="button"
-          onClick={refresh}
-          className="mt-3 text-sm text-[var(--primary)] underline"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-3">
-      {pending?.isDemoNote && (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          {pending.isDemoNote}
-        </p>
+    <>
+      {!previewMode && (
+        <SignedUrlFetcher
+          key={fetchKey}
+          content={content}
+          enrollmentId={enrollmentId}
+          onStateChange={onSignedUrlStateChange}
+        />
       )}
-      <div className="aspect-video overflow-hidden rounded-lg bg-black">
-        <video
-          ref={videoRef}
-          key={url}
-          src={url}
-          controls
-          playsInline
-          className="h-full w-full"
-          controlsList="nodownload"
-        >
-          <track kind="captions" />
-        </video>
-      </div>
-      <div className="flex items-center justify-between text-xs text-[var(--foreground-muted)]">
-        <span>Progresso do vídeo: {formatPercent(watchPercent)}</span>
-        {saveError && <span className="text-[var(--accent-red)]">{saveError}</span>}
-      </div>
-    </div>
+
+      {pending && !url ? (
+        <LearningContentPending title={pending.title} message={pending.message} isDemoNote={pending.isDemoNote} />
+      ) : loading ? (
+        <div className="flex aspect-video items-center justify-center rounded-lg bg-black/80">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
+        </div>
+      ) : error || !url ? (
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6 text-center">
+          <p className="text-sm text-[var(--foreground-muted)]">{error ?? "Vídeo indisponível."}</p>
+          <button type="button" onClick={refresh} className="mt-3 text-sm text-[var(--primary)] underline">
+            Tentar novamente
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {pending?.isDemoNote && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              {pending.isDemoNote}
+            </p>
+          )}
+          <div className="aspect-video overflow-hidden rounded-lg bg-black">
+            <video
+              ref={videoRef}
+              key={url}
+              src={url}
+              controls
+              playsInline
+              className="h-full w-full"
+              controlsList="nodownload"
+            >
+              <track kind="captions" />
+            </video>
+          </div>
+          <div className="flex items-center justify-between text-xs text-[var(--foreground-muted)]">
+            <span>Progresso do vídeo: {formatPercent(watchPercent)}</span>
+            {saveError && <span className="text-[var(--accent-red)]">{saveError}</span>}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

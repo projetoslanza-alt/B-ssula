@@ -141,7 +141,7 @@ async function main() {
       ? driveFiles.find((f) => normalizeName(f.name) === normalizeName(mapping.videoFile))
       : matchDriveFile(driveFiles, mapping.videoFile);
     const size = drive?.sizeBytes ? `${(drive.sizeBytes / 1024 / 1024).toFixed(1)} MB` : drive ? "?" : "—";
-    let status = drive ? "encontrado" : "AUSENTE — interromper";
+    const status = drive ? "encontrado" : "AUSENTE — interromper";
     if (!drive) {
       console.error(`\nArquivo esperado não encontrado: ${mapping.videoFile}`);
       console.table(report);

@@ -1,70 +1,70 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { DemoBanner } from "@/components/platform/demo-banner";
+import { requirePageSession } from "@/lib/auth/page-guard";
 import { PageHeader } from "@/components/platform/page-header";
-import { MetricCard } from "@/components/platform/metric-card";
-import { StatusBadge } from "@/components/platform/status-badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select } from "@/components/ui/input";
-import { DEMO_CERTIFICATES } from "@/modules/demo-data";
+import { StatusBadge } from "@/components/platform/status-badge";
+import { createClient } from "@/lib/supabase/server";
 import { platformRoutes } from "@/lib/routes";
-import { Copy, Download, Share2 } from "lucide-react";
 
-export default function CertificadosPage() {
-  const [statusFilter, setStatusFilter] = useState("todos");
-  const filtered = statusFilter === "todos"
-    ? DEMO_CERTIFICATES
-    : DEMO_CERTIFICATES.filter((c) => c.status === statusFilter);
+export default async function CertificadosPage() {
+  const session = await requirePageSession();
+  const supabase = await createClient();
+
+  const { data: certificates } = await supabase
+    .from("certificates")
+    .select(
+      "id, validation_code, course_title_snapshot, student_name_snapshot, workload_hours_snapshot, issued_at, status, is_demo",
+    )
+    .eq("user_id", session.userId)
+    .order("issued_at", { ascending: false });
+
+  const list = certificates ?? [];
 
   return (
     <div className="space-y-8">
-      <DemoBanner message="Certificados demonstrativos de homologação." />
       <PageHeader
         subtitle="Reconhecimentos conquistados ao longo da sua jornada."
         title="Certificados"
         backHref={platformRoutes.learning.root}
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Total de certificados" value={DEMO_CERTIFICATES.length} variant="purple" />
-        <MetricCard label="No mês" value={1} variant="success" />
-        <MetricCard label="Carga horária certificada" value="14h" />
-        <MetricCard label="Último certificado" value="Jun/2026" variant="info" />
-      </section>
-
-      <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="max-w-xs" aria-label="Status">
-        <option value="todos">Todos os status</option>
-        <option value="disponivel">Disponível</option>
-        <option value="em_processamento">Em processamento</option>
-      </Select>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {filtered.map((cert) => (
-          <Card key={cert.id} className="overflow-hidden">
-            <div className="h-2 bg-gradient-to-r from-violet-500 to-sky-500" />
-            <CardContent className="space-y-4 p-6">
-              <div className="flex justify-between">
-                <h3 className="font-semibold">{cert.courseName}</h3>
-                <StatusBadge label={cert.status} tone="success" />
-              </div>
-              <p className="text-sm text-[var(--foreground-muted)]">{cert.studentName}</p>
-              <p className="text-sm">Conclusão: {cert.completedAt} · {cert.workloadHours}h · Nota {cert.grade}</p>
-              <p className="font-mono text-xs text-sky-400">{cert.validationCode}</p>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={platformRoutes.learning.certificate(cert.id)}>Visualizar</Link>
-                </Button>
-                <Button size="sm" variant="outline"><Download className="h-4 w-4" /> PDF</Button>
-                <Button size="sm" variant="ghost"><Copy className="h-4 w-4" /></Button>
-                <Button size="sm" variant="ghost"><Share2 className="h-4 w-4" /></Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {list.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-sm text-[var(--foreground-muted)]">
+            Nenhum certificado emitido ainda. Conclua os requisitos do curso para solicitar emissão.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {list.map((cert) => (
+            <Card key={cert.id} className="overflow-hidden">
+              <div className="h-2 bg-gradient-to-r from-violet-500 to-sky-500" />
+              <CardContent className="space-y-4 p-6">
+                <div className="flex justify-between gap-2">
+                  <h3 className="font-semibold">{cert.course_title_snapshot}</h3>
+                  <StatusBadge label={cert.status} tone="success" />
+                </div>
+                {cert.is_demo && (
+                  <p className="text-xs text-amber-400">Homologação QA — não é certificado de produção</p>
+                )}
+                <p className="text-sm text-[var(--foreground-muted)]">{cert.student_name_snapshot}</p>
+                <p className="text-sm">
+                  Conclusão:{" "}
+                  {cert.issued_at ? new Date(cert.issued_at).toLocaleDateString("pt-BR") : "—"} ·{" "}
+                  {cert.workload_hours_snapshot}h
+                </p>
+                <p className="font-mono text-xs text-sky-400">{cert.validation_code}</p>
+                <Link
+                  href={`${platformRoutes.certificateValidation}?codigo=${encodeURIComponent(cert.validation_code)}`}
+                  className="text-sm text-[var(--primary)] hover:underline"
+                >
+                  Validar publicamente
+                </Link>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

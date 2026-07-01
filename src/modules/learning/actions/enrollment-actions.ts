@@ -223,6 +223,98 @@ export async function updateProgressAction(input: {
   }
 }
 
+export async function updateVideoProgressAction(input: {
+  enrollmentId: string;
+  lessonId: string;
+  contentId: string;
+  durationSeconds: number;
+  currentPositionSeconds: number;
+  deltaWatchedSeconds: number;
+}) {
+  try {
+    const session = await requireSession();
+    const supabase = await createClient();
+
+    const { data: enrollment } = await supabase
+      .from("course_enrollments")
+      .select("id, user_id, tenant_id, course_id, course_version_id")
+      .eq("id", input.enrollmentId)
+      .eq("user_id", session.userId)
+      .single();
+
+    if (!enrollment) return { error: "Matrícula não encontrada." };
+
+    const lessonValid = await assertLessonInEnrollment(supabase, enrollment, input.lessonId);
+    if (!lessonValid) return { error: "Aula inválida." };
+
+    const { data: existing } = await supabase
+      .from("learning_video_progress")
+      .select("watched_seconds")
+      .eq("enrollment_id", input.enrollmentId)
+      .eq("content_id", input.contentId)
+      .maybeSingle();
+
+    const prevWatched = existing?.watched_seconds ?? 0;
+    const duration = Math.max(0, Math.floor(input.durationSeconds));
+    const position = Math.max(0, Math.floor(input.currentPositionSeconds));
+    const watchedSeconds = Math.min(
+      duration || Number.MAX_SAFE_INTEGER,
+      prevWatched + Math.max(0, Math.floor(input.deltaWatchedSeconds)),
+    );
+    const watchPercentage =
+      duration > 0 ? Math.min(100, Math.round((watchedSeconds / duration) * 10000) / 100) : 0;
+
+    await supabase.from("learning_video_progress").upsert(
+      {
+        tenant_id: session.tenantId,
+        user_id: session.userId,
+        enrollment_id: input.enrollmentId,
+        course_id: enrollment.course_id,
+        lesson_id: input.lessonId,
+        content_id: input.contentId,
+        duration_seconds: duration,
+        current_position_seconds: position,
+        watched_seconds: watchedSeconds,
+        watch_percentage: watchPercentage,
+        last_activity_at: new Date().toISOString(),
+        started_at: existing ? undefined : new Date().toISOString(),
+      },
+      { onConflict: "enrollment_id,content_id" },
+    );
+
+    const { data: lesson } = await supabase
+      .from("lessons")
+      .select("completion_rule, completion_config")
+      .eq("id", input.lessonId)
+      .single();
+
+    const config = (lesson?.completion_config as { min_video_percent?: number }) ?? {};
+    const isComplete = canCompleteLesson(lesson?.completion_rule ?? "video_percent", config, {
+      videoPercent: watchPercentage,
+    });
+
+    if (isComplete) {
+      await supabase
+        .from("learning_video_progress")
+        .update({ completed_at: new Date().toISOString() })
+        .eq("enrollment_id", input.enrollmentId)
+        .eq("content_id", input.contentId);
+    }
+
+    const progressResult = await updateProgressAction({
+      enrollmentId: input.enrollmentId,
+      lessonId: input.lessonId,
+      contentId: input.contentId,
+      videoPositionSeconds: position,
+      videoPercent: watchPercentage,
+    });
+
+    return { ...progressResult, videoPercent: watchPercentage };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
 export async function assignCourseAction(input: {
   courseId: string;
   userId: string;

@@ -26,6 +26,36 @@ export type SessionContext = {
   organizations: OrganizationSummary[];
 };
 
+async function loadGroupPermissionsForMembership(
+  membershipId: string,
+): Promise<string[]> {
+  const supabase = await createClient();
+  const { data: rows } = await supabase
+    .from("membership_access_groups")
+    .select(`
+      access_groups (
+        access_group_permissions (
+          granted,
+          permissions ( code )
+        )
+      )
+    `)
+    .eq("membership_id", membershipId);
+
+  const permissions = new Set<string>();
+  for (const row of rows ?? []) {
+    const groupRaw = row.access_groups;
+    const group = Array.isArray(groupRaw) ? groupRaw[0] : groupRaw;
+    for (const gp of group?.access_group_permissions ?? []) {
+      if (!gp.granted) continue;
+      const permRaw = gp.permissions;
+      const perm = Array.isArray(permRaw) ? permRaw[0] : permRaw;
+      if (perm?.code) permissions.add(perm.code);
+    }
+  }
+  return Array.from(permissions);
+}
+
 async function loadPermissionsForMembership(
   membershipId: string,
 ): Promise<{ permissions: string[]; roleCodes: string[] }> {
@@ -45,7 +75,8 @@ async function loadPermissionsForMembership(
     .eq("membership_id", membershipId);
 
   if (error || !rows?.length) {
-    return { permissions: [], roleCodes: [] };
+    const groupPerms = await loadGroupPermissionsForMembership(membershipId);
+    return { permissions: groupPerms, roleCodes: [] };
   }
 
   const roleCodes = new Set<string>();
@@ -63,6 +94,10 @@ async function loadPermissionsForMembership(
       const perm = Array.isArray(permRaw) ? permRaw[0] : permRaw;
       if (perm?.code) permissions.add(perm.code);
     }
+  }
+
+  for (const code of await loadGroupPermissionsForMembership(membershipId)) {
+    permissions.add(code);
   }
 
   return {

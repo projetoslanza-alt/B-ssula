@@ -1,18 +1,21 @@
 import Link from "next/link";
 import { requirePageSession } from "@/lib/auth/page-guard";
 import { ClickableMetricCard } from "@/components/platform/clickable-metric-card";
+import { RankingPodium } from "@/components/platform/ranking-podium";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/platform/status-badge";
 import { DEMO_HOME_METRICS, DEMO_NEWS } from "@/modules/demo-data";
+import { getCampaignRanking } from "@/modules/gamification/queries/ranking";
 import { platformRoutes } from "@/lib/routes";
-import { ArrowRight, Compass, TrendingUp } from "lucide-react";
+import { ArrowRight, Compass, TrendingUp, Trophy } from "lucide-react";
 
 export default async function InicioPage() {
   const session = await requirePageSession();
   const firstName = session.fullName?.split(" ")[0] ?? "colaborador";
   const metrics = DEMO_HOME_METRICS;
   const newsPreview = DEMO_NEWS.slice(0, 4);
+  const ranking = await getCampaignRanking("rota-do-fechamento", 3);
 
   return (
     <div className="space-y-10">
@@ -75,6 +78,25 @@ export default async function InicioPage() {
         <ClickableMetricCard label="Cursos em andamento" value={metrics.cursosEmAndamento} href={platformRoutes.learning.myUniversity} variant="purple" />
         <ClickableMetricCard label="Chamados abertos" value={metrics.chamadosAbertos} href={platformRoutes.support.root} />
         <ClickableMetricCard label="Próxima Conversa de Norte" value={metrics.proximaConversaNorte} href={platformRoutes.northConversation.root} variant="info" />
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-sky-400" />
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">
+              {ranking?.campaignName ?? "Rota do Fechamento"}
+            </h2>
+          </div>
+          <Link href={platformRoutes.gamification.ranking} className="text-sm text-sky-400 hover:underline">
+            Ver ranking <ArrowRight className="inline h-4 w-4" />
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <RankingPodium entries={ranking?.entries ?? []} />
+          </CardContent>
+        </Card>
       </section>
 
       <section className="space-y-4">

@@ -25,6 +25,13 @@
     "qa:setup:staging": "tsx scripts/provision-qa-users.ts --environment=staging --tenant=all",
     "qa:verify:staging": "tsx scripts/qa-verify-staging.ts",
     "db:types": "tsx scripts/generate-db-types.ts",
+    "course:provision": "tsx scripts/provision-sales-course.ts --environment=staging",
+    "course:provision:dry": "tsx scripts/provision-sales-course.ts --environment=staging --dry-run",
+    "course:import-videos": "tsx scripts/import-learning-videos.ts --environment=staging",
+    "staging:media": "tsx scripts/provision-staging-media.ts",
+    "staging:gamification": "tsx scripts/provision-gamification-qa.ts",
+    "staging:access-groups": "tsx scripts/provision-access-groups.ts",
+    "course:import-videos:dry": "tsx scripts/import-learning-videos.ts --dry-run --environment=staging",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -40,6 +47,8 @@
     "isomorphic-dompurify": "^3.18.0",
     "lucide-react": "^1.22.0",
     "next": "16.2.9",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.80.0",
@@ -54,6 +63,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.3",
@@ -64,6 +74,7 @@
     "prettier": "^3.9.3",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
+    "tus-js-client": "^4.3.1",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }

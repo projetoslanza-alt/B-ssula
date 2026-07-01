@@ -6,6 +6,8 @@ import { cn, formatPercent } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/security/sanitize";
 import { Button } from "@/components/ui/button";
 import { updateProgressAction } from "@/modules/learning/actions/enrollment-actions";
+import { LearningVideoPlayer } from "@/modules/learning/components/learning-video-player";
+import { LearningAssessmentPanel } from "@/modules/learning/components/learning-assessment-panel";
 
 type LessonContent = {
   id: string;
@@ -40,6 +42,18 @@ type ProgressEntry = {
   status: string;
   progress_percentage: number;
   video_position_seconds: number;
+};
+
+type VideoProgressEntry = {
+  lesson_id: string;
+  content_id: string;
+  watch_percentage: number;
+  current_position_seconds: number;
+};
+
+type AssessmentEntry = {
+  id: string;
+  lesson_id: string;
 };
 
 function useSignedUrl(
@@ -90,6 +104,8 @@ export function LearningPlayer({
   courseTitle,
   modules,
   progressMap,
+  videoProgressMap,
+  assessmentsByLesson,
   progressPercentage,
   initialLessonId,
   previewMode = false,
@@ -98,6 +114,8 @@ export function LearningPlayer({
   courseTitle: string;
   modules: Module[];
   progressMap: Map<string, ProgressEntry>;
+  videoProgressMap: Map<string, VideoProgressEntry>;
+  assessmentsByLesson: Map<string, AssessmentEntry>;
   progressPercentage: number;
   initialLessonId: string | null;
   previewMode?: boolean;
@@ -162,33 +180,29 @@ export function LearningPlayer({
     });
   }
 
-  function handleVideoTimeUpdate(currentTime: number, duration: number) {
-    if (!currentLesson || !currentContent || duration <= 0) return;
-    const percent = (currentTime / duration) * 100;
-    if (Math.floor(currentTime) % 10 === 0) {
-      saveProgress({
-        enrollmentId,
-        lessonId: currentLesson.id,
-        contentId: currentContent.id,
-        videoPositionSeconds: Math.floor(currentTime),
-        videoPercent: percent,
-      });
-    }
-  }
+  const currentVideoProgress = currentLesson
+    ? videoProgressMap.get(currentLesson.id)
+    : undefined;
+  const currentAssessment = currentLesson ? assessmentsByLesson.get(currentLesson.id) : undefined;
+  const minVideoPercent =
+    Number((currentLesson?.completion_config as { min_video_percent?: number })?.min_video_percent) || 90;
+  const videoPending =
+    (currentContent?.metadata as { media_status?: string } | undefined)?.media_status ===
+    "pending_external_storage";
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
       <aside className="w-full shrink-0 lg:w-72">
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
           <h2 className="font-semibold line-clamp-2">{courseTitle}</h2>
           <div className="mt-3">
-            <div className="mb-1 flex justify-between text-xs text-slate-500">
+            <div className="mb-1 flex justify-between text-xs text-[var(--foreground-muted)]">
               <span>Progresso geral</span>
               <span>{formatPercent(progressPercentage)}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-2 overflow-hidden rounded-full bg-[var(--background-secondary)]">
               <div
-                className="h-full rounded-full bg-amber-500"
+                className="h-full rounded-full bg-[var(--primary)]"
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
@@ -196,7 +210,7 @@ export function LearningPlayer({
           <nav className="mt-4 max-h-[50vh] space-y-4 overflow-y-auto" aria-label="Módulos e aulas">
             {sortedModules.map((mod) => (
               <div key={mod.id}>
-                <p className="text-xs font-semibold uppercase text-slate-400">{mod.title}</p>
+                <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">{mod.title}</p>
                 <ul className="mt-2 space-y-1">
                   {mod.lessons.map((lesson) => {
                     const globalIndex = allLessons.findIndex((l) => l.id === lesson.id);
@@ -210,7 +224,9 @@ export function LearningPlayer({
                           onClick={() => setCurrentLessonIndex(globalIndex)}
                           className={cn(
                             "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm",
-                            isActive ? "bg-amber-50 text-amber-900" : "text-slate-600 hover:bg-slate-50",
+                            isActive
+                              ? "bg-[var(--primary)]/10 text-[var(--primary)]"
+                              : "text-[var(--foreground-secondary)] hover:bg-[var(--card-elevated)]",
                           )}
                         >
                           {isCompleted ? (
@@ -232,30 +248,35 @@ export function LearningPlayer({
 
       <div className="min-w-0 flex-1">
         {currentLesson && (
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
             <h1 className="text-xl font-semibold">{currentLesson.title}</h1>
 
-            {currentContent?.content_type === "video" && mediaUrl && (
-              <div className="mt-6 aspect-video overflow-hidden rounded-lg bg-black">
-                <video
-                  key={currentContent.id}
-                  src={mediaUrl}
-                  controls
-                  className="h-full w-full"
-                  onTimeUpdate={(e) =>
-                    handleVideoTimeUpdate(
-                      e.currentTarget.currentTime,
-                      e.currentTarget.duration,
-                    )
+            {currentContent?.content_type === "video" && (
+              <div className="mt-6">
+                <LearningVideoPlayer
+                  enrollmentId={enrollmentId}
+                  lessonId={currentLesson.id}
+                  content={currentContent}
+                  initialPositionSeconds={
+                    currentVideoProgress?.current_position_seconds ??
+                    progressMap.get(currentLesson.id)?.video_position_seconds ??
+                    0
                   }
-                  onLoadedMetadata={(e) => {
-                    const saved = progressMap.get(currentLesson.id)?.video_position_seconds;
-                    if (saved) e.currentTarget.currentTime = saved;
-                  }}
-                >
-                  <track kind="captions" />
-                </video>
+                  initialWatchPercent={currentVideoProgress?.watch_percentage ?? 0}
+                  previewMode={previewMode}
+                />
               </div>
+            )}
+
+            {currentAssessment && !previewMode && (
+              <LearningAssessmentPanel
+                assessmentId={currentAssessment.id}
+                enrollmentId={enrollmentId}
+                lessonTitle={currentLesson.title}
+                watchPercent={currentVideoProgress?.watch_percentage ?? 0}
+                requiredVideoPercent={minVideoPercent}
+                videoPending={videoPending}
+              />
             )}
 
             {currentContent?.content_type === "text" && (
@@ -305,7 +326,7 @@ export function LearningPlayer({
               </div>
             )}
 
-            <div className="mt-8 flex justify-between border-t border-slate-100 pt-6">
+            <div className="mt-8 flex justify-between border-t border-[var(--border)] pt-6">
               <Button
                 variant="outline"
                 disabled={currentLessonIndex === 0}

@@ -14,6 +14,7 @@ import {
   Newspaper,
   FileBarChart,
   Settings,
+  Trophy,
   User,
   X,
 } from "lucide-react";
@@ -37,6 +38,7 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
   support: <MessageSquare className="h-5 w-5" />,
   "north-conversation": <BarChart3 className="h-5 w-5" />,
   learning: <GraduationCap className="h-5 w-5" />,
+  gamification: <Trophy className="h-5 w-5" />,
   reports: <FileBarChart className="h-5 w-5" />,
   admin: <Settings className="h-5 w-5" />,
 };
@@ -143,7 +145,7 @@ export function PlatformLayoutClient({
           </summary>
           <div className="absolute bottom-full left-0 z-20 mb-1 w-48 rounded-lg border border-[var(--border)] bg-[var(--card)] py-1 shadow-xl">
             <Link
-              href={platformRoutes.admin.settings}
+              href={platformRoutes.profile}
               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--card-elevated)]"
             >
               <User className="h-4 w-4" /> Perfil

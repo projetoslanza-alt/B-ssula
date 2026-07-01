@@ -22,6 +22,7 @@ export default async function AprenderPage({
       id,
       progress_percentage,
       last_lesson_id,
+      course_version_id,
       course_versions!inner (
         id, title,
         course_modules (
@@ -51,6 +52,16 @@ export default async function AprenderPage({
     .select("lesson_id, status, progress_percentage, video_position_seconds")
     .eq("enrollment_id", enrollment.id);
 
+  const { data: videoProgress } = await supabase
+    .from("learning_video_progress")
+    .select("lesson_id, content_id, watch_percentage, current_position_seconds")
+    .eq("enrollment_id", enrollment.id);
+
+  const { data: assessments } = await supabase
+    .from("assessments")
+    .select("id, lesson_id")
+    .eq("course_version_id", enrollment.course_version_id);
+
   const { data: org } = await supabase
     .from("organizations")
     .select("name")
@@ -67,9 +78,21 @@ export default async function AprenderPage({
         enrollmentId={enrollment.id}
         courseTitle={version.title}
         modules={modules}
-        progressMap={new Map(
-          lessonProgress?.map((p) => [p.lesson_id, p]) ?? [],
-        )}
+        progressMap={new Map(lessonProgress?.map((p) => [p.lesson_id, p]) ?? [])}
+        videoProgressMap={
+          new Map(
+            videoProgress?.map((p) => [
+              p.lesson_id,
+              {
+                lesson_id: p.lesson_id,
+                content_id: p.content_id,
+                watch_percentage: p.watch_percentage ?? 0,
+                current_position_seconds: p.current_position_seconds ?? 0,
+              },
+            ]) ?? [],
+          )
+        }
+        assessmentsByLesson={new Map(assessments?.map((a) => [a.lesson_id, a]) ?? [])}
         progressPercentage={enrollment.progress_percentage}
         initialLessonId={enrollment.last_lesson_id}
       />

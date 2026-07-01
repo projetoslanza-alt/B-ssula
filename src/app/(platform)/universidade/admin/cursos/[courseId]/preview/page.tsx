@@ -49,6 +49,8 @@ export default async function PreviewCursoPage({
         courseTitle={data.version.title}
         modules={(modules ?? []) as Parameters<typeof LearningPlayer>[0]["modules"]}
         progressMap={new Map()}
+        videoProgressMap={new Map()}
+        assessmentsByLesson={new Map()}
         progressPercentage={0}
         initialLessonId={null}
         previewMode

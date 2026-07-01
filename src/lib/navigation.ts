@@ -81,6 +81,18 @@ export const PLATFORM_MODULES: PlatformModule[] = [
     ],
   },
   {
+    id: "gamification",
+    label: "Gamificação",
+    href: r.gamification.root,
+    items: [
+      { href: r.gamification.root, label: "Visão geral" },
+      { href: r.gamification.ranking, label: "Ranking" },
+      { href: r.gamification.missions, label: "Missões" },
+      { href: r.gamification.achievements, label: "Conquistas" },
+      { href: r.gamification.myJourney, label: "Minha jornada" },
+    ],
+  },
+  {
     id: "reports",
     label: "Relatórios",
     href: r.reports.root,
@@ -98,7 +110,9 @@ export const PLATFORM_MODULES: PlatformModule[] = [
     items: [
       { href: r.admin.root, label: "Visão geral" },
       { href: r.admin.organization, label: "Organização", permission: "platform.organization.manage" },
-      { href: r.admin.users, label: "Usuários", permission: "platform.users.manage" },
+      { href: r.admin.users, label: "Usuários e Acessos", permission: "platform.users.manage" },
+      { href: r.admin.groups, label: "Grupos e Permissões", permission: "platform.users.manage" },
+      { href: r.admin.permissions, label: "Matriz de permissões", permission: "platform.users.manage" },
       { href: r.admin.teams, label: "Equipes", permission: "platform.teams.manage" },
       { href: r.admin.units, label: "Unidades", permission: "platform.organization.manage" },
       { href: r.admin.positions, label: "Cargos", permission: "platform.organization.manage" },

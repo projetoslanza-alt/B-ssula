@@ -13,13 +13,26 @@ export async function getSupportOverview(tenantId: string) {
   return { total: count ?? 0, open: open.length, outOfSla };
 }
 
-export async function listSupportCategories(tenantId: string) {
+export async function listSupportCategories(tenantId: string, activeOnly = false) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("support_categories")
-    .select("id, name, slug, support_subcategories ( id, name, slug )")
+    .select("id, name, slug, description, is_active, support_subcategories ( id, name, slug, is_active )")
     .eq("tenant_id", tenantId)
     .order("name");
+  if (activeOnly) query = query.eq("is_active", true);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listSupportSlaPolicies(tenantId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("support_sla_policies")
+    .select("id, name, priority, response_hours, resolution_hours, is_active")
+    .eq("tenant_id", tenantId)
+    .order("priority");
   if (error) throw error;
   return data ?? [];
 }

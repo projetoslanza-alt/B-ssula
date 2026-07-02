@@ -16,7 +16,7 @@ import {
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/platform/brand-logo";
 import { CommandMenuProvider } from "@/components/platform/command-menu";
 import { TopbarActions } from "@/components/platform/topbar-actions";
@@ -61,6 +61,7 @@ export function PlatformLayoutClient({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const modules = filterModules(session.permissions);
   const displayName = session.fullName ?? session.email;
   const initials = displayName
@@ -79,7 +80,22 @@ export function PlatformLayoutClient({
     };
   }, [mobileOpen]);
 
-  const closeMobile = () => setMobileOpen(false);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
+
+  const closeMobile = () => {
+    setMobileOpen(false);
+    menuButtonRef.current?.focus();
+  };
 
   return (
     <CommandMenuProvider permissions={session.permissions}>
@@ -92,10 +108,17 @@ export function PlatformLayoutClient({
         </a>
 
         <div className="app">
-          <aside className={cn("sidebar", mobileOpen && "open")} id="sidebar" aria-label="Menu lateral">
-            <BrandLogo />
+          <aside
+            className={cn("sidebar", mobileOpen && "open")}
+            id="sidebar"
+            aria-label="Menu lateral"
+            aria-hidden={mobileOpen ? undefined : undefined}
+          >
+            <div className="sidebar-header">
+              <BrandLogo />
+            </div>
 
-            <div>
+            <div className="sidebar-scroll">
               <div className="menu-label">Navegação</div>
               <nav className="nav" aria-label="Menu principal">
                 {modules.map((mod) => {
@@ -119,50 +142,52 @@ export function PlatformLayoutClient({
               </nav>
             </div>
 
-            <div className="sidebar-bottom">
-              <Link href={platformRoutes.support.knowledge} className="nav-btn" onClick={closeMobile}>
-                <span className="icon">
-                  <HelpCircle className="h-4 w-4" strokeWidth={2} />
-                </span>
-                <span>Ajuda</span>
-              </Link>
-
-              <details className="relative">
-                <summary className="profile-mini cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                  <div className="avatar" aria-hidden>
-                    {initials}
-                  </div>
-                  <div>
-                    <strong>{displayName}</strong>
-                    <small>{session.tenantName}</small>
-                  </div>
-                  <span className="muted" aria-hidden>
-                    ⋮
+            <div className="sidebar-footer">
+              <div className="sidebar-bottom">
+                <Link href={platformRoutes.support.knowledge} className="nav-btn" onClick={closeMobile}>
+                  <span className="icon">
+                    <HelpCircle className="h-4 w-4" strokeWidth={2} />
                   </span>
-                </summary>
-                <div className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-[14px] border border-[var(--border-soft)] bg-[var(--panel)] p-2 shadow-[var(--shadow)]">
-                  <Link href={platformRoutes.profile} className="nav-btn">
-                    <span className="icon">
-                      <User className="h-4 w-4" strokeWidth={2} />
-                    </span>
-                    <span>Perfil</span>
-                  </Link>
-                  <SignOutButton className="nav-btn w-full text-[var(--red)]" />
-                </div>
-              </details>
+                  <span>Ajuda</span>
+                </Link>
 
-              <p className="muted small" style={{ padding: "0 12px" }}>
-                Desenvolvido por VendasComCiência
-              </p>
+                <details className="relative">
+                  <summary className="profile-mini cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                    <div className="avatar" aria-hidden>
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <strong className="truncate">{displayName}</strong>
+                      <small className="truncate">{session.tenantName}</small>
+                    </div>
+                    <span className="muted" aria-hidden>
+                      ⋮
+                    </span>
+                  </summary>
+                  <div className="absolute bottom-full left-0 z-20 mb-2 w-full rounded-[14px] border border-[var(--border-soft)] bg-[var(--panel)] p-2 shadow-[var(--shadow)]">
+                    <Link href={platformRoutes.profile} className="nav-btn" onClick={closeMobile}>
+                      <span className="icon">
+                        <User className="h-4 w-4" strokeWidth={2} />
+                      </span>
+                      <span>Perfil</span>
+                    </Link>
+                    <SignOutButton className="nav-btn w-full text-[var(--red)]" />
+                  </div>
+                </details>
+
+                <p className="muted small hidden min-[480px]:block" style={{ padding: "0 12px" }}>
+                  Desenvolvido por VendasComCiência
+                </p>
+              </div>
             </div>
           </aside>
 
           {mobileOpen && (
             <button
               type="button"
-              className="fixed inset-0 z-[55] bg-black/60 lg:hidden"
+              className="sidebar-overlay fixed inset-0 z-[55] bg-black/60"
               aria-label="Fechar menu"
-              onClick={() => setMobileOpen(false)}
+              onClick={closeMobile}
             />
           )}
 
@@ -170,9 +195,11 @@ export function PlatformLayoutClient({
             <header className="topbar">
               <div className="topbar-left">
                 <button
+                  ref={menuButtonRef}
                   type="button"
                   className="mobile-menu"
                   aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+                  aria-expanded={mobileOpen}
                   onClick={() => setMobileOpen((v) => !v)}
                 >
                   ☰

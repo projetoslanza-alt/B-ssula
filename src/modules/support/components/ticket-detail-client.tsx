@@ -6,7 +6,8 @@ import { StatusBadge } from "@/components/platform/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/input";
-import { platformRoutes } from "@/lib/routes";
+import { ticketRoutes } from "@/lib/ticket-routes";
+import { TICKET_STATUS_LABELS } from "@/modules/support/domain/kanban";
 import { promptReason } from "@/components/platform/status-change-form";
 import {
   addTicketMessageAction,
@@ -15,17 +16,7 @@ import {
   updateTicketStatusAction,
 } from "@/modules/support/actions/ticket-actions";
 
-const STATUS_LABELS: Record<string, string> = {
-  new: "Novo",
-  open: "Aberto",
-  in_progress: "Em atendimento",
-  waiting_requester: "Aguardando solicitante",
-  waiting_third_party: "Aguardando terceiro",
-  resolved: "Resolvido",
-  closed: "Fechado",
-  cancelled: "Cancelado",
-  archived: "Arquivado",
-};
+const STATUS_LABELS = TICKET_STATUS_LABELS;
 
 const PRIORITY_LABELS: Record<string, string> = {
   low: "Baixa",
@@ -85,7 +76,7 @@ export function TicketDetailClient({ ticket, canManage, canArchive, canReplyInte
       <PageHeader
         title={ticket.title}
         subtitle={`#${ticket.ticket_number}`}
-        backHref={platformRoutes.support.root}
+        backHref={ticketRoutes.kanban()}
         status={
           <StatusBadge
             label={STATUS_LABELS[ticket.status] ?? ticket.status}

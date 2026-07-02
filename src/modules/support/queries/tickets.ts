@@ -5,12 +5,15 @@ export async function getSupportOverview(tenantId: string) {
   const supabase = await createClient();
   const { data, count } = await supabase
     .from("support_tickets")
-    .select("id, status, priority, sla_due_at", { count: "exact" })
+    .select("id, status, priority, sla_due_at, assignee_id", { count: "exact" })
     .eq("tenant_id", tenantId);
-  const open = data?.filter((t) => !["resolved", "closed", "cancelled"].includes(t.status)) ?? [];
+  const open = data?.filter((t) => !["resolved", "closed", "cancelled", "archived"].includes(t.status)) ?? [];
   const now = Date.now();
   const outOfSla = open.filter((t) => t.sla_due_at && new Date(t.sla_due_at).getTime() < now).length;
-  return { total: count ?? 0, open: open.length, outOfSla };
+  const unassigned = open.filter((t) => !t.assignee_id).length;
+  const blocked = open.filter((t) => t.status === "blocked").length;
+  const inValidation = open.filter((t) => t.status === "waiting_validation").length;
+  return { total: count ?? 0, open: open.length, outOfSla, unassigned, blocked, inValidation };
 }
 
 export async function listSupportCategories(tenantId: string, activeOnly = false) {
@@ -41,14 +44,64 @@ export async function listTickets(tenantId: string, scope: "mine" | "all", userI
   const supabase = await createClient();
   let query = supabase
     .from("support_tickets")
-    .select("id, ticket_number, title, status, priority, opened_at, sla_due_at, assignee_id, requester_id")
+    .select(`
+      id,
+      ticket_number,
+      title,
+      status,
+      priority,
+      opened_at,
+      updated_at,
+      sla_due_at,
+      assignee_id,
+      requester_id,
+      kanban_column_id,
+      kanban_position,
+      blocked_at,
+      support_categories ( name ),
+      teams ( name ),
+      requester:profiles!support_tickets_requester_id_fkey ( full_name, email ),
+      assignee:profiles!support_tickets_assignee_id_fkey ( full_name, email ),
+      support_ticket_messages ( id ),
+      support_ticket_attachments ( id )
+    `)
     .eq("tenant_id", tenantId)
     .order("opened_at", { ascending: false })
-    .limit(50);
-  if (scope === "mine") query = query.eq("requester_id", userId);
+    .limit(200);
+  if (scope === "mine") {
+    query = query.or(`requester_id.eq.${userId},assignee_id.eq.${userId}`);
+  }
   const { data, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((row) => {
+    const requester = unwrapRelation(row.requester);
+    const assignee = unwrapRelation(row.assignee);
+    const category = unwrapRelation(row.support_categories);
+    const team = unwrapRelation(row.teams);
+    const messages = Array.isArray(row.support_ticket_messages) ? row.support_ticket_messages : [];
+    const attachments = Array.isArray(row.support_ticket_attachments) ? row.support_ticket_attachments : [];
+    return {
+      id: row.id,
+      ticket_number: row.ticket_number,
+      title: row.title,
+      status: row.status,
+      priority: row.priority,
+      opened_at: row.opened_at,
+      updated_at: row.updated_at,
+      sla_due_at: row.sla_due_at,
+      assignee_id: row.assignee_id,
+      requester_id: row.requester_id,
+      kanban_column_id: row.kanban_column_id,
+      kanban_position: row.kanban_position,
+      blocked_at: row.blocked_at,
+      requesterName: requester?.full_name ?? requester?.email ?? "Solicitante",
+      assigneeName: assignee?.full_name ?? assignee?.email ?? null,
+      categoryName: category?.name ?? null,
+      teamName: team?.name ?? null,
+      messageCount: messages.length,
+      attachmentCount: attachments.length,
+    };
+  });
 }
 
 export async function getTicket(tenantId: string, ticketId: string) {
@@ -65,7 +118,7 @@ export async function getTicket(tenantId: string, ticketId: string) {
         id, body, created_at, created_by, is_internal,
         author:profiles!support_ticket_messages_created_by_fkey ( full_name )
       ),
-      support_ticket_history ( id, action, created_at, new_value, old_value, created_by )
+      support_ticket_history ( id, action, created_at, new_value, previous_value, created_by )
     `)
     .eq("tenant_id", tenantId)
     .eq("id", ticketId)

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requirePageSession } from "@/lib/auth/page-guard";
 import { hasAnyPermission, hasPermission } from "@/modules/core/auth/session";
 import { TicketDetailClient } from "@/modules/support/components/ticket-detail-client";
@@ -22,9 +22,11 @@ export default async function ChamadoDetalhePage({
   const canManageAll = hasPermission(session, "support.ticket.manage_all");
   const canArchive = hasAnyPermission(session, ["support.ticket.manage_all", "support.ticket.archive"]);
   const isOwner = ticket.requester_id === session.userId;
+  const isAssignee = ticket.assignee_id === session.userId;
+  const canViewOwn = hasPermission(session, "support.ticket.manage_own") && isOwner;
 
-  if (!canManageAll && !canArchive && !isOwner) {
-    notFound();
+  if (!canManageAll && !canArchive && !isOwner && !isAssignee && !canViewOwn) {
+    redirect("/acesso-negado");
   }
 
   return (

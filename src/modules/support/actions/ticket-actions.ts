@@ -8,6 +8,7 @@ import { recordAuditEvent } from "@/modules/core/audit/record";
 import { requireAnyPermission, requirePermission, requireSession, hasPermission } from "@/modules/core/auth/session";
 import { platformRoutes } from "@/lib/routes";
 import { getErrorMessage } from "@/lib/errors";
+import { statusForColumnSlug, type BoardMoveOrigin } from "@/modules/support/domain/kanban";
 
 const PRIORITY_MAP: Record<string, string> = {
   baixa: "low",
@@ -135,7 +136,7 @@ export async function updateTicketStatusAction(ticketId: string, formData: FormD
     tenant_id: session.tenantId,
     ticket_id: ticketId,
     action: "status_changed",
-    old_value: current ? { status: current.status } : null,
+    previous_value: current ? { status: current.status } : null,
     new_value: { status, reason },
     created_by: session.userId,
   });
@@ -183,7 +184,7 @@ export async function archiveTicketAction(ticketId: string, formData: FormData) 
     tenant_id: session.tenantId,
     ticket_id: ticketId,
     action: "archived",
-    old_value: { status: current?.status },
+    previous_value: { status: current?.status },
     new_value: { status: "archived", reason },
     created_by: session.userId,
   });
@@ -229,7 +230,7 @@ export async function reactivateTicketAction(ticketId: string, formData: FormDat
     tenant_id: session.tenantId,
     ticket_id: ticketId,
     action: "reactivated",
-    old_value: { status: current?.status },
+    previous_value: { status: current?.status },
     new_value: { status: nextStatus, reason },
     created_by: session.userId,
   });
@@ -271,6 +272,100 @@ export async function assignTicketAction(ticketId: string, formData: FormData) {
       created_by: session.userId,
     });
 
+    revalidatePath(platformRoutes.support.ticket(ticketId));
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+async function assertCanMoveTicket(
+  session: Awaited<ReturnType<typeof requireSession>>,
+  ticket: { requester_id: string; assignee_id: string | null },
+) {
+  if (hasPermission(session, "support.ticket.move_all") || hasPermission(session, "support.ticket.manage_all")) {
+    return;
+  }
+  if (hasPermission(session, "support.ticket.move_team")) {
+    return;
+  }
+  if (
+    hasPermission(session, "support.ticket.move_own") &&
+    (ticket.requester_id === session.userId || ticket.assignee_id === session.userId)
+  ) {
+    return;
+  }
+  throw new Error("Sem permissão para mover este chamado.");
+}
+
+export async function moveTicketKanbanAction(
+  ticketId: string,
+  targetColumnSlug: string,
+  origin: BoardMoveOrigin = "kanban",
+  targetPosition = 0,
+) {
+  try {
+    const session = await requireSession();
+    const nextStatus = statusForColumnSlug(targetColumnSlug);
+    const supabase = await createClient();
+
+    const { data: current, error: fetchError } = await supabase
+      .from("support_tickets")
+      .select("id, status, title, requester_id, assignee_id, kanban_column_id")
+      .eq("id", ticketId)
+      .eq("tenant_id", session.tenantId)
+      .single();
+
+    if (fetchError || !current) return { error: "Chamado não encontrado." };
+
+    await assertCanMoveTicket(session, current);
+
+    const updates: Record<string, unknown> = {
+      status: nextStatus,
+      kanban_position: targetPosition,
+      last_board_move_at: new Date().toISOString(),
+      updated_by: session.userId,
+    };
+    if (nextStatus === "blocked") {
+      updates.blocked_at = new Date().toISOString();
+    } else if (current.status === "blocked") {
+      updates.blocked_at = null;
+      updates.blocked_reason = null;
+    }
+
+    const { error } = await supabase
+      .from("support_tickets")
+      .update(updates)
+      .eq("id", ticketId)
+      .eq("tenant_id", session.tenantId);
+
+    if (error) return { error: "Não foi possível mover o chamado." };
+
+    await supabase.from("support_ticket_history").insert({
+      tenant_id: session.tenantId,
+      ticket_id: ticketId,
+      action: "kanban_moved",
+      previous_value: { status: current.status, column: current.kanban_column_id },
+      new_value: { status: nextStatus, columnSlug: targetColumnSlug, origin },
+      created_by: session.userId,
+    });
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "SUPPORT_TICKET_KANBAN_MOVED",
+      entityType: "support_ticket",
+      entityId: ticketId,
+      origin: `support:${origin}`,
+      metadata: {
+        previousStatus: current.status,
+        newStatus: nextStatus,
+        targetColumnSlug,
+        title: current.title,
+      },
+    });
+
+    revalidatePath(platformRoutes.support.root);
     revalidatePath(platformRoutes.support.ticket(ticketId));
     return { success: true };
   } catch (error) {

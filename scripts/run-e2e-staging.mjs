@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 
+delete process.env.PLAYWRIGHT_E2E_CI;
+delete process.env.CI;
 process.env.PLAYWRIGHT_BASE_URL = "https://bussola-staging-nine.vercel.app";
 process.env.APP_ENV = "staging";
 

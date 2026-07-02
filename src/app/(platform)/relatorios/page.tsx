@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { listReports } from "@/modules/reports/queries/definitions";
 import { platformRoutes } from "@/lib/routes";
 import { Star } from "lucide-react";
+import { buildBreadcrumbs } from "@/lib/breadcrumb-config";
 
 export default async function RelatoriosPage({
   searchParams,
@@ -27,6 +28,9 @@ export default async function RelatoriosPage({
         subtitle="Transforme os dados da operação em análises sob medida."
         title="Relatórios"
         description="Construtor visual no-code para criar relatórios personalizados."
+        backHref={platformRoutes.home}
+        backLabel="Voltar ao início"
+        breadcrumbs={buildBreadcrumbs("/relatorios")}
         actions={
           <Button asChild>
             <Link href={platformRoutes.reports.new}>+ Criar relatório</Link>

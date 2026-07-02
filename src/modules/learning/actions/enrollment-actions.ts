@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireSession } from "@/modules/core/auth/session";
+import { requireSession, requirePermission, hasPermission } from "@/modules/core/auth/session";
 import { recordAuditEvent, AuditActions } from "@/modules/core/audit/record";
 import { canCompleteLesson } from "@/modules/learning/domain/progress";
 import { getErrorMessage } from "@/lib/errors";
@@ -324,7 +324,20 @@ export async function assignCourseAction(input: {
 }) {
   try {
     const session = await requireSession();
+    requirePermission(session, "learning.enrollment.manage");
     const supabase = await createClient();
+
+    if (session.teamId && !hasPermission(session, "learning.course.publish")) {
+      const { data: target } = await supabase
+        .from("profiles")
+        .select("team_id")
+        .eq("id", input.userId)
+        .eq("tenant_id", session.tenantId)
+        .single();
+      if (!target || target.team_id !== session.teamId) {
+        return { error: "Gerente só pode matricular usuários da própria equipe." };
+      }
+    }
 
     const { data: course } = await supabase
       .from("courses")
@@ -406,7 +419,8 @@ export async function assignCourseAction(input: {
       entityId: input.courseId,
     });
 
-    revalidatePath("/universidade/equipe/atribuicoes");
+    revalidatePath(`/universidade/admin/cursos/${input.courseId}/matriculas`);
+    revalidatePath("/universidade/equipe");
     return { success: true };
   } catch (error) {
     return { error: getErrorMessage(error) };

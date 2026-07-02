@@ -5,7 +5,8 @@ import { platformRoutes } from "@/lib/routes";
 const TABS = [
   { href: "editar", label: "Informações" },
   { href: "conteudo", label: "Conteúdo" },
-  { href: "configuracoes", label: "Visibilidade" },
+  { href: "configuracoes", label: "Público" },
+  { href: "matriculas", label: "Matrículas" },
   { href: "publicar", label: "Publicação" },
   { href: "versoes", label: "Versões" },
   { href: "preview", label: "Prévia" },

@@ -17,6 +17,7 @@ import { TICKET_PRIORITY_LABELS, TICKET_STATUS_LABELS } from "@/modules/support/
 import type { TicketListFilters } from "@/modules/support/domain/ticket-filters";
 import type { TicketRow } from "@/modules/support/queries/tickets";
 import type { KanbanColumnRow } from "@/modules/support/queries/kanban";
+import { buildBreadcrumbs } from "@/lib/breadcrumb-config";
 import { platformRoutes } from "@/lib/routes";
 import { ticketFiltersToSearchParams } from "@/modules/support/domain/ticket-filters";
 
@@ -103,6 +104,7 @@ export function SupportHub({
         eyebrow="CENTRAL DE ORIENTAÇÃO"
         title="Encontrou um obstáculo na rota?"
         description="Visualize, priorize e mova chamados no quadro Kanban ou na lista operacional."
+        breadcrumbs={buildBreadcrumbs("/chamados")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <TicketViewSwitcher currentView={filters.view} />

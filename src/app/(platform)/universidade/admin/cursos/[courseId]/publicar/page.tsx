@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { getSessionContext } from "@/modules/core/auth/session";
 import { CourseAdminLayout } from "@/modules/learning/components/course-admin-layout";
 import { getPublishChecklistAction, publishCourseValidatedAction } from "@/modules/learning/actions/publish-actions";
+import { CoursePublishControls } from "@/modules/learning/components/course-publish-controls";
 import { Button } from "@/components/ui/button";
 
 export default async function PublicarCursoPage({
@@ -65,9 +66,11 @@ export default async function PublicarCursoPage({
           }}
         >
           <Button type="submit" disabled={!("canPublish" in checklist && checklist.canPublish)}>
-            Publicar curso
+            Publicar curso agora
           </Button>
         </form>
+
+        <CoursePublishControls courseId={courseId} />
       </div>
     </CourseAdminLayout>
   );

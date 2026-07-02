@@ -137,7 +137,8 @@ export async function listAssessmentResults(
   if (filters.maxScore != null) filtered = filtered.filter((r) => (r.percent ?? 100) <= filters.maxScore!);
 
   return filtered.map((row) => {
-    const { courseId: _omit, ...rest } = row;
+    const { courseId, ...rest } = row;
+    void courseId;
     return rest;
   });
 }

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/states";
 import { CheckInForm } from "@/modules/north-conversation/components/check-in-form";
+import { buildBreadcrumbs } from "@/lib/breadcrumb-config";
 import { platformRoutes } from "@/lib/routes";
 import { LineChartWidget } from "@/components/charts/chart-widgets";
 import {
@@ -70,6 +71,9 @@ export function NorthConversationHub({
         eyebrow="DESENVOLVIMENTO"
         title="Conversa de Norte"
         description="Reconheça avanços, identifique desvios e defina os próximos passos."
+        backHref={platformRoutes.home}
+        backLabel="Voltar ao início"
+        breadcrumbs={buildBreadcrumbs("/conversa-de-norte")}
         actions={
           canCreateMeeting ? (
             <Button asChild>

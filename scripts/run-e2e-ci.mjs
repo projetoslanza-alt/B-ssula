@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 
 process.env.PLAYWRIGHT_E2E_CI = "1";
 process.env.CI = "1";
+delete process.env.PLAYWRIGHT_SKIP_WEBSERVER;
 
 console.log("Aplicando RBAC operacional no Supabase...");
 const rbac = spawnSync("npx", ["tsx", "scripts/apply-management-rbac.ts"], {

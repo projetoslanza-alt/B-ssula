@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/input";
 import { ticketRoutes } from "@/lib/ticket-routes";
+import { buildBreadcrumbs } from "@/lib/breadcrumb-config";
 import { TicketHistoryTimeline } from "@/modules/support/components/ticket-history-timeline";
 import { TICKET_STATUS_LABELS } from "@/modules/support/domain/kanban";
 import { promptReason } from "@/components/platform/status-change-form";
@@ -84,6 +85,8 @@ export function TicketDetailClient({ ticket, canManage, canArchive, canReplyInte
         title={ticket.title}
         subtitle={`#${ticket.ticket_number}`}
         backHref={ticketRoutes.kanban()}
+        backLabel="Voltar ao Kanban"
+        breadcrumbs={buildBreadcrumbs(`/chamados/${ticket.id}`, { chamados: "Chamados", [ticket.id]: `#${ticket.ticket_number}` })}
         status={
           <StatusBadge
             label={STATUS_LABELS[ticket.status] ?? ticket.status}

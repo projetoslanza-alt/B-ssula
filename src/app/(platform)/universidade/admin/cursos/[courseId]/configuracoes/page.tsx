@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
-import { getSessionContext } from "@/modules/core/auth/session";
+import { getSessionContext, hasPermission } from "@/modules/core/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { CourseAdminLayout } from "@/modules/learning/components/course-admin-layout";
+import { CourseAudienceForm } from "@/modules/learning/components/course-audience-form";
 import { loadCourseForAdmin } from "@/modules/learning/queries/course-admin";
-import { saveVisibilityAction } from "@/modules/learning/actions/structure-actions";
-import { Button } from "@/components/ui/button";
 
 export default async function ConfiguracoesCursoPage({
   params,
@@ -14,47 +13,39 @@ export default async function ConfiguracoesCursoPage({
   const { courseId } = await params;
   const session = await getSessionContext();
   if (!session) redirect("/acesso-pendente");
+  if (!hasPermission(session, "learning.course.create")) redirect("/acesso-negado");
 
   const data = await loadCourseForAdmin(courseId, session.tenantId);
   if (!data?.version) redirect("/universidade/admin/cursos");
 
   const supabase = await createClient();
-  const { data: rules } = await supabase
-    .from("course_visibility_rules")
-    .select("rule_type, target_id")
-    .eq("course_id", courseId);
+  const [{ data: rules }, { data: teams }, { data: groups }] = await Promise.all([
+    supabase.from("course_visibility_rules").select("rule_type, target_id").eq("course_id", courseId),
+    supabase.from("teams").select("id, name").eq("tenant_id", session.tenantId).order("name"),
+    supabase.from("access_groups").select("id, name").eq("tenant_id", session.tenantId).order("name"),
+  ]);
+
+  let usersQuery = supabase.from("profiles").select("id, full_name, email").eq("tenant_id", session.tenantId).order("full_name").limit(100);
+  if (session.teamId && !hasPermission(session, "learning.course.publish")) {
+    usersQuery = usersQuery.eq("team_id", session.teamId);
+  }
+  const { data: users } = await usersQuery;
+
+  const selectedTeamIds = (rules ?? []).filter((r) => r.rule_type === "team").map((r) => r.target_id!).filter(Boolean);
+  const selectedUserIds = (rules ?? []).filter((r) => r.rule_type === "user").map((r) => r.target_id!).filter(Boolean);
 
   return (
     <CourseAdminLayout params={params} currentTab="configuracoes">
-      <form
-        action={async (formData) => {
-          "use server";
-          const visibilityType = formData.get("visibilityType") as string;
-          await saveVisibilityAction(courseId, visibilityType, []);
-        }}
-        className="max-w-xl space-y-4 rounded-xl border border-[var(--border)] bg-[var(--panel)] p-6"
-      >
-        <h2 className="text-lg font-semibold">Público e visibilidade</h2>
-        <p className="text-sm text-[var(--muted)]">
-          Defina quem pode visualizar este curso no catálogo.
-        </p>
-        <div>
-          <label htmlFor="visibilityType" className="mb-1 block text-sm font-medium">Visibilidade</label>
-          <select
-            id="visibilityType"
-            name="visibilityType"
-            defaultValue={data.version.visibility_type}
-            className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm"
-          >
-            <option value="organization">Toda a organização</option>
-            <option value="restricted">Público personalizado (regras)</option>
-          </select>
-        </div>
-        {rules && rules.length > 0 && (
-          <p className="text-sm text-[var(--foreground-secondary)]">{rules.length} regra(s) configurada(s).</p>
-        )}
-        <Button type="submit">Salvar visibilidade</Button>
-      </form>
+      <CourseAudienceForm
+        courseId={courseId}
+        visibilityType={data.version.visibility_type}
+        selectedTeamIds={selectedTeamIds}
+        selectedUserIds={selectedUserIds}
+        selectedGroupIds={[]}
+        teams={(teams ?? []).map((t) => ({ id: t.id, name: t.name }))}
+        groups={(groups ?? []).map((g) => ({ id: g.id, name: g.name }))}
+        users={(users ?? []).map((u) => ({ id: u.id, name: u.full_name ?? u.email ?? u.id }))}
+      />
     </CourseAdminLayout>
   );
 }

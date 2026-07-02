@@ -1,14 +1,18 @@
 import { requirePagePermission } from "@/lib/auth/page-guard";
 import { PageHeader } from "@/components/platform/page-header";
 import { SupportAdminPanel } from "@/modules/support/components/support-admin-panel";
+import { KanbanFlowEditor } from "@/modules/support/components/kanban-flow-editor";
 import { listSupportCategories, listSupportSlaPolicies } from "@/modules/support/queries/tickets";
+import { ensureDefaultKanbanColumns, listKanbanTransitions } from "@/modules/support/queries/kanban";
 import { platformRoutes } from "@/lib/routes";
 
 export default async function ChamadosConfiguracoesAdminPage() {
   const session = await requirePagePermission("support.settings.manage");
-  const [categories, slaPolicies] = await Promise.all([
+  const [categories, slaPolicies, columns, transitions] = await Promise.all([
     listSupportCategories(session.tenantId),
     listSupportSlaPolicies(session.tenantId),
+    ensureDefaultKanbanColumns(session.tenantId),
+    listKanbanTransitions(session.tenantId),
   ]);
 
   return (
@@ -20,6 +24,7 @@ export default async function ChamadosConfiguracoesAdminPage() {
         backHref={platformRoutes.admin.root}
       />
       <SupportAdminPanel categories={categories} slaPolicies={slaPolicies} />
+      <KanbanFlowEditor columns={columns} transitions={transitions} />
     </div>
   );
 }

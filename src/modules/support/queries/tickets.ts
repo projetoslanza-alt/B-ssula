@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { unwrapRelation } from "@/lib/supabase/relations";
+import type { TicketListFilters } from "@/modules/support/domain/ticket-filters";
+import { statusForColumnSlug } from "@/modules/support/domain/kanban";
+import { getColumnBySlug } from "@/modules/support/queries/kanban";
 
 export async function getSupportOverview(tenantId: string) {
   const supabase = await createClient();
@@ -40,68 +43,190 @@ export async function listSupportSlaPolicies(tenantId: string) {
   return data ?? [];
 }
 
-export async function listTickets(tenantId: string, scope: "mine" | "all", userId: string) {
+const PAGE_SIZE = 20;
+
+export type TicketRow = {
+  id: string;
+  ticket_number: number;
+  title: string;
+  status: string;
+  priority: string;
+  opened_at: string;
+  updated_at: string | null;
+  sla_due_at: string | null;
+  assignee_id: string | null;
+  requester_id: string;
+  category_id: string | null;
+  subcategory_id: string | null;
+  team_id: string | null;
+  kanban_column_id: string | null;
+  kanban_position: number | null;
+  blocked_at: string | null;
+  requesterName: string;
+  assigneeName: string | null;
+  categoryName: string | null;
+  teamName: string | null;
+  columnName: string | null;
+  messageCount: number;
+  attachmentCount: number;
+};
+
+function mapTicketRow(row: Record<string, unknown>): TicketRow {
+  const requester = unwrapRelation(row.requester as { full_name?: string; email?: string } | null);
+  const assignee = unwrapRelation(row.assignee as { full_name?: string; email?: string } | null);
+  const category = unwrapRelation(row.support_categories as { name?: string } | null);
+  const team = unwrapRelation(row.teams as { name?: string } | null);
+  const column = unwrapRelation(row.support_kanban_columns as { name?: string } | null);
+  const messages = Array.isArray(row.support_ticket_messages) ? row.support_ticket_messages : [];
+  const attachments = Array.isArray(row.support_ticket_attachments) ? row.support_ticket_attachments : [];
+  return {
+    id: row.id as string,
+    ticket_number: row.ticket_number as number,
+    title: row.title as string,
+    status: row.status as string,
+    priority: row.priority as string,
+    opened_at: row.opened_at as string,
+    updated_at: (row.updated_at as string) ?? null,
+    sla_due_at: (row.sla_due_at as string) ?? null,
+    assignee_id: (row.assignee_id as string) ?? null,
+    requester_id: row.requester_id as string,
+    category_id: (row.category_id as string) ?? null,
+    subcategory_id: (row.subcategory_id as string) ?? null,
+    team_id: (row.team_id as string) ?? null,
+    kanban_column_id: (row.kanban_column_id as string) ?? null,
+    kanban_position: (row.kanban_position as number) ?? null,
+    blocked_at: (row.blocked_at as string) ?? null,
+    requesterName: requester?.full_name ?? requester?.email ?? "Solicitante",
+    assigneeName: assignee?.full_name ?? assignee?.email ?? null,
+    categoryName: category?.name ?? null,
+    teamName: team?.name ?? null,
+    columnName: column?.name ?? null,
+    messageCount: messages.length,
+    attachmentCount: attachments.length,
+  };
+}
+
+const TICKET_SELECT = `
+  id,
+  ticket_number,
+  title,
+  status,
+  priority,
+  opened_at,
+  updated_at,
+  sla_due_at,
+  assignee_id,
+  requester_id,
+  category_id,
+  subcategory_id,
+  team_id,
+  kanban_column_id,
+  kanban_position,
+  blocked_at,
+  support_categories ( name ),
+  teams ( name ),
+  support_kanban_columns ( name, slug ),
+  requester:profiles!support_tickets_requester_id_fkey ( full_name, email ),
+  assignee:profiles!support_tickets_assignee_id_fkey ( full_name, email ),
+  support_ticket_messages ( id ),
+  support_ticket_attachments ( id )
+`;
+
+export async function listTicketsFiltered(
+  tenantId: string,
+  scope: "mine" | "all",
+  userId: string,
+  filters: TicketListFilters,
+  options?: { paginate?: boolean },
+) {
   const supabase = await createClient();
   let query = supabase
     .from("support_tickets")
-    .select(`
-      id,
-      ticket_number,
-      title,
-      status,
-      priority,
-      opened_at,
-      updated_at,
-      sla_due_at,
-      assignee_id,
-      requester_id,
-      kanban_column_id,
-      kanban_position,
-      blocked_at,
-      support_categories ( name ),
-      teams ( name ),
-      requester:profiles!support_tickets_requester_id_fkey ( full_name, email ),
-      assignee:profiles!support_tickets_assignee_id_fkey ( full_name, email ),
-      support_ticket_messages ( id ),
-      support_ticket_attachments ( id )
-    `)
-    .eq("tenant_id", tenantId)
-    .order("opened_at", { ascending: false })
-    .limit(200);
-  if (scope === "mine") {
+    .select(TICKET_SELECT, { count: options?.paginate ? "exact" : undefined })
+    .eq("tenant_id", tenantId);
+
+  if (scope === "mine" && !filters.mine) {
     query = query.or(`requester_id.eq.${userId},assignee_id.eq.${userId}`);
   }
-  const { data, error } = await query;
+  if (filters.mine) {
+    query = query.or(`requester_id.eq.${userId},assignee_id.eq.${userId}`);
+  }
+  if (filters.createdByMe) query = query.eq("requester_id", userId);
+  if (filters.status) query = query.eq("status", filters.status);
+  if (filters.priority) query = query.eq("priority", filters.priority);
+  if (filters.category) query = query.eq("category_id", filters.category);
+  if (filters.subcategory) query = query.eq("subcategory_id", filters.subcategory);
+  if (filters.assignee) query = query.eq("assignee_id", filters.assignee);
+  if (filters.team || filters.queue) query = query.eq("team_id", filters.team ?? filters.queue);
+  if (filters.requester) query = query.eq("requester_id", filters.requester);
+  if (filters.unassigned) query = query.is("assignee_id", null);
+  if (filters.blocked) query = query.or("status.eq.blocked,blocked_at.not.is.null");
+  if (filters.archived) query = query.eq("status", "archived");
+  else if (!filters.status) query = query.neq("status", "archived");
+
+  if (filters.column) {
+    const col = await getColumnBySlug(tenantId, filters.column);
+    if (col) query = query.eq("kanban_column_id", col.id);
+    else query = query.eq("status", statusForColumnSlug(filters.column));
+  }
+
+  if (filters.overdue || filters.sla === "breached") {
+    query = query.lt("sla_due_at", new Date().toISOString());
+  }
+
+  if (filters.search) {
+    const term = filters.search.replace(/%/g, "");
+    if (/^\d+$/.test(term)) {
+      query = query.eq("ticket_number", Number(term));
+    } else {
+      query = query.ilike("title", `%${term}%`);
+    }
+  }
+
+  if (filters.period === "7d") {
+    const since = new Date(Date.now() - 7 * 86400000).toISOString();
+    query = query.gte("opened_at", since);
+  } else if (filters.period === "30d") {
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    query = query.gte("opened_at", since);
+  }
+
+  const sortCol = ["opened_at", "updated_at", "priority", "status", "ticket_number"].includes(filters.sort)
+    ? filters.sort
+    : "opened_at";
+  query = query.order(sortCol, { ascending: filters.order === "asc" });
+
+  if (options?.paginate) {
+    const from = (filters.page - 1) * PAGE_SIZE;
+    query = query.range(from, from + PAGE_SIZE - 1);
+  } else {
+    query = query.limit(500);
+  }
+
+  const { data, error, count } = await query;
   if (error) throw error;
-  return (data ?? []).map((row) => {
-    const requester = unwrapRelation(row.requester);
-    const assignee = unwrapRelation(row.assignee);
-    const category = unwrapRelation(row.support_categories);
-    const team = unwrapRelation(row.teams);
-    const messages = Array.isArray(row.support_ticket_messages) ? row.support_ticket_messages : [];
-    const attachments = Array.isArray(row.support_ticket_attachments) ? row.support_ticket_attachments : [];
-    return {
-      id: row.id,
-      ticket_number: row.ticket_number,
-      title: row.title,
-      status: row.status,
-      priority: row.priority,
-      opened_at: row.opened_at,
-      updated_at: row.updated_at,
-      sla_due_at: row.sla_due_at,
-      assignee_id: row.assignee_id,
-      requester_id: row.requester_id,
-      kanban_column_id: row.kanban_column_id,
-      kanban_position: row.kanban_position,
-      blocked_at: row.blocked_at,
-      requesterName: requester?.full_name ?? requester?.email ?? "Solicitante",
-      assigneeName: assignee?.full_name ?? assignee?.email ?? null,
-      categoryName: category?.name ?? null,
-      teamName: team?.name ?? null,
-      messageCount: messages.length,
-      attachmentCount: attachments.length,
-    };
-  });
+
+  return {
+    tickets: (data ?? []).map((row) => mapTicketRow(row as Record<string, unknown>)),
+    total: count ?? (data ?? []).length,
+    pageSize: PAGE_SIZE,
+  };
+}
+
+export async function listTickets(tenantId: string, scope: "mine" | "all", userId: string) {
+  const { tickets } = await listTicketsFiltered(
+    tenantId,
+    scope,
+    userId,
+    {
+      view: "kanban",
+      page: 1,
+      sort: "opened_at",
+      order: "desc",
+    },
+    { paginate: false },
+  );
+  return tickets;
 }
 
 export async function getTicket(tenantId: string, ticketId: string) {

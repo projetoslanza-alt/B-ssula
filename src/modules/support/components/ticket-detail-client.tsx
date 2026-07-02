@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/input";
 import { ticketRoutes } from "@/lib/ticket-routes";
+import { TicketHistoryTimeline } from "@/modules/support/components/ticket-history-timeline";
 import { TICKET_STATUS_LABELS } from "@/modules/support/domain/kanban";
 import { promptReason } from "@/components/platform/status-change-form";
 import {
@@ -47,7 +48,13 @@ type TicketDetailData = {
   categoryName: string;
   subcategoryName: string;
   messages: TicketMessage[];
-  history: { id: string; action: string; created_at: string }[];
+  history: {
+    id: string;
+    action: string;
+    created_at: string;
+    previous_value?: Record<string, unknown> | null;
+    new_value?: Record<string, unknown> | null;
+  }[];
 };
 
 type TicketDetailClientProps = {
@@ -243,13 +250,7 @@ export function TicketDetailClient({ ticket, canManage, canArchive, canReplyInte
               <CardTitle className="text-base">Histórico</CardTitle>
             </CardHeader>
             <CardContent>
-              <ol className="space-y-2">
-                {ticket.history.map((h) => (
-                  <li key={h.id} className="text-sm text-[var(--muted)]">
-                    {h.action} · {new Date(h.created_at).toLocaleString("pt-BR")}
-                  </li>
-                ))}
-              </ol>
+              <TicketHistoryTimeline entries={ticket.history} showTechnical={canManage} />
             </CardContent>
           </Card>
         </div>

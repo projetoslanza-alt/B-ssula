@@ -14,40 +14,20 @@ import {
 import { StatusBadge } from "@/components/platform/status-badge";
 import { ticketRoutes } from "@/lib/ticket-routes";
 import {
-  DEFAULT_KANBAN_COLUMNS,
   TICKET_PRIORITY_LABELS,
   TICKET_STATUS_LABELS,
   columnSlugForStatus,
-  type KanbanColumnDef,
 } from "@/modules/support/domain/kanban";
+import type { KanbanColumnRow } from "@/modules/support/queries/kanban";
+import type { TicketRow } from "@/modules/support/queries/tickets";
 import { moveTicketKanbanAction } from "@/modules/support/actions/ticket-actions";
 import { cn } from "@/lib/utils";
 
-export type KanbanTicketCard = {
-  id: string;
-  ticket_number: number;
-  title: string;
-  status: string;
-  priority: string;
-  opened_at: string;
-  updated_at?: string | null;
-  sla_due_at: string | null;
-  assignee_id: string | null;
-  requester_id: string;
-  assigneeName?: string | null;
-  requesterName?: string | null;
-  categoryName?: string | null;
-  teamName?: string | null;
-  messageCount?: number;
-  attachmentCount?: number;
-  kanban_column_id?: string | null;
-  kanban_position?: number | null;
-  blocked_at?: string | null;
-};
+export type KanbanTicketCard = TicketRow;
 
 type TicketKanbanBoardProps = {
   tickets: KanbanTicketCard[];
-  columns?: KanbanColumnDef[];
+  columns: KanbanColumnRow[];
   canMoveAll?: boolean;
   canMoveTeam?: boolean;
   canMoveOwn?: boolean;
@@ -73,23 +53,32 @@ function canMoveTicket(
 }
 
 export function TicketKanbanBoard({
-  tickets,
-  columns = DEFAULT_KANBAN_COLUMNS,
+  tickets: initialTickets,
+  columns,
   canMoveAll,
   canMoveTeam,
   canMoveOwn,
   userId,
 }: TicketKanbanBoardProps) {
+  const [tickets, setTickets] = useState(initialTickets);
   const [pending, startTransition] = useTransition();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const serverSig = initialTickets.map((t) => `${t.id}:${t.kanban_column_id}:${t.kanban_position}`).join("|");
+  const [syncedSig, setSyncedSig] = useState(serverSig);
+  if (!pending && serverSig !== syncedSig) {
+    setSyncedSig(serverSig);
+    setTickets(initialTickets);
+  }
+
   const grouped = useMemo(() => {
     const map = new Map<string, KanbanTicketCard[]>();
     for (const col of columns) map.set(col.slug, []);
     for (const ticket of tickets) {
-      const slug = columnSlugForStatus(ticket.status);
+      const col = columns.find((c) => c.id === ticket.kanban_column_id);
+      const slug = col?.slug ?? columnSlugForStatus(ticket.status);
       const list = map.get(slug) ?? [];
       list.push(ticket);
       map.set(slug, list);
@@ -103,10 +92,24 @@ export function TicketKanbanBoard({
 
   const moveToColumn = (ticketId: string, targetSlug: string) => {
     setError(null);
+    const targetCol = columns.find((c) => c.slug === targetSlug);
+    const previous = tickets;
+    setTickets((list) =>
+      list.map((t) =>
+        t.id === ticketId
+          ? {
+              ...t,
+              status: targetCol?.status_key ?? t.status,
+              kanban_column_id: targetCol?.id ?? t.kanban_column_id,
+            }
+          : t,
+      ),
+    );
     startTransition(async () => {
       const result = await moveTicketKanbanAction(ticketId, targetSlug, "kanban");
       if (result?.error) {
         setError(result.error);
+        setTickets(previous);
       }
     });
   };

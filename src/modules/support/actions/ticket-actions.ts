@@ -8,7 +8,12 @@ import { recordAuditEvent } from "@/modules/core/audit/record";
 import { requireAnyPermission, requirePermission, requireSession, hasPermission } from "@/modules/core/auth/session";
 import { platformRoutes } from "@/lib/routes";
 import { getErrorMessage } from "@/lib/errors";
-import { statusForColumnSlug, type BoardMoveOrigin } from "@/modules/support/domain/kanban";
+import { type BoardMoveOrigin } from "@/modules/support/domain/kanban";
+import {
+  countTicketsInColumn,
+  ensureDefaultKanbanColumns,
+  getColumnBySlug,
+} from "@/modules/support/queries/kanban";
 
 const PRIORITY_MAP: Record<string, string> = {
   baixa: "low",
@@ -306,8 +311,13 @@ export async function moveTicketKanbanAction(
 ) {
   try {
     const session = await requireSession();
-    const nextStatus = statusForColumnSlug(targetColumnSlug);
     const supabase = await createClient();
+    await ensureDefaultKanbanColumns(session.tenantId);
+
+    const targetColumn = await getColumnBySlug(session.tenantId, targetColumnSlug);
+    if (!targetColumn || !targetColumn.is_active) {
+      return { error: "Coluna de destino indisponível." };
+    }
 
     const { data: current, error: fetchError } = await supabase
       .from("support_tickets")
@@ -320,8 +330,36 @@ export async function moveTicketKanbanAction(
 
     await assertCanMoveTicket(session, current);
 
+    if (current.kanban_column_id === targetColumn.id && targetPosition === 0) {
+      return { success: true };
+    }
+
+    if (current.kanban_column_id && current.kanban_column_id !== targetColumn.id) {
+      const { data: allowed } = await supabase
+        .from("support_kanban_transitions")
+        .select("id")
+        .eq("tenant_id", session.tenantId)
+        .eq("from_column_id", current.kanban_column_id)
+        .eq("to_column_id", targetColumn.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (!allowed) {
+        return { error: "Transição não permitida para esta coluna." };
+      }
+    }
+
+    if (targetColumn.wip_limit != null) {
+      const inColumn = await countTicketsInColumn(session.tenantId, targetColumn.id);
+      if (inColumn >= targetColumn.wip_limit && current.kanban_column_id !== targetColumn.id) {
+        return { error: `Limite WIP (${targetColumn.wip_limit}) atingido em ${targetColumn.name}.` };
+      }
+    }
+
+    const nextStatus = targetColumn.status_key;
+
     const updates: Record<string, unknown> = {
       status: nextStatus,
+      kanban_column_id: targetColumn.id,
       kanban_position: targetPosition,
       last_board_move_at: new Date().toISOString(),
       updated_by: session.userId,
@@ -345,8 +383,16 @@ export async function moveTicketKanbanAction(
       tenant_id: session.tenantId,
       ticket_id: ticketId,
       action: "kanban_moved",
-      previous_value: { status: current.status, column: current.kanban_column_id },
-      new_value: { status: nextStatus, columnSlug: targetColumnSlug, origin },
+      previous_value: {
+        status: current.status,
+        columnId: current.kanban_column_id,
+      },
+      new_value: {
+        status: nextStatus,
+        columnSlug: targetColumnSlug,
+        columnId: targetColumn.id,
+        origin,
+      },
       created_by: session.userId,
     });
 

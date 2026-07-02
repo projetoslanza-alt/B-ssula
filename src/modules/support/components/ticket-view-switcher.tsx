@@ -1,21 +1,28 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Columns3, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buildTicketListHref, normalizeTicketView, type TicketView } from "@/lib/ticket-routes";
+import { saveTicketViewPreferenceAction } from "@/modules/support/actions/preference-actions";
 
-export function TicketViewSwitcher({ className }: { className?: string }) {
+export function TicketViewSwitcher({
+  className,
+  currentView,
+}: {
+  className?: string;
+  currentView?: TicketView;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const view = normalizeTicketView(searchParams.get("view"));
+  const view = currentView ?? normalizeTicketView(searchParams.get("view"));
 
   const setView = (next: TicketView) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", next);
-    router.push(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}`);
+    void saveTicketViewPreferenceAction(next);
   };
 
   return (
@@ -28,9 +35,7 @@ export function TicketViewSwitcher({ className }: { className?: string }) {
         type="button"
         className={cn(
           "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-          view === "kanban"
-            ? "bg-[var(--blue)] text-[#041018]"
-            : "text-[var(--muted)] hover:text-[var(--foreground)]",
+          view === "kanban" ? "bg-[var(--blue)] text-[#041018]" : "text-[var(--muted)] hover:text-[var(--foreground)]",
         )}
         aria-pressed={view === "kanban"}
         onClick={() => setView("kanban")}
@@ -42,9 +47,7 @@ export function TicketViewSwitcher({ className }: { className?: string }) {
         type="button"
         className={cn(
           "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-          view === "lista"
-            ? "bg-[var(--blue)] text-[#041018]"
-            : "text-[var(--muted)] hover:text-[var(--foreground)]",
+          view === "lista" ? "bg-[var(--blue)] text-[#041018]" : "text-[var(--muted)] hover:text-[var(--foreground)]",
         )}
         aria-pressed={view === "lista"}
         onClick={() => setView("lista")}
@@ -58,8 +61,8 @@ export function TicketViewSwitcher({ className }: { className?: string }) {
 
 export function TicketBackLink({ view = "kanban" }: { view?: TicketView }) {
   return (
-    <Link href={buildTicketListHref(view)} className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
+    <a href={buildTicketListHref(view)} className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
       ← Voltar para Chamados
-    </Link>
+    </a>
   );
 }

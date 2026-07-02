@@ -18,12 +18,20 @@ const MIN_COUNTS = {
   companies: 10,
   courses: 1,
   enrollments: 2,
+  gamificationCampaigns: 1,
+  gamificationMissions: 6,
+  gamificationLedger: 10,
+  gamificationParticipants: 5,
+  newsPublications: 4,
+  notifications: 3,
+  reportDefinitions: 10,
+  assessmentAttempts: 2,
 } as const;
 
 /** Mínimos por tenant — enrollments só no Norte/Sul quando há cursos obrigatórios fixture. */
 const TENANT_MIN_COUNTS: Record<string, Partial<typeof MIN_COUNTS>> = {
   Norte: MIN_COUNTS,
-  Sul: { ...MIN_COUNTS, enrollments: 2 },
+  Sul: { ...MIN_COUNTS, enrollments: 2, assessmentAttempts: 0 },
 };
 
 function guardEnv() {
@@ -131,6 +139,14 @@ async function main() {
       tickets: await countByTenant(admin, "support_tickets", t.id),
       courses: await countByTenant(admin, "courses", t.id),
       enrollments: await countByTenant(admin, "course_enrollments", t.id),
+      gamificationCampaigns: await countByTenant(admin, "gamification_campaigns", t.id),
+      gamificationMissions: await countByTenant(admin, "gamification_missions", t.id),
+      gamificationLedger: await countByTenant(admin, "gamification_points_ledger", t.id),
+      gamificationParticipants: await countByTenant(admin, "gamification_campaign_participants", t.id),
+      newsPublications: await countByTenant(admin, "news_publications", t.id),
+      notifications: await countByTenant(admin, "notifications", t.id),
+      reportDefinitions: await countByTenant(admin, "report_definitions", t.id),
+      assessmentAttempts: await countByTenant(admin, "learning_assessment_attempts", t.id),
     };
 
     console.log(`--- ${t.key} ---`);

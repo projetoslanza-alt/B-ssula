@@ -1,12 +1,14 @@
 #!/usr/bin/env npx tsx
 /**
- * Orquestra fixtures QA idempotentes no staging — uma entrada por entidade principal.
+ * Orquestra fixtures QA idempotentes no staging — massa completa para homologação.
  * Requer APP_ENV=staging e credenciais Supabase em .env.local.
  */
 import { execSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 import { loadCloudEnv } from "./qa-env";
 import { TENANTS } from "./qa-fixtures";
+import { provisionLearningSupplementary } from "./qa-data/learning";
+import { provisionPlatformSupplementary } from "./qa-data/platform";
 import { provisionReportFixtures } from "./qa-data/reports";
 
 function run(label: string, cmd: string) {
@@ -14,110 +16,25 @@ function run(label: string, cmd: string) {
   execSync(cmd, { stdio: "inherit", env: process.env });
 }
 
-async function provisionSupplementaryFixtures(admin: ReturnType<typeof createClient>) {
-  const tenantId = TENANTS.north.id;
-
+async function provisionTenantSupplementary(
+  admin: ReturnType<typeof createClient>,
+  tenantKey: "north" | "south",
+) {
+  const tenant = TENANTS[tenantKey];
   const { data: adminProfile } = await admin
     .from("profiles")
     .select("id")
-    .eq("fixture_key", "user.admin.north")
-    .maybeSingle();
-  const { data: studentProfile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("fixture_key", "user.student.north")
+    .eq("fixture_key", `user.admin.${tenantKey}`)
     .maybeSingle();
 
-  if (!adminProfile || !studentProfile) {
-    console.warn("Perfis QA ausentes — pulando fixtures complementares.");
+  if (!adminProfile) {
+    console.warn(`Admin ${tenantKey} ausente — pulando fixtures complementares.`);
     return;
   }
 
-  const notifications = [
-    {
-      fixture_key: "north.notification.unread.admin",
-      user_id: adminProfile.id,
-      title: "Chamado atualizado",
-      message: "Seu chamado QA foi respondido pela equipe de suporte.",
-      type: "support",
-      link: "/chamados/77777777-7777-7777-7777-77777777101",
-      read_at: null as string | null,
-    },
-    {
-      fixture_key: "north.notification.read.admin",
-      user_id: adminProfile.id,
-      title: "Campanha publicada",
-      message: "A campanha Rota do Fechamento está ativa.",
-      type: "gamification",
-      link: "/gamificacao",
-      read_at: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      fixture_key: "north.notification.unread.student",
-      user_id: studentProfile.id,
-      title: "Nova missão",
-      message: "Complete 50 ligações qualificadas esta semana.",
-      type: "gamification",
-      link: "/gamificacao?tab=missao",
-      read_at: null,
-    },
-  ];
-
-  for (const n of notifications) {
-    await admin.from("notifications").upsert(
-      {
-        tenant_id: tenantId,
-        fixture_key: n.fixture_key,
-        user_id: n.user_id,
-        title: n.title,
-        message: n.message,
-        type: n.type,
-        link: n.link,
-        read_at: n.read_at,
-      },
-      { onConflict: "tenant_id,fixture_key" },
-    );
-  }
-
-  await admin.from("audit_events").upsert(
-    {
-      id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0001",
-      tenant_id: tenantId,
-      fixture_key: "north.audit.sample",
-      actor_id: adminProfile.id,
-      action: "FIXTURE_AUDIT_SAMPLE",
-      entity_type: "system",
-      entity_id: tenantId,
-      origin: "qa:fixtures",
-      metadata: {
-        reason: "Provisionamento idempotente de homologação",
-        previousValue: null,
-        newValue: "sample",
-      },
-    },
-    { onConflict: "id" },
-  );
-
-  const archivedTicketId = "77777777-7777-7777-7777-77777777126";
-  await admin.from("support_tickets").upsert(
-    {
-      id: archivedTicketId,
-      tenant_id: tenantId,
-      fixture_key: "north.support.ticket.archived",
-      title: "Chamado arquivado QA",
-      description: "Ticket fixture para fluxo de arquivamento e reativação.",
-      status: "archived",
-      priority: "medium",
-      requester_id: studentProfile.id,
-      created_by: studentProfile.id,
-      is_test_data: true,
-    },
-    { onConflict: "id" },
-  );
-
-  await provisionReportFixtures(admin, tenantId, adminProfile.id);
-
-  console.log("Fixtures complementares (notificações, auditoria, chamado arquivado, relatórios QA) OK.");
+  await provisionPlatformSupplementary(admin, tenantKey);
+  await provisionLearningSupplementary(admin, tenantKey);
+  await provisionReportFixtures(admin, tenant.id, adminProfile.id, tenantKey);
 }
 
 async function main() {
@@ -126,7 +43,7 @@ async function main() {
     process.exit(1);
   }
 
-  run("Usuários QA", "npx tsx scripts/provision-qa-users.ts --environment=staging --tenant=all");
+  run("Usuários QA + CRM + News + OOO + Chamados + Cursos", "npx tsx scripts/provision-qa-users.ts --environment=staging --tenant=all");
   run("Grupos de acesso", "npx tsx scripts/provision-access-groups.ts");
   run("Gamificação QA", "npx tsx scripts/provision-gamification-qa.ts");
   run("Curso comercial", "npx tsx scripts/provision-sales-course.ts --environment=staging");
@@ -134,10 +51,13 @@ async function main() {
 
   const env = loadCloudEnv();
   const admin = createClient(env.url, env.serviceKey, { auth: { persistSession: false } });
-  await provisionSupplementaryFixtures(admin);
+
+  console.log("\n▶ Fixtures complementares (Norte + Sul)");
+  await provisionTenantSupplementary(admin, "north");
+  await provisionTenantSupplementary(admin, "south");
 
   run("Verificação staging", "npx tsx scripts/qa-verify-staging.ts");
-  console.log("\n✓ Fixtures staging completas.");
+  console.log("\n✓ Fixtures staging completas — todos os módulos.");
 }
 
 main().catch((e) => {

@@ -8,29 +8,60 @@ type ReportFixture = {
   filters?: Record<string, unknown>;
 };
 
-export const QA_REPORT_FIXTURES: ReportFixture[] = [
-  { fixture_key: "north.report.kanban_columns", name: "Chamados por coluna Kanban", source: "support", description: "Distribuição de chamados por coluna do quadro." },
-  { fixture_key: "north.report.ticket_status", name: "Chamados por status", source: "support", description: "Volume por status operacional." },
-  { fixture_key: "north.report.assignee", name: "Chamados por responsável", source: "support", description: "Carga por analista responsável." },
-  { fixture_key: "north.report.queue", name: "Chamados por fila", source: "support", description: "Distribuição por fila de atendimento." },
-  { fixture_key: "north.report.overdue", name: "Chamados atrasados", source: "support", description: "Chamados fora do prazo de SLA." },
-  { fixture_key: "north.report.blocked", name: "Chamados bloqueados", source: "support", description: "Impedimentos ativos no fluxo." },
-  { fixture_key: "north.report.sla_priority", name: "SLA por prioridade", source: "support", description: "Cumprimento de SLA por prioridade." },
-  { fixture_key: "north.report.avg_resolution", name: "Tempo médio de resolução", source: "support", description: "MTTR por período e fila." },
-  { fixture_key: "north.report.sales_team", name: "Vendas por equipe", source: "crm", description: "Receita e pipeline por equipe comercial." },
-  { fixture_key: "north.report.learning_progress", name: "Progresso Universidade", source: "learning", description: "Matrículas e conclusões por curso." },
-  { fixture_key: "north.report.assessment_scores", name: "Histórico de notas", source: "learning", description: "Evolução de notas em avaliações." },
-  { fixture_key: "north.report.gamification_rank", name: "Ranking Gamificação", source: "gamification", description: "Pontuação e posição no ranking." },
-  { fixture_key: "north.report.users_active", name: "Usuários ativos/inativos", source: "admin", description: "Status de acesso dos usuários." },
-  { fixture_key: "north.report.permission_changes", name: "Alterações de permissões", source: "audit", description: "Auditoria de mudanças em permissões." },
+const REPORT_TEMPLATES: Omit<ReportFixture, "fixture_key">[] = [
+  { name: "Chamados por coluna Kanban", source: "support", description: "Distribuição de chamados por coluna do quadro." },
+  { name: "Chamados por status", source: "support", description: "Volume por status operacional." },
+  { name: "Chamados por responsável", source: "support", description: "Carga por analista responsável." },
+  { name: "Chamados por fila", source: "support", description: "Distribuição por fila de atendimento." },
+  { name: "Chamados atrasados", source: "support", description: "Chamados fora do prazo de SLA." },
+  { name: "Chamados bloqueados", source: "support", description: "Impedimentos ativos no fluxo." },
+  { name: "SLA por prioridade", source: "support", description: "Cumprimento de SLA por prioridade." },
+  { name: "Tempo médio de resolução", source: "support", description: "MTTR por período e fila." },
+  { name: "Vendas por equipe", source: "crm", description: "Receita e pipeline por equipe comercial." },
+  { name: "Progresso Universidade", source: "learning", description: "Matrículas e conclusões por curso." },
+  { name: "Histórico de notas", source: "learning", description: "Evolução de notas em avaliações." },
+  { name: "Ranking Gamificação", source: "gamification", description: "Pontuação e posição no ranking." },
+  { name: "Usuários ativos/inativos", source: "admin", description: "Status de acesso dos usuários." },
+  { name: "Alterações de permissões", source: "audit", description: "Auditoria de mudanças em permissões." },
 ];
+
+const REPORT_KEY_SUFFIXES = [
+  "kanban_columns",
+  "ticket_status",
+  "assignee",
+  "queue",
+  "overdue",
+  "blocked",
+  "sla_priority",
+  "avg_resolution",
+  "sales_team",
+  "learning_progress",
+  "assessment_scores",
+  "gamification_rank",
+  "users_active",
+  "permission_changes",
+] as const;
+
+/** Compatibilidade com imports existentes. */
+export const QA_REPORT_FIXTURES: ReportFixture[] = REPORT_TEMPLATES.map((t, i) => ({
+  ...t,
+  fixture_key: `north.report.${REPORT_KEY_SUFFIXES[i]}`,
+}));
+
+export function getReportFixtures(tenantKey: "north" | "south"): ReportFixture[] {
+  return REPORT_TEMPLATES.map((t, i) => ({
+    ...t,
+    fixture_key: `${tenantKey}.report.${REPORT_KEY_SUFFIXES[i]}`,
+  }));
+}
 
 export async function provisionReportFixtures(
   admin: SupabaseClient,
   tenantId: string,
   ownerId: string,
+  tenantKey: "north" | "south" = "north",
 ) {
-  for (const report of QA_REPORT_FIXTURES) {
+  for (const report of getReportFixtures(tenantKey)) {
     const { data: existing } = await admin
       .from("report_definitions")
       .select("id")

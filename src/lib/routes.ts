@@ -23,7 +23,7 @@ export const platformRoutes = {
     sla: "/chamados/sla",
     knowledge: "/chamados/base-de-conhecimento",
     settings: "/chamados/configuracoes",
-    admin: "/chamados/administracao",
+    admin: "/administracao/chamados/configuracoes",
   },
   northConversation: {
     root: "/conversa-de-norte",

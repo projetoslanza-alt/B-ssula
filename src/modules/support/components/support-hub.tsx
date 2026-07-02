@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { PageHeader } from "@/components/platform/page-header";
 import { MetricCard } from "@/components/platform/metric-card";
@@ -10,59 +11,62 @@ import { StatusBadge } from "@/components/platform/status-badge";
 import { FilterBar } from "@/components/platform/filter-bar";
 import { FilterSelect } from "@/components/platform/filter-select";
 import { Input } from "@/components/ui/input";
-import { platformRoutes } from "@/lib/routes";
+import { ticketRoutes, normalizeTicketView } from "@/lib/ticket-routes";
 import { EmptyState } from "@/components/feedback/states";
+import { TicketViewSwitcher } from "@/modules/support/components/ticket-view-switcher";
+import { TicketKanbanBoard, type KanbanTicketCard } from "@/modules/support/components/ticket-kanban-board";
+import { TICKET_PRIORITY_LABELS, TICKET_STATUS_LABELS } from "@/modules/support/domain/kanban";
 
-const STATUS_LABELS: Record<string, { label: string; tone: "default" | "warning" | "info" | "success" | "danger" | "purple" }> = {
-  new: { label: "Novo", tone: "default" },
-  open: { label: "Aberto", tone: "default" },
-  in_progress: { label: "Em atendimento", tone: "purple" },
-  waiting_requester: { label: "Aguardando solicitante", tone: "warning" },
-  waiting_third_party: { label: "Aguardando terceiro", tone: "warning" },
-  resolved: { label: "Resolvido", tone: "success" },
-  closed: { label: "Fechado", tone: "default" },
-  cancelled: { label: "Cancelado", tone: "danger" },
-};
-
-const PRIORITY_LABELS: Record<string, { label: string; tone: "default" | "warning" | "danger" | "info" }> = {
-  low: { label: "Baixa", tone: "default" },
-  medium: { label: "Média", tone: "info" },
-  high: { label: "Alta", tone: "warning" },
-  urgent: { label: "Crítica", tone: "danger" },
-};
-
-export type SupportTicketRow = {
-  id: string;
-  ticket_number: string;
-  title: string;
-  status: string;
-  priority: string;
-  opened_at: string;
-  sla_due_at: string | null;
-};
+export type SupportTicketRow = KanbanTicketCard;
 
 type SupportHubProps = {
   tickets?: SupportTicketRow[];
-  overview?: { total: number; open: number; outOfSla: number };
+  overview?: {
+    total: number;
+    open: number;
+    outOfSla: number;
+    unassigned?: number;
+    blocked?: number;
+    inValidation?: number;
+  };
   canCreate?: boolean;
+  canMoveAll?: boolean;
+  canMoveTeam?: boolean;
+  canMoveOwn?: boolean;
+  userId: string;
 };
 
-export function SupportHub({ tickets = [], overview, canCreate = true }: SupportHubProps) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
+export function SupportHub({
+  tickets = [],
+  overview,
+  canCreate = true,
+  canMoveAll,
+  canMoveTeam,
+  canMoveOwn,
+  userId,
+}: SupportHubProps) {
+  const searchParams = useSearchParams();
+  const view = normalizeTicketView(searchParams.get("view"));
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "todos");
 
   const stats = useMemo(() => {
     const resolved = tickets.filter((t) => ["resolved", "closed"].includes(t.status)).length;
     const inProgress = tickets.filter((t) => t.status === "in_progress").length;
     const waiting = tickets.filter((t) =>
-      ["waiting_requester", "waiting_third_party", "new"].includes(t.status),
+      ["waiting_requester", "waiting_third_party", "new", "open", "waiting_validation"].includes(t.status),
     ).length;
+    const blocked = tickets.filter((t) => t.status === "blocked" || t.blocked_at).length;
+    const unassigned = tickets.filter((t) => !t.assignee_id && !["resolved", "closed", "archived", "cancelled"].includes(t.status)).length;
     return {
-      abertos: overview?.open ?? tickets.filter((t) => !["resolved", "closed", "cancelled"].includes(t.status)).length,
+      abertos: overview?.open ?? tickets.filter((t) => !["resolved", "closed", "cancelled", "archived"].includes(t.status)).length,
       aguardando: waiting,
       emAndamento: inProgress,
       resolvidos: resolved,
-      tempoMedio: overview && overview.outOfSla > 0 ? `${overview.outOfSla} fora SLA` : "—",
+      foraSla: overview?.outOfSla ?? 0,
+      semResponsavel: overview?.unassigned ?? unassigned,
+      bloqueados: overview?.blocked ?? blocked,
+      emValidacao: overview?.inValidation ?? tickets.filter((t) => t.status === "waiting_validation").length,
     };
   }, [overview, tickets]);
 
@@ -85,22 +89,28 @@ export function SupportHub({ tickets = [], overview, canCreate = true }: Support
       <PageHeader
         eyebrow="CENTRAL DE ORIENTAÇÃO"
         title="Encontrou um obstáculo na rota?"
-        description="Abra um chamado e receba a orientação necessária para continuar avançando."
+        description="Visualize, priorize e mova chamados no quadro Kanban ou na lista operacional."
         actions={
-          canCreate ? (
-            <Link href={platformRoutes.support.new} className="btn btn-primary btn-sm">
-              + Abrir novo chamado
-            </Link>
-          ) : undefined
+          <div className="flex flex-wrap items-center gap-2">
+            <TicketViewSwitcher />
+            {canCreate && (
+              <Link href={ticketRoutes.new()} className="btn btn-primary btn-sm">
+                + Abrir novo chamado
+              </Link>
+            )}
+          </div>
         }
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
         <MetricCard label="Abertos" value={stats.abertos} badge={{ label: "Fila atual", tone: "info" }} />
         <MetricCard label="Aguardando" value={stats.aguardando} badge={{ label: "Triagem", tone: "warning" }} />
         <MetricCard label="Em andamento" value={stats.emAndamento} badge={{ label: "Atendimento", tone: "purple" }} />
         <MetricCard label="Resolvidos" value={stats.resolvidos} badge={{ label: "Encerrados", tone: "success" }} />
-        <MetricCard label="SLA" value={stats.tempoMedio} />
+        <MetricCard label="Fora do SLA" value={stats.foraSla} variant="danger" />
+        <MetricCard label="Sem responsável" value={stats.semResponsavel} />
+        <MetricCard label="Bloqueados" value={stats.bloqueados} variant="warning" />
+        <MetricCard label="Em validação" value={stats.emValidacao} />
       </section>
 
       <section className="card">
@@ -117,9 +127,9 @@ export function SupportHub({ tickets = [], overview, canCreate = true }: Support
           </div>
           <FilterSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Status">
             <option value="todos">Todos os status</option>
-            {Object.entries(STATUS_LABELS).map(([k, v]) => (
+            {Object.entries(TICKET_STATUS_LABELS).map(([k, v]) => (
               <option key={k} value={k}>
-                {v.label}
+                {v}
               </option>
             ))}
           </FilterSelect>
@@ -135,11 +145,19 @@ export function SupportHub({ tickets = [], overview, canCreate = true }: Support
             }
             action={
               canCreate ? (
-                <Link href={platformRoutes.support.new} className="btn btn-primary btn-sm">
+                <Link href={ticketRoutes.new()} className="btn btn-primary btn-sm">
                   Abrir chamado
                 </Link>
               ) : undefined
             }
+          />
+        ) : view === "kanban" ? (
+          <TicketKanbanBoard
+            tickets={filtered}
+            canMoveAll={canMoveAll}
+            canMoveTeam={canMoveTeam}
+            canMoveOwn={canMoveOwn}
+            userId={userId}
           />
         ) : (
           <DataTable
@@ -148,14 +166,14 @@ export function SupportHub({ tickets = [], overview, canCreate = true }: Support
               { key: "title", label: "Título" },
               { key: "priority", label: "Prioridade" },
               { key: "status", label: "Status" },
+              { key: "assignee", label: "Responsável" },
               { key: "opened", label: "Abertura" },
               { key: "actions", label: "", className: "w-20" },
             ]}
             className="border-0 bg-transparent"
           >
             {filtered.map((t) => {
-              const st = STATUS_LABELS[t.status] ?? { label: t.status, tone: "default" as const };
-              const pr = PRIORITY_LABELS[t.priority] ?? { label: t.priority, tone: "default" as const };
+              const pr = TICKET_PRIORITY_LABELS[t.priority] ?? { label: t.priority, tone: "default" as const };
               return (
                 <DataTableRow key={t.id}>
                   <DataTableCell className="font-mono text-[var(--blue)]">{t.ticket_number}</DataTableCell>
@@ -164,8 +182,9 @@ export function SupportHub({ tickets = [], overview, canCreate = true }: Support
                     <StatusBadge label={pr.label} tone={pr.tone} />
                   </DataTableCell>
                   <DataTableCell>
-                    <StatusBadge label={st.label} tone={st.tone} />
+                    <StatusBadge label={TICKET_STATUS_LABELS[t.status] ?? t.status} tone="default" />
                   </DataTableCell>
+                  <DataTableCell className="text-[var(--muted)]">{t.assigneeName ?? "—"}</DataTableCell>
                   <DataTableCell className="whitespace-nowrap text-[var(--muted)]">
                     {new Date(t.opened_at).toLocaleString("pt-BR", {
                       day: "2-digit",
@@ -175,7 +194,7 @@ export function SupportHub({ tickets = [], overview, canCreate = true }: Support
                     })}
                   </DataTableCell>
                   <DataTableCell>
-                    <Link href={platformRoutes.support.ticket(t.id)} className="btn btn-ghost btn-sm">
+                    <Link href={ticketRoutes.detail(t.id)} className="btn btn-ghost btn-sm">
                       Ver
                     </Link>
                   </DataTableCell>

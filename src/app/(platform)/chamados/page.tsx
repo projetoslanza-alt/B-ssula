@@ -1,5 +1,6 @@
-﻿import { requirePageSession, requirePagePermission } from "@/lib/auth/page-guard";
-import { hasPermission } from "@/modules/core/auth/session";
+﻿import { Suspense } from "react";
+import { requirePageSession, requirePagePermission } from "@/lib/auth/page-guard";
+import { hasAnyPermission, hasPermission } from "@/modules/core/auth/session";
 import { SupportHub } from "@/modules/support/components/support-hub";
 import { getSupportOverview, listTickets } from "@/modules/support/queries/tickets";
 
@@ -17,10 +18,21 @@ export default async function ChamadosPage() {
   ]);
 
   return (
-    <SupportHub
-      tickets={tickets}
-      overview={overview}
-      canCreate={hasPermission(session, "support.ticket.create")}
-    />
+    <Suspense fallback={<p className="text-[var(--muted)]">Carregando chamados...</p>}>
+      <SupportHub
+        tickets={tickets}
+        overview={overview}
+        canCreate={hasPermission(session, "support.ticket.create")}
+        canMoveAll={
+          hasAnyPermission(session, [
+            "support.ticket.move_all",
+            "support.ticket.manage_all",
+          ])
+        }
+        canMoveTeam={hasPermission(session, "support.ticket.move_team")}
+        canMoveOwn={hasPermission(session, "support.ticket.move_own")}
+        userId={session.userId}
+      />
+    </Suspense>
   );
 }

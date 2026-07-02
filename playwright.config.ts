@@ -25,9 +25,10 @@ const isCiE2e =
   process.env.CI === "1" ||
   process.env.CI === "true";
 
-const isStagingRun = process.env.PLAYWRIGHT_BASE_URL?.includes("bussola-staging") ?? false;
+const isStagingRun =
+  !isCiE2e && (process.env.PLAYWRIGHT_BASE_URL?.includes("bussola-staging") ?? false);
 
-const baseURL = isCiE2e && !isStagingRun
+const baseURL = isCiE2e
   ? "http://localhost:3099"
   : (process.env.PLAYWRIGHT_BASE_URL ??
     process.env.BASE_URL ??

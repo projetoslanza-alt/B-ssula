@@ -33,7 +33,7 @@ test.describe("Chamados — Kanban e Lista", () => {
   test("detalhe do chamado abre pela lista", async ({ page }) => {
     await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
     await page.goto("/chamados?view=lista");
-    const verLink = page.getByRole("link", { name: "Ver" }).first();
+    const verLink = page.locator("table").getByRole("link", { name: "Ver" }).first();
     if (await verLink.count()) {
       await verLink.click();
       await expect(page).toHaveURL(/\/chamados\/[0-9a-f-]{36}/);

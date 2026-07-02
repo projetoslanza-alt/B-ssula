@@ -36,7 +36,7 @@ test.describe("Administração completa", () => {
   test("filas e categorias: formulários de configuração", async ({ page }) => {
     await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
     await page.goto("/chamados/administracao");
-    await expect(page.getByRole("heading", { name: "Filas e categorias" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Filas, categorias, SLA e fluxo/i })).toBeVisible();
     await expect(page.getByPlaceholder("Nome da categoria")).toBeVisible();
     await expect(page.getByRole("button", { name: "Adicionar SLA" })).toBeVisible();
   });

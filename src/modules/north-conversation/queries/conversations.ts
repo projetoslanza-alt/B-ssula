@@ -101,4 +101,51 @@ export async function listTeamMembersForMeeting(tenantId: string, managerId: str
   });
 }
 
+export type PreviousMeetingComparison = {
+  previousMeetingId: string;
+  previousCompletedAt: string | null;
+  previousScore: number | null;
+  previousClassification: string | null;
+};
+
+export async function getPreviousMeetingComparison(
+  tenantId: string,
+  meetingId: string,
+): Promise<PreviousMeetingComparison | null> {
+  const supabase = await createClient();
+
+  const { data: current } = await supabase
+    .from("one_on_one_meetings")
+    .select("id, employee_id, completed_at, created_at")
+    .eq("tenant_id", tenantId)
+    .eq("id", meetingId)
+    .maybeSingle();
+
+  if (!current) return null;
+
+  let query = supabase
+    .from("one_on_one_meetings")
+    .select("id, completed_at, calculated_score, classification")
+    .eq("tenant_id", tenantId)
+    .eq("employee_id", current.employee_id)
+    .eq("status", "completed")
+    .neq("id", meetingId)
+    .order("completed_at", { ascending: false, nullsFirst: false })
+    .limit(1);
+
+  if (current.completed_at) {
+    query = query.lt("completed_at", current.completed_at);
+  }
+
+  const { data: previous } = await query.maybeSingle();
+  if (!previous) return null;
+
+  return {
+    previousMeetingId: previous.id,
+    previousCompletedAt: previous.completed_at,
+    previousScore: previous.calculated_score,
+    previousClassification: previous.classification,
+  };
+}
+
 export { listMeetings, listActionPlans };

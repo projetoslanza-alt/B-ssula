@@ -48,7 +48,9 @@ test.describe("Regressão visual — referência Dark Executive", () => {
       await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
       await page.waitForURL(/inicio|universidade|acesso-pendente/, { timeout: 25_000 });
       await page.goto(route);
+      await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
       await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 20_000 });
+      await page.evaluate(() => document.fonts.ready);
       const slug = route.replace(/\//g, "-").replace(/^-/, "") || "root";
       await expect(page).toHaveScreenshot(`${slug}-desktop.png`, {
         maxDiffPixelRatio: 0.02,
@@ -63,7 +65,9 @@ test.describe("Regressão visual — referência Dark Executive", () => {
       await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
       await page.waitForURL(/inicio|universidade|acesso-pendente/, { timeout: 25_000 });
       await page.goto(route);
+      await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
       await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 20_000 });
+      await page.evaluate(() => document.fonts.ready);
       const slug = route.replace(/\//g, "-").replace(/^-/, "") || "root";
       await expect(page).toHaveScreenshot(`${slug}-mobile.png`, {
         maxDiffPixelRatio: 0.08,

@@ -14,6 +14,16 @@ if (rbac.status !== 0) {
   process.exit(rbac.status ?? 1);
 }
 
+console.log("Provisionando catálogo oficial de chamados...");
+const fixtures = spawnSync("npx", ["tsx", "scripts/provision-e2e-support.ts"], {
+  stdio: "inherit",
+  shell: true,
+  env: process.env,
+});
+if (fixtures.status !== 0) {
+  process.exit(fixtures.status ?? 1);
+}
+
 const args = process.argv.slice(2);
 const result = spawnSync("npx", ["playwright", "test", ...args], {
   stdio: "inherit",

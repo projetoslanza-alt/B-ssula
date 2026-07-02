@@ -2,10 +2,27 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Select, Textarea } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { saveMeetingBlockAction, finalizeMeetingAction } from "@/modules/north-conversation/actions/wizard-actions";
+import {
+  finalizeMeetingAction,
+  saveMeetingBlockAction,
+  saveSelfAssessmentAction,
+} from "@/modules/north-conversation/actions/wizard-actions";
+import { scoreFromBlocks } from "@/modules/north-conversation/domain/report-data";
+import {
+  ActionPlanBlock,
+  BehaviorChecklistBlock,
+  BottleneckSuggestionBlock,
+  ConversionsDisplayBlock,
+  CrmChecklistBlock,
+  ExecutionDimensionsBlock,
+  GeneralOpeningBlock,
+  ScorePreviewBlock,
+  SelfAssessmentBlock,
+  type PreviousCycleData,
+} from "@/modules/north-conversation/components/north-wizard-blocks";
 
 const BLOCKS = [
   { key: "general", label: "Dados Gerais" },
@@ -38,11 +55,21 @@ export function NorthConversationWizard({
   companyName,
   employees,
   initialBlocks = {},
+  previousCycle,
+  canEditSelfAssessment,
+  isManager,
+  employeeId,
+  sessionUserId,
 }: {
   meetingId: string;
   companyName: string;
   employees: Employee[];
   initialBlocks?: Record<string, Record<string, unknown>>;
+  previousCycle?: PreviousCycleData;
+  canEditSelfAssessment: boolean;
+  isManager: boolean;
+  employeeId: string;
+  sessionUserId: string;
 }) {
   const [step, setStep] = useState(0);
   const [saving, startSave] = useTransition();
@@ -57,9 +84,39 @@ export function NorthConversationWizard({
     setBlocks((prev) => ({ ...prev, [key]: { ...(prev[key] ?? {}), ...patch } }));
   }
 
+  function payloadForCurrentBlock() {
+    if (block.key === "conversions") {
+      const raw = (blocks.indicators as { raw?: Record<string, number> })?.raw ?? {};
+      const targets = (blocks.indicators as { targets?: Record<string, number> })?.targets ?? {};
+      const computed = scoreFromBlocks({ indicators: { raw, targets } });
+      return { items: computed.conversions };
+    }
+
+    if (block.key === "score") {
+      const computed = scoreFromBlocks(blocks);
+      return {
+        scoreBlocks: computed.scoreBlocks,
+        calculatedScore: computed.calculatedScore,
+        classification: computed.classification,
+      };
+    }
+
+    return blocks[block.key] ?? {};
+  }
+
   function persistAndNext() {
     startSave(async () => {
-      await saveMeetingBlockAction(meetingId, block.key, blocks[block.key] ?? {});
+      const payload = payloadForCurrentBlock();
+      if (block.key === "self_assessment") {
+        if (!canEditSelfAssessment) {
+          setMessage("Autoavaliação somente leitura para este usuário.");
+          setStep((s) => Math.min(s + 1, BLOCKS.length - 1));
+          return;
+        }
+        await saveSelfAssessmentAction(meetingId, payload);
+      } else {
+        await saveMeetingBlockAction(meetingId, block.key, payload);
+      }
       setMessage("Rascunho salvo");
       setStep((s) => Math.min(s + 1, BLOCKS.length - 1));
     });
@@ -78,7 +135,9 @@ export function NorthConversationWizard({
 
   const general = blocks.general ?? {};
   const indicators = (blocks.indicators as { raw?: Record<string, number> })?.raw ?? {};
-  const actions = ((blocks.action_plan as { actions?: { title: string }[] })?.actions ?? [{ title: "" }, { title: "" }, { title: "" }]);
+  const indicatorTargets = (blocks.indicators as { targets?: Record<string, number> })?.targets ?? {};
+  const actions = ((blocks.action_plan as { actions?: { title: string }[] })?.actions ?? []);
+  const employeeName = employees.find((employee) => employee.id === employeeId)?.name ?? "colaborador";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -86,6 +145,7 @@ export function NorthConversationWizard({
         <p className="text-xs uppercase tracking-wide text-sky-400">Venda ComCiência · Conversa de Norte</p>
         <h2 className="text-lg font-semibold">Gestão individual de performance comercial</h2>
         <p className="text-sm text-[var(--muted)]">Empresa: {companyName}</p>
+        <p className="text-xs text-[var(--muted)]">Sessão: {sessionUserId === employeeId ? "Colaborador avaliado" : "Gestor"}</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -114,29 +174,11 @@ export function NorthConversationWizard({
         </CardHeader>
         <CardContent className="space-y-3">
           {block.key === "general" && (
-            <>
-              <Select value={(general.employeeId as string) ?? ""} onChange={(e) => updateBlock("general", { employeeId: e.target.value })}>
-                <option value="">Colaborador avaliado</option>
-                {employees.map((e) => (
-                  <option key={e.id} value={e.id}>{e.name}</option>
-                ))}
-              </Select>
-              <Input placeholder="Projeto / Operação" value={(general.project as string) ?? ""} onChange={(e) => updateBlock("general", { project: e.target.value })} />
-              <Input type="date" value={(general.meetingDate as string) ?? ""} onChange={(e) => updateBlock("general", { meetingDate: e.target.value })} />
-              <Select value={(general.meetingType as string) ?? ""} onChange={(e) => updateBlock("general", { meetingType: e.target.value })}>
-                <option value="">Tipo de reunião</option>
-                <option value="quinzenal">Quinzenal</option>
-                <option value="fechamento">Fechamento de mês</option>
-                <option value="emergencial">Emergencial</option>
-                <option value="recuperacao">Plano de recuperação</option>
-              </Select>
-              <Textarea
-                placeholder="Roteiro de abertura — notas da condução"
-                value={(general.openingNotes as string) ?? ""}
-                onChange={(e) => updateBlock("general", { openingNotes: e.target.value })}
-                rows={4}
-              />
-            </>
+            <GeneralOpeningBlock
+              employees={employees}
+              value={general}
+              onChange={(patch) => updateBlock("general", patch)}
+            />
           )}
 
           {block.key === "indicators" && (
@@ -172,39 +214,44 @@ export function NorthConversationWizard({
             </div>
           )}
 
+          {block.key === "conversions" && (
+            <ConversionsDisplayBlock indicatorsRaw={indicators} indicatorsTargets={indicatorTargets} />
+          )}
+
           {block.key === "bottleneck" && (
-            <>
-              <Select value={(blocks.bottleneck?.primary as string) ?? ""} onChange={(e) => updateBlock("bottleneck", { primary: e.target.value })}>
-                <option value="">Gargalo principal</option>
-                <option value="low_calls">Baixo volume de ligações</option>
-                <option value="low_opening">Baixa taxa de abertura</option>
-                <option value="low_scheduled">Baixa conversão para reunião</option>
-                <option value="no_show">Alto no-show</option>
-                <option value="low_contracts">Poucos contratos gerados</option>
-                <option value="stuck_contracts">Contratos parados</option>
-                <option value="crm">CRM desatualizado</option>
-              </Select>
-              <Textarea placeholder="Observação e evidências" value={(blocks.bottleneck?.notes as string) ?? ""} onChange={(e) => updateBlock("bottleneck", { notes: e.target.value })} />
-            </>
+            <BottleneckSuggestionBlock
+              value={blocks.bottleneck ?? {}}
+              indicatorsRaw={indicators}
+              onChange={(patch) => updateBlock("bottleneck", patch)}
+            />
+          )}
+
+          {block.key === "crm" && (
+            <CrmChecklistBlock value={blocks.crm ?? {}} onChange={(patch) => updateBlock("crm", patch)} />
+          )}
+
+          {block.key === "execution" && (
+            <ExecutionDimensionsBlock
+              value={blocks.execution ?? {}}
+              onChange={(patch) => updateBlock("execution", patch)}
+            />
+          )}
+
+          {block.key === "behavior" && (
+            <BehaviorChecklistBlock
+              value={blocks.behavior ?? {}}
+              onChange={(patch) => updateBlock("behavior", patch)}
+            />
           )}
 
           {block.key === "self_assessment" && (
-            <>
-              <Select value={(blocks.self_assessment?.performance as string) ?? ""} onChange={(e) => updateBlock("self_assessment", { performance: e.target.value })}>
-                <option value="">Performance geral (colaborador)</option>
-                <option value="alta_performance">Alta performance</option>
-                <option value="dentro_esperado">Dentro do esperado</option>
-                <option value="abaixo_esperado">Abaixo do esperado</option>
-                <option value="critica">Crítica</option>
-              </Select>
-              <Select value={(blocks.self_assessment?.organization as string) ?? ""} onChange={(e) => updateBlock("self_assessment", { organization: e.target.value })}>
-                <option value="">Organização e CRM</option>
-                <option value="muito_organizada">Muito organizada</option>
-                <option value="organizada">Organizada</option>
-                <option value="parcialmente_organizada">Parcialmente organizada</option>
-                <option value="desorganizada">Desorganizada</option>
-              </Select>
-            </>
+            <SelfAssessmentBlock
+              value={blocks.self_assessment ?? {}}
+              canEdit={canEditSelfAssessment}
+              isManager={isManager}
+              employeeName={employeeName}
+              onChange={(patch) => updateBlock("self_assessment", patch)}
+            />
           )}
 
           {block.key === "diagnosis" && (
@@ -216,21 +263,16 @@ export function NorthConversationWizard({
             />
           )}
 
+          {block.key === "score" && (
+            <ScorePreviewBlock blocks={blocks} previousCycle={previousCycle} />
+          )}
+
           {block.key === "action_plan" && (
-            <div className="space-y-3">
-              {actions.map((action, idx) => (
-                <Input
-                  key={idx}
-                  placeholder={`Ação ${idx + 1} (máx. 3)`}
-                  value={action.title}
-                  onChange={(e) => {
-                    const next = [...actions];
-                    next[idx] = { title: e.target.value };
-                    updateBlock("action_plan", { actions: next });
-                  }}
-                />
-              ))}
-            </div>
+            <ActionPlanBlock
+              value={blocks.action_plan ?? { actions }}
+              employees={employees}
+              onChange={(patch) => updateBlock("action_plan", patch)}
+            />
           )}
 
           {block.key === "review" && (
@@ -249,7 +291,7 @@ export function NorthConversationWizard({
             </>
           )}
 
-          {!["general", "indicators", "bottleneck", "self_assessment", "diagnosis", "action_plan", "review"].includes(block.key) && (
+          {!["general", "indicators", "conversions", "bottleneck", "crm", "execution", "behavior", "self_assessment", "diagnosis", "score", "action_plan", "review"].includes(block.key) && (
             <p className="text-sm text-[var(--muted)]">
               Bloco estruturado — registre observações e avaliações. Use os blocos adjacentes para detalhar CRM, execução e comportamento na próxima iteração do formulário.
             </p>

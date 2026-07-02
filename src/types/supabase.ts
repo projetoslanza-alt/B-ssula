@@ -5163,6 +5163,64 @@ export type Database = {
           },
         ]
       }
+      one_on_one_self_assessments: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          meeting_id: string
+          responses: Json
+          status: string
+          submitted_at: string
+          tenant_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          meeting_id: string
+          responses?: Json
+          status?: string
+          submitted_at?: string
+          tenant_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          meeting_id?: string
+          responses?: Json
+          status?: string
+          submitted_at?: string
+          tenant_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_on_one_self_assessments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "one_on_one_self_assessments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "one_on_one_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "one_on_one_self_assessments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       one_on_one_template_questions: {
         Row: {
           id: string
@@ -6033,6 +6091,66 @@ export type Database = {
           },
         ]
       }
+      support_canned_responses: {
+        Row: {
+          audience: string
+          body: string
+          category_id: string | null
+          created_at: string
+          fixture_key: string | null
+          id: string
+          is_active: boolean
+          queue_slug: string | null
+          sort_order: number
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          body: string
+          category_id?: string | null
+          created_at?: string
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          queue_slug?: string | null
+          sort_order?: number
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          body?: string
+          category_id?: string | null
+          created_at?: string
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          queue_slug?: string | null
+          sort_order?: number
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_canned_responses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "support_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_canned_responses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_categories: {
         Row: {
           created_at: string
@@ -6290,8 +6408,10 @@ export type Database = {
         Row: {
           category_id: string | null
           created_at: string
+          description: string | null
           field_type: string
           fixture_key: string | null
+          help_text: string | null
           id: string
           is_active: boolean
           is_required: boolean
@@ -6306,8 +6426,10 @@ export type Database = {
         Insert: {
           category_id?: string | null
           created_at?: string
+          description?: string | null
           field_type?: string
           fixture_key?: string | null
+          help_text?: string | null
           id?: string
           is_active?: boolean
           is_required?: boolean
@@ -6322,8 +6444,10 @@ export type Database = {
         Update: {
           category_id?: string | null
           created_at?: string
+          description?: string | null
           field_type?: string
           fixture_key?: string | null
+          help_text?: string | null
           id?: string
           is_active?: boolean
           is_required?: boolean
@@ -6352,6 +6476,80 @@ export type Database = {
           },
           {
             foreignKeyName: "support_question_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_queue_assignees: {
+        Row: {
+          assignee_id: string | null
+          backup_assignee_id: string | null
+          created_at: string
+          fixture_key: string | null
+          id: string
+          is_active: boolean
+          queue_slug: string
+          schedule_note: string | null
+          scope: string | null
+          sort_order: number
+          team_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          backup_assignee_id?: string | null
+          created_at?: string
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          queue_slug: string
+          schedule_note?: string | null
+          scope?: string | null
+          sort_order?: number
+          team_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          assignee_id?: string | null
+          backup_assignee_id?: string | null
+          created_at?: string
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          queue_slug?: string
+          schedule_note?: string | null
+          scope?: string | null
+          sort_order?: number
+          team_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_queue_assignees_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_queue_assignees_backup_assignee_id_fkey"
+            columns: ["backup_assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_queue_assignees_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_queue_assignees_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -6565,8 +6763,10 @@ export type Database = {
           created_by: string | null
           file_name: string
           file_path: string
+          file_size: number | null
           id: string
           message_id: string | null
+          mime_type: string | null
           tenant_id: string
           ticket_id: string
         }
@@ -6575,8 +6775,10 @@ export type Database = {
           created_by?: string | null
           file_name: string
           file_path: string
+          file_size?: number | null
           id?: string
           message_id?: string | null
+          mime_type?: string | null
           tenant_id: string
           ticket_id: string
         }
@@ -6585,8 +6787,10 @@ export type Database = {
           created_by?: string | null
           file_name?: string
           file_path?: string
+          file_size?: number | null
           id?: string
           message_id?: string | null
+          mime_type?: string | null
           tenant_id?: string
           ticket_id?: string
         }

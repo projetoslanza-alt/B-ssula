@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/lib/auth/page-guard";
 import { createClient } from "@/lib/supabase/server";
+import { unwrapRelation } from "@/lib/supabase/relations";
 import { PageHeader } from "@/components/platform/page-header";
 import { platformRoutes } from "@/lib/routes";
 import { NorthConversationReport } from "@/modules/north-conversation/components/north-conversation-report";
@@ -16,7 +17,11 @@ export default async function ConversaRelatorioPage({
 
   const { data: meeting } = await supabase
     .from("one_on_one_meetings")
-    .select("id, company_snapshot, calculated_score, classification, classification_override, completed_at, manager_id, employee_id")
+    .select(`
+      id, company_snapshot, calculated_score, classification, classification_override, completed_at, manager_id, employee_id,
+      manager:profiles!one_on_one_meetings_manager_id_fkey ( full_name, email ),
+      employee:profiles!one_on_one_meetings_employee_id_fkey ( full_name, email )
+    `)
     .eq("id", id)
     .eq("tenant_id", session.tenantId)
     .maybeSingle();
@@ -28,11 +33,20 @@ export default async function ConversaRelatorioPage({
       .from("one_on_one_meeting_snapshots")
       .select("snapshot, created_at")
       .eq("meeting_id", id)
+      .eq("tenant_id", session.tenantId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase.from("one_on_one_meeting_insights").select("dimension, severity, message, recommendation").eq("meeting_id", id),
+    supabase
+      .from("one_on_one_meeting_insights")
+      .select("dimension, severity, message, recommendation")
+      .eq("meeting_id", id)
+      .eq("tenant_id", session.tenantId),
   ]);
+  const managerProfile = unwrapRelation(meeting.manager);
+  const employeeProfile = unwrapRelation(meeting.employee);
+  const managerName = managerProfile?.full_name ?? managerProfile?.email ?? "Gestor";
+  const employeeName = employeeProfile?.full_name ?? employeeProfile?.email ?? "Colaborador";
 
   return (
     <div className="space-y-6">
@@ -41,7 +55,15 @@ export default async function ConversaRelatorioPage({
         description="Venda ComCiência · Gestão individual de performance comercial"
         backHref={platformRoutes.northConversation.conversation(id)}
       />
-      <NorthConversationReport meetingId={id} meeting={meeting} snapshot={snapshot?.snapshot} insights={insights ?? []} />
+      <NorthConversationReport
+        meetingId={id}
+        meeting={meeting}
+        snapshot={snapshot?.snapshot}
+        snapshotCreatedAt={snapshot?.created_at}
+        insights={insights ?? []}
+        managerName={managerName}
+        employeeName={employeeName}
+      />
     </div>
   );
 }

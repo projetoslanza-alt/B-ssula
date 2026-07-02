@@ -35,9 +35,13 @@ test.describe("Administração completa", () => {
 
   test("filas e categorias: formulários de configuração", async ({ page }) => {
     await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
-    await page.goto("/chamados/administracao");
-    await expect(page.getByRole("heading", { name: /Filas, categorias, SLA e fluxo/i })).toBeVisible();
-    await expect(page.getByPlaceholder("Nome da categoria")).toBeVisible();
+    await page.goto("/administracao/chamados/configuracoes");
+    await expect(page).not.toHaveURL(/acesso-negado/);
+    await expect(page.getByRole("heading", { name: "Chamados — Configurações" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Filas" })).toBeVisible();
+    await page.getByRole("button", { name: "Categorias", exact: true }).click();
+    await expect(page.getByPlaceholder("Nome")).toBeVisible();
+    await page.getByRole("button", { name: "SLA" }).click();
     await expect(page.getByRole("button", { name: "Adicionar SLA" })).toBeVisible();
   });
 

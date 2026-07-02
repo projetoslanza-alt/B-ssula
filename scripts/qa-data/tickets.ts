@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TENANTS } from "../qa-fixtures";
+import { provisionOfficialSupportCatalog } from "./support-official";
 
 type AdminDb = SupabaseClient;
 
@@ -65,6 +66,7 @@ export async function provisionSupportData(
 ) {
   const tenant = TENANTS[tenantKey];
   const prefix = tenantKey === "north" ? "north" : "south";
+  await provisionOfficialSupportCatalog(admin, tenantKey);
   const categoryIds: Record<string, string> = {};
   const columnIds = await provisionKanbanColumns(admin, tenantKey);
 

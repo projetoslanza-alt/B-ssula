@@ -1,6 +1,6 @@
 ﻿import { requirePageSession } from "@/lib/auth/page-guard";
 import { hasPermission } from "@/modules/core/auth/session";
-import { TicketWizard } from "@/modules/support/components/ticket-wizard";
+import { GuidedTicketWizard } from "@/modules/support/components/guided-ticket-wizard";
 import { listSupportCategories } from "@/modules/support/queries/tickets";
 import { PageHeader } from "@/components/platform/page-header";
 import { platformRoutes } from "@/lib/routes";
@@ -21,7 +21,7 @@ export default async function NovoChamadoPage() {
         description="Siga as etapas para registrar sua solicitação de orientação."
         backHref={platformRoutes.support.root}
       />
-      <TicketWizard categories={categories} />
+      <GuidedTicketWizard categories={categories} permissions={session.permissions} />
     </div>
   );
 }

@@ -279,6 +279,7 @@ export type Database = {
           created_at: string
           entity_id: string | null
           entity_type: string
+          fixture_key: string | null
           id: string
           ip_address: unknown
           metadata: Json
@@ -295,6 +296,7 @@ export type Database = {
           created_at?: string
           entity_id?: string | null
           entity_type: string
+          fixture_key?: string | null
           id?: string
           ip_address?: unknown
           metadata?: Json
@@ -311,6 +313,7 @@ export type Database = {
           created_at?: string
           entity_id?: string | null
           entity_type?: string
+          fixture_key?: string | null
           id?: string
           ip_address?: unknown
           metadata?: Json
@@ -4391,6 +4394,7 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string
+          fixture_key: string | null
           id: string
           link: string | null
           message: string
@@ -4403,6 +4407,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          fixture_key?: string | null
           id?: string
           link?: string | null
           message: string
@@ -4415,6 +4420,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          fixture_key?: string | null
           id?: string
           link?: string | null
           message?: string
@@ -4713,18 +4719,198 @@ export type Database = {
           },
         ]
       }
+      one_on_one_meeting_blocks: {
+        Row: {
+          block_key: string
+          created_at: string
+          id: string
+          meeting_id: string
+          payload: Json
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          block_key: string
+          created_at?: string
+          id?: string
+          meeting_id: string
+          payload?: Json
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          block_key?: string
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          payload?: Json
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_on_one_meeting_blocks_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "one_on_one_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "one_on_one_meeting_blocks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "one_on_one_meeting_blocks_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      one_on_one_meeting_insights: {
+        Row: {
+          created_at: string
+          dimension: string
+          evidence: Json
+          id: string
+          meeting_id: string
+          message: string
+          recommendation: string | null
+          rule_key: string
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          dimension: string
+          evidence?: Json
+          id?: string
+          meeting_id: string
+          message: string
+          recommendation?: string | null
+          rule_key: string
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          dimension?: string
+          evidence?: Json
+          id?: string
+          meeting_id?: string
+          message?: string
+          recommendation?: string | null
+          rule_key?: string
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_on_one_meeting_insights_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "one_on_one_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "one_on_one_meeting_insights_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      one_on_one_meeting_snapshots: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          meeting_id: string
+          snapshot: Json
+          tenant_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meeting_id: string
+          snapshot: Json
+          tenant_id: string
+          version_number?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meeting_id?: string
+          snapshot?: Json
+          tenant_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_on_one_meeting_snapshots_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "one_on_one_meeting_snapshots_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "one_on_one_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "one_on_one_meeting_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       one_on_one_meetings: {
         Row: {
           blockers: string | null
+          calculated_score: number | null
+          classification: string | null
+          classification_override: string | null
+          classification_override_at: string | null
+          classification_override_by: string | null
+          classification_override_reason: string | null
+          company_snapshot: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
+          cycle_key: string | null
           employee_id: string
+          employee_role: string | null
           fixture_key: string | null
           id: string
+          initial_status_label: string | null
           is_test_data: boolean
           manager_id: string
+          meeting_type: string | null
+          methodology_version: string
+          period_end: string | null
+          period_start: string | null
           positives: string | null
+          project_name: string | null
+          risk_level: string | null
           scheduled_at: string | null
           status: Database["public"]["Enums"]["one_on_one_meeting_status"]
           summary: string | null
@@ -4735,15 +4921,31 @@ export type Database = {
         }
         Insert: {
           blockers?: string | null
+          calculated_score?: number | null
+          classification?: string | null
+          classification_override?: string | null
+          classification_override_at?: string | null
+          classification_override_by?: string | null
+          classification_override_reason?: string | null
+          company_snapshot?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          cycle_key?: string | null
           employee_id: string
+          employee_role?: string | null
           fixture_key?: string | null
           id?: string
+          initial_status_label?: string | null
           is_test_data?: boolean
           manager_id: string
+          meeting_type?: string | null
+          methodology_version?: string
+          period_end?: string | null
+          period_start?: string | null
           positives?: string | null
+          project_name?: string | null
+          risk_level?: string | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["one_on_one_meeting_status"]
           summary?: string | null
@@ -4754,15 +4956,31 @@ export type Database = {
         }
         Update: {
           blockers?: string | null
+          calculated_score?: number | null
+          classification?: string | null
+          classification_override?: string | null
+          classification_override_at?: string | null
+          classification_override_by?: string | null
+          classification_override_reason?: string | null
+          company_snapshot?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          cycle_key?: string | null
           employee_id?: string
+          employee_role?: string | null
           fixture_key?: string | null
           id?: string
+          initial_status_label?: string | null
           is_test_data?: boolean
           manager_id?: string
+          meeting_type?: string | null
+          methodology_version?: string
+          period_end?: string | null
+          period_start?: string | null
           positives?: string | null
+          project_name?: string | null
+          risk_level?: string | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["one_on_one_meeting_status"]
           summary?: string | null
@@ -4772,6 +4990,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "one_on_one_meetings_classification_override_by_fkey"
+            columns: ["classification_override_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "one_on_one_meetings_created_by_fkey"
             columns: ["created_by"]
@@ -4871,6 +5096,69 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      one_on_one_route_checkins: {
+        Row: {
+          answers: Json
+          average_score: number
+          classification: string
+          comment: string | null
+          created_at: string
+          cycle_key: string
+          feeling: string | null
+          fixture_key: string | null
+          id: string
+          is_test_data: boolean
+          tenant_id: string
+          user_id: string
+          wants_conversation: boolean
+        }
+        Insert: {
+          answers?: Json
+          average_score: number
+          classification: string
+          comment?: string | null
+          created_at?: string
+          cycle_key: string
+          feeling?: string | null
+          fixture_key?: string | null
+          id?: string
+          is_test_data?: boolean
+          tenant_id: string
+          user_id: string
+          wants_conversation?: boolean
+        }
+        Update: {
+          answers?: Json
+          average_score?: number
+          classification?: string
+          comment?: string | null
+          created_at?: string
+          cycle_key?: string
+          feeling?: string | null
+          fixture_key?: string | null
+          id?: string
+          is_test_data?: boolean
+          tenant_id?: string
+          user_id?: string
+          wants_conversation?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "one_on_one_route_checkins_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "one_on_one_route_checkins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -5397,6 +5685,147 @@ export type Database = {
         }
         Relationships: []
       }
+      report_definition_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          report_id: string
+          snapshot: Json
+          tenant_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          report_id: string
+          snapshot?: Json
+          tenant_id: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          report_id?: string
+          snapshot?: Json
+          tenant_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_definition_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definition_versions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definition_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_definitions: {
+        Row: {
+          blocks: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          filters: Json
+          fixture_key: string | null
+          id: string
+          is_favorite: boolean
+          layout: Json
+          name: string
+          owner_id: string
+          source: string
+          status: Database["public"]["Enums"]["report_definition_status"]
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filters?: Json
+          fixture_key?: string | null
+          id?: string
+          is_favorite?: boolean
+          layout?: Json
+          name: string
+          owner_id: string
+          source: string
+          status?: Database["public"]["Enums"]["report_definition_status"]
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filters?: Json
+          fixture_key?: string | null
+          id?: string
+          is_favorite?: boolean
+          layout?: Json
+          name?: string
+          owner_id?: string
+          source?: string
+          status?: Database["public"]["Enums"]["report_definition_status"]
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           permission_id: string
@@ -5533,46 +5962,262 @@ export type Database = {
           },
         ]
       }
+      support_assignment_rules: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          fixture_key: string | null
+          id: string
+          is_active: boolean
+          priority: Database["public"]["Enums"]["support_priority"] | null
+          queue_slug: string | null
+          sort_order: number
+          subcategory_id: string | null
+          team_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: Database["public"]["Enums"]["support_priority"] | null
+          queue_slug?: string | null
+          sort_order?: number
+          subcategory_id?: string | null
+          team_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: Database["public"]["Enums"]["support_priority"] | null
+          queue_slug?: string | null
+          sort_order?: number
+          subcategory_id?: string | null
+          team_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_assignment_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "support_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_assignment_rules_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "support_subcategories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_assignment_rules_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_assignment_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_categories: {
         Row: {
           created_at: string
+          default_priority:
+            | Database["public"]["Enums"]["support_priority"]
+            | null
+          default_queue_slug: string | null
+          default_team_id: string | null
           description: string | null
+          examples: string | null
           fixture_key: string | null
+          icon: string | null
           id: string
           is_active: boolean
           is_global: boolean
           name: string
+          required_permission: string | null
           slug: string
+          sort_order: number
           tenant_id: string | null
         }
         Insert: {
           created_at?: string
+          default_priority?:
+            | Database["public"]["Enums"]["support_priority"]
+            | null
+          default_queue_slug?: string | null
+          default_team_id?: string | null
           description?: string | null
+          examples?: string | null
           fixture_key?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
           is_global?: boolean
           name: string
+          required_permission?: string | null
           slug: string
+          sort_order?: number
           tenant_id?: string | null
         }
         Update: {
           created_at?: string
+          default_priority?:
+            | Database["public"]["Enums"]["support_priority"]
+            | null
+          default_queue_slug?: string | null
+          default_team_id?: string | null
           description?: string | null
+          examples?: string | null
           fixture_key?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
           is_global?: boolean
           name?: string
+          required_permission?: string | null
           slug?: string
+          sort_order?: number
           tenant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "support_categories_default_team_id_fkey"
+            columns: ["default_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "support_categories_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_kanban_columns: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_final: boolean
+          is_initial: boolean
+          name: string
+          slug: string
+          sort_order: number
+          status_key: string
+          tenant_id: string
+          updated_at: string
+          wip_limit: number | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_final?: boolean
+          is_initial?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          status_key: string
+          tenant_id: string
+          updated_at?: string
+          wip_limit?: number | null
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_final?: boolean
+          is_initial?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          status_key?: string
+          tenant_id?: string
+          updated_at?: string
+          wip_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_kanban_columns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_kanban_transitions: {
+        Row: {
+          created_at: string
+          from_column_id: string
+          id: string
+          is_active: boolean
+          rules: Json
+          tenant_id: string
+          to_column_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_column_id: string
+          id?: string
+          is_active?: boolean
+          rules?: Json
+          tenant_id: string
+          to_column_id: string
+        }
+        Update: {
+          created_at?: string
+          from_column_id?: string
+          id?: string
+          is_active?: boolean
+          rules?: Json
+          tenant_id?: string
+          to_column_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_kanban_transitions_from_column_id_fkey"
+            columns: ["from_column_id"]
+            isOneToOne: false
+            referencedRelation: "support_kanban_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_kanban_transitions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_kanban_transitions_to_column_id_fkey"
+            columns: ["to_column_id"]
+            isOneToOne: false
+            referencedRelation: "support_kanban_columns"
             referencedColumns: ["id"]
           },
         ]
@@ -5641,6 +6286,133 @@ export type Database = {
           },
         ]
       }
+      support_question_templates: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          field_type: string
+          fixture_key: string | null
+          id: string
+          is_active: boolean
+          is_required: boolean
+          label: string
+          options: Json
+          question_key: string
+          scope: string
+          sort_order: number
+          subcategory_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          field_type?: string
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          label: string
+          options?: Json
+          question_key: string
+          scope?: string
+          sort_order?: number
+          subcategory_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          field_type?: string
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          label?: string
+          options?: Json
+          question_key?: string
+          scope?: string
+          sort_order?: number
+          subcategory_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_question_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "support_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_question_templates_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "support_subcategories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_question_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_queues: {
+        Row: {
+          created_at: string
+          description: string | null
+          fixture_key: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          team_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          team_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          fixture_key?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          team_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_queues_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_queues_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_sla_policies: {
         Row: {
           created_at: string
@@ -5689,28 +6461,43 @@ export type Database = {
         Row: {
           category_id: string
           created_at: string
+          default_queue_slug: string | null
+          description: string | null
+          examples: string | null
+          fixture_key: string | null
           id: string
           is_active: boolean
           name: string
           slug: string
+          sort_order: number
           tenant_id: string | null
         }
         Insert: {
           category_id: string
           created_at?: string
+          default_queue_slug?: string | null
+          description?: string | null
+          examples?: string | null
+          fixture_key?: string | null
           id?: string
           is_active?: boolean
           name: string
           slug: string
+          sort_order?: number
           tenant_id?: string | null
         }
         Update: {
           category_id?: string
           created_at?: string
+          default_queue_slug?: string | null
+          description?: string | null
+          examples?: string | null
+          fixture_key?: string | null
           id?: string
           is_active?: boolean
           name?: string
           slug?: string
+          sort_order?: number
           tenant_id?: string | null
         }
         Relationships: [
@@ -5726,6 +6513,48 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_answers: {
+        Row: {
+          created_at: string
+          id: string
+          question_key: string
+          tenant_id: string
+          ticket_id: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question_key: string
+          tenant_id: string
+          ticket_id: string
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question_key?: string
+          tenant_id?: string
+          ticket_id?: string
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_answers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_answers_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
             referencedColumns: ["id"]
           },
         ]
@@ -5954,6 +6783,8 @@ export type Database = {
       support_tickets: {
         Row: {
           assignee_id: string | null
+          blocked_at: string | null
+          blocked_reason: string | null
           category_id: string | null
           closed_at: string | null
           created_at: string
@@ -5961,15 +6792,24 @@ export type Database = {
           description: string
           fixture_key: string | null
           id: string
+          impact_data: Json
           is_test_data: boolean
+          kanban_column_id: string | null
+          kanban_position: number
+          last_board_move_at: string | null
           opened_at: string
           priority: Database["public"]["Enums"]["support_priority"]
+          protocol: string | null
+          queue_slug: string | null
           requester_id: string
           resolved_at: string | null
           sla_due_at: string | null
           source: string
           status: Database["public"]["Enums"]["support_ticket_status"]
           subcategory_id: string | null
+          suggested_priority:
+            | Database["public"]["Enums"]["support_priority"]
+            | null
           team_id: string | null
           tenant_id: string
           ticket_number: number
@@ -5979,6 +6819,8 @@ export type Database = {
         }
         Insert: {
           assignee_id?: string | null
+          blocked_at?: string | null
+          blocked_reason?: string | null
           category_id?: string | null
           closed_at?: string | null
           created_at?: string
@@ -5986,15 +6828,24 @@ export type Database = {
           description: string
           fixture_key?: string | null
           id?: string
+          impact_data?: Json
           is_test_data?: boolean
+          kanban_column_id?: string | null
+          kanban_position?: number
+          last_board_move_at?: string | null
           opened_at?: string
           priority?: Database["public"]["Enums"]["support_priority"]
+          protocol?: string | null
+          queue_slug?: string | null
           requester_id: string
           resolved_at?: string | null
           sla_due_at?: string | null
           source?: string
           status?: Database["public"]["Enums"]["support_ticket_status"]
           subcategory_id?: string | null
+          suggested_priority?:
+            | Database["public"]["Enums"]["support_priority"]
+            | null
           team_id?: string | null
           tenant_id: string
           ticket_number?: number
@@ -6004,6 +6855,8 @@ export type Database = {
         }
         Update: {
           assignee_id?: string | null
+          blocked_at?: string | null
+          blocked_reason?: string | null
           category_id?: string | null
           closed_at?: string | null
           created_at?: string
@@ -6011,15 +6864,24 @@ export type Database = {
           description?: string
           fixture_key?: string | null
           id?: string
+          impact_data?: Json
           is_test_data?: boolean
+          kanban_column_id?: string | null
+          kanban_position?: number
+          last_board_move_at?: string | null
           opened_at?: string
           priority?: Database["public"]["Enums"]["support_priority"]
+          protocol?: string | null
+          queue_slug?: string | null
           requester_id?: string
           resolved_at?: string | null
           sla_due_at?: string | null
           source?: string
           status?: Database["public"]["Enums"]["support_ticket_status"]
           subcategory_id?: string | null
+          suggested_priority?:
+            | Database["public"]["Enums"]["support_priority"]
+            | null
           team_id?: string | null
           tenant_id?: string
           ticket_number?: number
@@ -6047,6 +6909,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_kanban_column_id_fkey"
+            columns: ["kanban_column_id"]
+            isOneToOne: false
+            referencedRelation: "support_kanban_columns"
             referencedColumns: ["id"]
           },
           {
@@ -6254,6 +7123,45 @@ export type Database = {
           },
         ]
       }
+      user_ui_preferences: {
+        Row: {
+          pref_key: string
+          pref_value: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          pref_key: string
+          pref_value: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          pref_key?: string
+          pref_value?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_ui_preferences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_ui_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -6406,8 +7314,10 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+        | "draft"
       organization_status: "active" | "suspended" | "archived"
       progress_status: "not_started" | "in_progress" | "completed"
+      report_definition_status: "draft" | "active" | "inactive"
       support_priority: "low" | "medium" | "high" | "urgent"
       support_ticket_status:
         | "new"
@@ -6418,6 +7328,9 @@ export type Database = {
         | "resolved"
         | "closed"
         | "cancelled"
+        | "archived"
+        | "blocked"
+        | "waiting_validation"
       visibility_rule_type:
         | "organization"
         | "position"
@@ -6678,9 +7591,11 @@ export const Constants = {
         "in_progress",
         "completed",
         "cancelled",
+        "draft",
       ],
       organization_status: ["active", "suspended", "archived"],
       progress_status: ["not_started", "in_progress", "completed"],
+      report_definition_status: ["draft", "active", "inactive"],
       support_priority: ["low", "medium", "high", "urgent"],
       support_ticket_status: [
         "new",
@@ -6691,6 +7606,9 @@ export const Constants = {
         "resolved",
         "closed",
         "cancelled",
+        "archived",
+        "blocked",
+        "waiting_validation",
       ],
       visibility_rule_type: [
         "organization",

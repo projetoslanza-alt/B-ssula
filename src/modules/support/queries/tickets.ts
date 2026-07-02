@@ -23,8 +23,9 @@ export async function listSupportCategories(tenantId: string, activeOnly = false
   const supabase = await createClient();
   let query = supabase
     .from("support_categories")
-    .select("id, name, slug, description, is_active, support_subcategories ( id, name, slug, is_active )")
+    .select("id, name, slug, description, icon, required_permission, default_queue_slug, is_active, sort_order, support_subcategories ( id, name, slug, is_active, sort_order )")
     .eq("tenant_id", tenantId)
+    .order("sort_order")
     .order("name");
   if (activeOnly) query = query.eq("is_active", true);
   const { data, error } = await query;

@@ -9,6 +9,10 @@ import { requireAnyPermission, requirePermission, requireSession, hasPermission 
 import { platformRoutes } from "@/lib/routes";
 import { getErrorMessage } from "@/lib/errors";
 import { type BoardMoveOrigin } from "@/modules/support/domain/kanban";
+import { computeSuggestedPriority, canSelectCritical, type ImpactData } from "@/modules/support/domain/intake-priority";
+import { computeSlaDueAt } from "@/modules/support/domain/intake-sla";
+import { resolveAssignment } from "@/modules/support/domain/intake-assignment";
+
 import {
   countTicketsInColumn,
   ensureDefaultKanbanColumns,
@@ -65,15 +69,65 @@ export async function createTicketAction(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const priorityRaw = String(formData.get("priority") ?? "medium");
-  const priority = PRIORITY_MAP[priorityRaw] ?? "medium";
+  const priorityRaw = String(formData.get("priority") ?? "");
   const categoryId = String(formData.get("categoryId") ?? "") || null;
   const subcategoryId = String(formData.get("subcategoryId") ?? "") || null;
-  const teamId = String(formData.get("teamId") ?? "") || null;
+  const answersJson = String(formData.get("answersJson") ?? "{}");
+  const impactJson = String(formData.get("impactJson") ?? "{}");
 
   if (!title || !description) throw new Error("Preencha título e descrição");
 
+  let impact: ImpactData = {};
+  let answers: Record<string, string> = {};
+  try {
+    impact = JSON.parse(impactJson) as ImpactData;
+    answers = JSON.parse(answersJson) as Record<string, string>;
+  } catch {
+    impact = {};
+    answers = {};
+  }
+
+  const suggested = computeSuggestedPriority(impact);
+  const requested = priorityRaw || suggested;
+  const criticalCheck = canSelectCritical(impact, requested);
+  if (!criticalCheck.allowed) throw new Error(criticalCheck.reason ?? "Prioridade inválida");
+  const priority = PRIORITY_MAP[requested] ?? suggested;
+
   const supabase = await createClient();
+
+  const [{ data: category }, { data: rules }, { data: slaPolicies }] = await Promise.all([
+    categoryId
+      ? supabase
+          .from("support_categories")
+          .select("default_queue_slug, default_priority, default_team_id")
+          .eq("id", categoryId)
+          .eq("tenant_id", session.tenantId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("support_assignment_rules")
+      .select("category_id, subcategory_id, queue_slug, priority, team_id, sort_order")
+      .eq("tenant_id", session.tenantId)
+      .eq("is_active", true),
+    supabase
+      .from("support_sla_policies")
+      .select("priority, response_hours, resolution_hours")
+      .eq("tenant_id", session.tenantId)
+      .eq("is_active", true),
+  ]);
+
+  const assignment = resolveAssignment(rules ?? [], categoryId, subcategoryId, {
+    default_queue_slug: category?.default_queue_slug,
+    default_priority: category?.default_priority,
+    default_team_id: category?.default_team_id,
+  });
+
+  const slaDue = computeSlaDueAt(priority, slaPolicies ?? []);
+  await ensureDefaultKanbanColumns(session.tenantId);
+  const initialColumn = await getColumnBySlug(session.tenantId, "novo");
+  const position = initialColumn ? await countTicketsInColumn(session.tenantId, initialColumn.id) : 0;
+  const protocol = `CH-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+
   const { data: ticket, error } = await supabase
     .from("support_tickets")
     .insert({
@@ -81,22 +135,40 @@ export async function createTicketAction(formData: FormData) {
       title,
       description,
       priority,
+      suggested_priority: suggested,
       category_id: categoryId,
       subcategory_id: subcategoryId,
-      team_id: teamId,
+      team_id: assignment.teamId ?? session.teamId,
+      queue_slug: assignment.queueSlug,
       requester_id: session.userId,
       status: "new",
+      sla_due_at: slaDue?.toISOString() ?? null,
+      kanban_column_id: initialColumn?.id ?? null,
+      kanban_position: position,
+      impact_data: impact,
+      protocol,
       created_by: session.userId,
     })
-    .select("id, ticket_number")
+    .select("id, ticket_number, protocol")
     .single();
 
   if (error) throw error;
+
+  const answerRows = Object.entries({ ...answers, title, description }).map(([question_key, value]) => ({
+    tenant_id: session.tenantId,
+    ticket_id: ticket.id,
+    question_key,
+    value: { text: value },
+  }));
+  if (answerRows.length) {
+    await supabase.from("support_ticket_answers").upsert(answerRows, { onConflict: "ticket_id,question_key" });
+  }
 
   await supabase.from("support_ticket_history").insert({
     tenant_id: session.tenantId,
     ticket_id: ticket.id,
     action: "created",
+    new_value: { protocol: ticket.protocol, suggested_priority: suggested, queue: assignment.queueSlug },
     created_by: session.userId,
   });
 
@@ -106,10 +178,11 @@ export async function createTicketAction(formData: FormData) {
     action: "SUPPORT_TICKET_CREATED",
     entityType: "support_ticket",
     entityId: ticket.id,
-    metadata: { title, priority },
+    metadata: { title, priority, suggested, protocol: ticket.protocol },
   });
 
   revalidatePath(platformRoutes.support.mine);
+  revalidatePath(platformRoutes.support.root);
   redirect(platformRoutes.support.ticket(ticket.id));
 }
 

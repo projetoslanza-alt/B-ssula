@@ -74,17 +74,21 @@ export async function createTicketAction(formData: FormData) {
   const subcategoryId = String(formData.get("subcategoryId") ?? "") || null;
   const answersJson = String(formData.get("answersJson") ?? "{}");
   const impactJson = String(formData.get("impactJson") ?? "{}");
+  const attachmentsJson = String(formData.get("attachmentsJson") ?? "[]");
 
   if (!title || !description) throw new Error("Preencha título e descrição");
 
   let impact: ImpactData = {};
   let answers: Record<string, string> = {};
+  let attachments: { path: string; fileName: string; mimeType: string; fileSize: number }[] = [];
   try {
     impact = JSON.parse(impactJson) as ImpactData;
     answers = JSON.parse(answersJson) as Record<string, string>;
+    attachments = JSON.parse(attachmentsJson) as typeof attachments;
   } catch {
     impact = {};
     answers = {};
+    attachments = [];
   }
 
   const suggested = computeSuggestedPriority(impact);
@@ -162,6 +166,19 @@ export async function createTicketAction(formData: FormData) {
   }));
   if (answerRows.length) {
     await supabase.from("support_ticket_answers").upsert(answerRows, { onConflict: "ticket_id,question_key" });
+  }
+
+  for (const att of attachments) {
+    if (!att.path?.startsWith(`${session.tenantId}/`)) continue;
+    await supabase.from("support_ticket_attachments").insert({
+      tenant_id: session.tenantId,
+      ticket_id: ticket.id,
+      file_path: att.path,
+      file_name: att.fileName,
+      mime_type: att.mimeType,
+      file_size: att.fileSize,
+      created_by: session.userId,
+    });
   }
 
   await supabase.from("support_ticket_history").insert({

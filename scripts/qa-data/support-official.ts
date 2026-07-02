@@ -147,6 +147,68 @@ const UNIVERSAL_QUESTIONS = [
   { key: "recurrence", label: "Essa solicitação já aconteceu antes?", field_type: "select", scope: "context", options: ["Sim", "Não", "Não sei"] },
 ] as const;
 
+const IMPACT_QUESTIONS = [
+  { key: "who_impacted", label: "Quem está sendo impactado?", field_type: "select", scope: "impact", options: ["Somente eu", "Algumas pessoas", "Uma equipe", "Várias equipes", "Toda a empresa"], required: true },
+  { key: "activity_blocked", label: "A atividade está impedida?", field_type: "select", scope: "impact", options: ["Não", "Parcialmente", "Totalmente"], required: true },
+  { key: "deadline_impact", label: "Existe prazo ou compromisso afetado?", field_type: "select", scope: "impact", options: ["Não", "Hoje", "Nas próximas 24 horas", "Nesta semana", "Informar data"] },
+  { key: "temporary_alternative", label: "Existe alternativa temporária?", field_type: "select", scope: "impact", options: ["Sim", "Não"] },
+  { key: "main_impact", label: "Qual impacto principal?", field_type: "select", scope: "impact", options: ["Produtividade", "Atendimento", "Venda", "Contrato", "Dados", "Treinamento", "Acesso", "Operação", "Outro"], required: true },
+] as const;
+
+const CATEGORY_QUESTIONS: Record<string, { key: string; label: string; field_type: string; options?: string[] }[]> = {
+  crm: [
+    { key: "crm_module", label: "Qual ambiente ou módulo do CRM?", field_type: "text" },
+    { key: "crm_pipeline", label: "Qual pipeline ou funil?", field_type: "text" },
+    { key: "crm_stage", label: "Qual etapa do funil?", field_type: "text" },
+    { key: "crm_user", label: "Qual usuário está afetado?", field_type: "text" },
+    { key: "crm_record", label: "Qual oportunidade, lead ou registro está envolvido?", field_type: "text" },
+    { key: "crm_error", label: "Existe mensagem de erro?", field_type: "textarea" },
+    { key: "crm_reproducible", label: "É possível reproduzir?", field_type: "select", options: ["Sim", "Não", "Não sei"] },
+  ],
+  opens: [
+    { key: "opens_user", label: "Qual usuário, ramal ou equipe?", field_type: "text" },
+    { key: "opens_channel", label: "É acesso web, aplicativo ou integração?", field_type: "select", options: ["Web", "Aplicativo", "Integração"] },
+    { key: "opens_integration", label: "Qual integração está apresentando problema?", field_type: "text" },
+    { key: "opens_call_complete", label: "A ligação completa?", field_type: "select", options: ["Sim", "Não", "Parcialmente"] },
+    { key: "opens_error", label: "Existe mensagem de erro?", field_type: "textarea" },
+  ],
+  "operacao-comercial": [
+    { key: "op_process", label: "Qual processo está envolvido?", field_type: "text" },
+    { key: "op_stage", label: "Em qual etapa o processo trava?", field_type: "text" },
+    { key: "op_team", label: "Qual equipe executa?", field_type: "text" },
+    { key: "op_expected", label: "Qual resultado esperado?", field_type: "textarea" },
+  ],
+  "dashboards-bi": [
+    { key: "bi_dashboard", label: "Qual dashboard ou relatório?", field_type: "text" },
+    { key: "bi_indicator", label: "Qual indicador?", field_type: "text" },
+    { key: "bi_period", label: "Qual período?", field_type: "text" },
+    { key: "bi_expected", label: "Qual valor era esperado?", field_type: "text" },
+    { key: "bi_issue", label: "O dado está ausente, incorreto ou desatualizado?", field_type: "select", options: ["Ausente", "Incorreto", "Desatualizado"] },
+  ],
+  comercial: [
+    { key: "com_team", label: "Qual equipe ou função?", field_type: "text" },
+    { key: "com_type", label: "É cadência, script, meta, indicador ou estratégia?", field_type: "select", options: ["Cadência", "Script", "Meta", "Indicador", "Estratégia"] },
+    { key: "com_objective", label: "Qual objetivo comercial?", field_type: "textarea" },
+  ],
+  treinamentos: [
+    { key: "train_topic", label: "Qual tema?", field_type: "text" },
+    { key: "train_audience", label: "Qual público?", field_type: "text" },
+    { key: "train_people", label: "Quantas pessoas?", field_type: "number" },
+    { key: "train_format", label: "Qual formato desejado?", field_type: "select", options: ["Presencial", "Online", "Gravado", "Mentoria"] },
+  ],
+  "produto-melhorias": [
+    { key: "prod_problem", label: "Qual problema precisa ser resolvido?", field_type: "textarea" },
+    { key: "prod_frequency", label: "Com que frequência acontece?", field_type: "text" },
+    { key: "prod_expected", label: "Qual comportamento esperado?", field_type: "textarea" },
+    { key: "prod_type", label: "É correção, evolução ou nova funcionalidade?", field_type: "select", options: ["Correção", "Evolução", "Nova funcionalidade"] },
+  ],
+  outros: [
+    { key: "other_need", label: "Explique sua necessidade.", field_type: "textarea" },
+    { key: "other_expected", label: "Qual resultado você espera?", field_type: "textarea" },
+    { key: "other_involved", label: "Quem deve ser envolvido?", field_type: "text" },
+  ],
+};
+
 function slugify(text: string) {
   return text
     .toLowerCase()
@@ -257,6 +319,63 @@ export async function provisionOfficialSupportCatalog(admin: AdminDb, tenantKey:
       { onConflict: "id" },
     );
   }
+
+  for (const [i, q] of IMPACT_QUESTIONS.entries()) {
+    await admin.from("support_question_templates").upsert(
+      {
+        id: `11111111-1111-1111-1112-${tenantKey === "north" ? "aa" : "bb"}${String(i).padStart(10, "0")}`,
+        tenant_id: tenant.id,
+        scope: q.scope,
+        question_key: q.key,
+        label: q.label,
+        field_type: q.field_type,
+        options: q.options ?? [],
+        sort_order: 100 + i,
+        is_required: "required" in q ? q.required : false,
+        fixture_key: `${prefix}.support.q.impact.${q.key}`,
+        is_active: true,
+      },
+      { onConflict: "id" },
+    );
+  }
+
+  for (const [ci, cat] of OFFICIAL_CATEGORIES.entries()) {
+    const catId = categoryId(tenantKey, ci);
+    const catQuestions = CATEGORY_QUESTIONS[cat.slug] ?? [];
+    for (const [qi, q] of catQuestions.entries()) {
+      await admin.from("support_question_templates").upsert(
+        {
+          id: `11111111-1111-1111-1113-${tenantKey === "north" ? "cc" : "dd"}${String(ci).padStart(3, "0")}${String(qi).padStart(7, "0")}`,
+          tenant_id: tenant.id,
+          category_id: catId,
+          scope: "category",
+          question_key: q.key,
+          label: q.label,
+          field_type: q.field_type,
+          options: q.options ?? [],
+          sort_order: 200 + qi,
+          is_required: false,
+          fixture_key: `${prefix}.support.q.${cat.slug}.${q.key}`,
+          is_active: true,
+        },
+        { onConflict: "id" },
+      );
+    }
+  }
+
+  await admin.from("support_canned_responses").upsert(
+    {
+      id: `12121212-1212-1212-1212-${tenantKey === "north" ? "aa00000001" : "bb00000001"}`,
+      tenant_id: tenant.id,
+      title: "Recebemos sua solicitação",
+      body: "Olá! Registramos seu chamado e a equipe responsável irá analisá-lo em breve.",
+      queue_slug: "triagem",
+      audience: "requester",
+      is_active: true,
+      fixture_key: `${prefix}.support.canned.received`,
+    },
+    { onConflict: "id" },
+  );
 
   console.log(`[support oficial ${tenant.name}] ${OFFICIAL_CATEGORIES.length} áreas provisionadas`);
 }

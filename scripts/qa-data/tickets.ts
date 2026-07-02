@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TENANTS } from "../qa-fixtures";
 import { provisionOfficialSupportCatalog } from "./support-official";
+import { provisionExtremeSupportTickets } from "./tickets-extreme";
 
 type AdminDb = SupabaseClient;
 
@@ -179,4 +180,6 @@ export async function provisionSupportData(
       );
     }
   }
+
+  await provisionExtremeSupportTickets(admin, tenantKey, userIds, columnIds);
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAnyPermission } from "@/lib/auth/page-guard";
-import { hasPermission } from "@/modules/core/auth/session";
+import { hasAnyPermission, hasPermission } from "@/modules/core/auth/session";
 import { AdminModuleCard } from "@/components/platform/admin-module-card";
 import { DataTable, DataTableCell, DataTableRow } from "@/components/platform/data-table";
 import { PageHeader } from "@/components/platform/page-header";
@@ -16,7 +16,7 @@ const ADMIN_MODULES = [
     title: "Usuários e equipes",
     description: "Gerencie colaboradores, gestores, equipes, cargos e operações.",
     href: platformRoutes.admin.users,
-    permission: "platform.users.manage",
+    permissionsAny: ["platform.users.manage", "platform.users.status"],
   },
   {
     badge: "Universidade",
@@ -48,14 +48,32 @@ const ADMIN_MODULES = [
     title: "Campanhas e pontuação",
     description: "Configure regras, metas, premiações, rankings e auditoria.",
     href: `${platformRoutes.gamification.root}?tab=central`,
-    permission: "gamification.campaign.create",
+    permissionsAny: [
+      "gamification.campaign.create",
+      "gamification.campaign.publish",
+      "gamification.campaign.pause",
+      "gamification.campaign.close",
+      "gamification.campaign.edit",
+    ],
   },
 ];
 
 export default async function AdministracaoPage() {
-  const session = await requireAnyPermission(["platform.users.manage", "platform.organization.manage"]);
+  const session = await requireAnyPermission([
+    "platform.users.manage",
+    "platform.users.status",
+    "platform.organization.manage",
+    "support.settings.manage",
+    "gamification.campaign.publish",
+  ]);
   const auditEvents = await getRecentAuditEvents(session.tenantId, 5);
-  const visibleModules = ADMIN_MODULES.filter((mod) => hasPermission(session, mod.permission));
+  const visibleModules = ADMIN_MODULES.filter((mod) =>
+    mod.permissionsAny
+      ? hasAnyPermission(session, mod.permissionsAny)
+      : mod.permission
+        ? hasPermission(session, mod.permission)
+        : true,
+  );
   const canCreateUser = hasPermission(session, "platform.users.manage");
 
   return (

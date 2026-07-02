@@ -1,17 +1,20 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePagePermission } from "@/lib/auth/page-guard";
+import Link from "next/link";
+import { requireAnyPermission } from "@/lib/auth/page-guard";
 import { PageHeader } from "@/components/platform/page-header";
 import { StatusBadge } from "@/components/platform/status-badge";
+import { StatusChangeForm } from "@/components/platform/status-change-form";
 import { createClient } from "@/lib/supabase/server";
 import {
   assignMembershipGroupAction,
   updateMembershipStatusAction,
 } from "@/modules/admin/actions/user-actions";
+import { canManageUsersFully } from "@/modules/admin/user-permissions";
 import { platformRoutes } from "@/lib/routes";
 
 export default async function UsuarioDetalhePage({ params }: { params: Promise<{ userId: string }> }) {
-  const session = await requirePagePermission("platform.users.manage");
+  const session = await requireAnyPermission(["platform.users.manage", "platform.users.status"]);
+  const canManageGroups = canManageUsersFully(session.permissions);
   const { userId: membershipId } = await params;
   const supabase = await createClient();
 
@@ -19,7 +22,7 @@ export default async function UsuarioDetalhePage({ params }: { params: Promise<{
     .from("organization_memberships")
     .select(`
       id, status, user_id,
-      profiles ( full_name, email ),
+      profiles!user_id ( full_name, email ),
       membership_roles ( roles ( code, name ) ),
       membership_access_groups ( group_id, access_groups ( id, name, code ) )
     `)
@@ -64,29 +67,35 @@ export default async function UsuarioDetalhePage({ params }: { params: Promise<{
         <span className="text-sm text-[var(--muted)]">Grupos: {groups.join(", ") || "—"}</span>
       </div>
 
-      <form action={updateMembershipStatusAction.bind(null, membership.id)} className="flex flex-wrap items-end gap-2">
-        <select name="status" defaultValue={membership.status} className="rounded-lg border px-2 py-2 text-sm">
-          <option value="active">Ativo</option>
-          <option value="suspended">Suspenso</option>
-        </select>
-        <button type="submit" className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white">
-          Atualizar status
-        </button>
-      </form>
+      <StatusChangeForm
+        action={updateMembershipStatusAction.bind(null, membership.id)}
+        defaultStatus={membership.status}
+        submitLabel="Atualizar status"
+        className="flex flex-wrap items-end gap-2"
+      />
 
-      <form action={assignMembershipGroupAction.bind(null, membership.id)} className="flex flex-wrap items-end gap-2">
-        <select name="groupId" className="rounded-lg border px-2 py-2 text-sm" required>
-          <option value="">Atribuir grupo...</option>
-          {(allGroups ?? []).map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="rounded-lg border px-3 py-2 text-sm">
-          Salvar grupo
-        </button>
-      </form>
+      {canManageGroups ? (
+        <form action={assignMembershipGroupAction.bind(null, membership.id)} className="flex flex-wrap items-end gap-2">
+          <select name="groupId" className="rounded-lg border px-2 py-2 text-sm" required>
+            <option value="">Atribuir grupo...</option>
+            {(allGroups ?? []).map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+          <input
+            name="reason"
+            required
+            minLength={3}
+            placeholder="Motivo (obrigatório)"
+            className="rounded-lg border px-2 py-2 text-sm"
+          />
+          <button type="submit" className="rounded-lg border px-3 py-2 text-sm">
+            Salvar grupo
+          </button>
+        </form>
+      ) : null}
 
       <p className="text-sm">
         <Link href={platformRoutes.admin.audit} className="text-sky-400 hover:underline">

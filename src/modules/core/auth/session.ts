@@ -219,3 +219,13 @@ export function requirePermission(session: SessionContext, permission: string): 
     throw new ForbiddenError("Você não tem permissão para esta ação.");
   }
 }
+
+export function hasAnyPermission(session: SessionContext, permissions: string[]): boolean {
+  return permissions.some((p) => hasPermission(session, p));
+}
+
+export function requireAnyPermission(session: SessionContext, permissions: string[]): void {
+  if (!hasAnyPermission(session, permissions)) {
+    throw new ForbiddenError("Você não tem permissão para esta ação.");
+  }
+}

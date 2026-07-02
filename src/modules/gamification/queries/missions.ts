@@ -1,5 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
-import type { MissionProgressRow } from "@/modules/gamification/domain/types";
+import type { MissionAdminRow, MissionProgressRow } from "@/modules/gamification/domain/types";
+
+export async function listMissionsForAdmin(tenantId: string): Promise<MissionAdminRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("gamification_missions")
+    .select("id, title, is_active, campaign_id, gamification_campaigns ( name )")
+    .eq("tenant_id", tenantId)
+    .order("sort_order");
+
+  if (error) throw error;
+
+  return (data ?? []).map((m) => {
+    const campaignRaw = m.gamification_campaigns;
+    const campaign = Array.isArray(campaignRaw) ? campaignRaw[0] : campaignRaw;
+    return {
+      id: m.id,
+      title: m.title,
+      campaignId: m.campaign_id,
+      campaignName: campaign?.name ?? "—",
+      isActive: m.is_active,
+    };
+  });
+}
 
 export async function listMissionProgress(
   tenantId: string,

@@ -6,8 +6,9 @@ import { StatusBadge } from "@/components/platform/status-badge";
 import { DataTable, DataTableCell, DataTableRow } from "@/components/platform/data-table";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import type { CampaignAdminRow } from "@/modules/gamification/domain/types";
+import type { CampaignAdminRow, MissionAdminRow } from "@/modules/gamification/domain/types";
 import type { CampaignParticipant } from "@/modules/gamification/queries/participants";
+import { promptReason } from "@/components/platform/status-change-form";
 import {
   adjustPointsAction,
   createCampaignAction,
@@ -15,11 +16,14 @@ import {
   publishCampaignResultsToNewsAction,
   updateCampaignStatusAction,
 } from "@/modules/gamification/actions/campaign-actions";
+import { toggleMissionStatusAction } from "@/modules/gamification/actions/mission-actions";
 
 type CampaignAdminPanelProps = {
   campaigns: CampaignAdminRow[];
+  missions: MissionAdminRow[];
   activeCampaignId?: string;
   canAdjustPoints: boolean;
+  canManageMissions: boolean;
   participants: CampaignParticipant[];
 };
 
@@ -32,8 +36,10 @@ const STATUS_LABELS: Record<string, { label: string; tone: "default" | "success"
 
 export function CampaignAdminPanel({
   campaigns,
+  missions,
   activeCampaignId,
   canAdjustPoints,
+  canManageMissions,
   participants,
 }: CampaignAdminPanelProps) {
   const router = useRouter();
@@ -47,6 +53,27 @@ export function CampaignAdminPanel({
     if (!q) return participants;
     return participants.filter((p) => p.fullName.toLowerCase().includes(q));
   }, [participantSearch, participants]);
+
+  function runCampaignStatus(campaignId: string, status: "published" | "paused" | "closed" | "draft") {
+    const fd = promptReason(`Alterar campanha para ${status}`);
+    if (!fd) return;
+    runAction(() => updateCampaignStatusAction(campaignId, status, fd));
+  }
+
+  function runMissionToggle(missionId: string, isActive: boolean) {
+    const fd = promptReason(isActive ? "Ativar missão" : "Inativar missão");
+    if (!fd) return;
+    fd.set("isActive", String(isActive));
+    startTransition(async () => {
+      setError(null);
+      try {
+        await toggleMissionStatusAction(missionId, fd);
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Erro ao alterar missão.");
+      }
+    });
+  }
 
   function runAction(fn: () => Promise<{ error?: string; success?: boolean }>) {
     startTransition(async () => {
@@ -107,7 +134,7 @@ export function CampaignAdminPanel({
                         size="sm"
                         variant="outline"
                         disabled={pending}
-                        onClick={() => runAction(() => updateCampaignStatusAction(c.id, "published"))}
+                        onClick={() => runCampaignStatus(c.id, "published")}
                       >
                         Publicar
                       </Button>
@@ -118,7 +145,7 @@ export function CampaignAdminPanel({
                           size="sm"
                           variant="outline"
                           disabled={pending}
-                          onClick={() => runAction(() => updateCampaignStatusAction(c.id, "paused"))}
+                          onClick={() => runCampaignStatus(c.id, "paused")}
                         >
                           Pausar
                         </Button>
@@ -126,7 +153,7 @@ export function CampaignAdminPanel({
                           size="sm"
                           variant="outline"
                           disabled={pending}
-                          onClick={() => runAction(() => updateCampaignStatusAction(c.id, "closed"))}
+                          onClick={() => runCampaignStatus(c.id, "closed")}
                         >
                           Encerrar
                         </Button>
@@ -137,7 +164,7 @@ export function CampaignAdminPanel({
                         size="sm"
                         variant="outline"
                         disabled={pending}
-                        onClick={() => runAction(() => updateCampaignStatusAction(c.id, "published"))}
+                        onClick={() => runCampaignStatus(c.id, "published")}
                       >
                         Retomar
                       </Button>
@@ -147,7 +174,7 @@ export function CampaignAdminPanel({
                         size="sm"
                         variant="outline"
                         disabled={pending}
-                        onClick={() => runAction(() => updateCampaignStatusAction(c.id, "closed"))}
+                        onClick={() => runCampaignStatus(c.id, "closed")}
                       >
                         Encerrar
                       </Button>
@@ -177,6 +204,52 @@ export function CampaignAdminPanel({
           })}
         </DataTable>
       </div>
+
+      {canManageMissions && (
+        <div className="card">
+          <div className="chart-head">
+            <div>
+              <h3>Missões</h3>
+              <p>Ative ou inative missões das campanhas do tenant.</p>
+            </div>
+          </div>
+          {missions.length === 0 ? (
+            <p className="muted">Nenhuma missão cadastrada.</p>
+          ) : (
+            <DataTable
+              columns={[
+                { key: "title", label: "Missão" },
+                { key: "campaign", label: "Campanha" },
+                { key: "status", label: "Status" },
+                { key: "actions", label: "Ações", className: "w-40" },
+              ]}
+            >
+              {missions.map((m) => (
+                <DataTableRow key={m.id}>
+                  <DataTableCell className="font-medium">{m.title}</DataTableCell>
+                  <DataTableCell>{m.campaignName}</DataTableCell>
+                  <DataTableCell>
+                    <StatusBadge
+                      label={m.isActive ? "Ativa" : "Inativa"}
+                      tone={m.isActive ? "success" : "warning"}
+                    />
+                  </DataTableCell>
+                  <DataTableCell>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={pending}
+                      onClick={() => runMissionToggle(m.id, !m.isActive)}
+                    >
+                      {m.isActive ? "Inativar" : "Ativar"}
+                    </Button>
+                  </DataTableCell>
+                </DataTableRow>
+              ))}
+            </DataTable>
+          )}
+        </div>
+      )}
 
       {canAdjustPoints && activeCampaignId && (
         <div className="card">

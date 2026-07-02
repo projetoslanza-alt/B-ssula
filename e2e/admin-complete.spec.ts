@@ -22,7 +22,15 @@ test.describe("Administração completa", () => {
     await page.goto("/administracao/usuarios");
     await expect(page.getByRole("heading", { name: "Usuários" })).toBeVisible();
     await expect(page.getByRole("link", { name: "+ Novo usuário" })).toBeVisible();
-    await expect(page.locator('form select[name="status"]').first()).toBeVisible();
+    await expect(page.getByPlaceholder("Pesquisar por nome ou e-mail")).toBeVisible();
+  });
+
+  test("gerente acessa usuários para status operacional", async ({ page }) => {
+    await login(page, QA_USERS.managerNorth, qaPassword("user.manager.north"));
+    await page.goto("/administracao/usuarios");
+    await expect(page).not.toHaveURL(/acesso-negado/);
+    await expect(page.getByRole("heading", { name: "Usuários" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "+ Novo usuário" })).toHaveCount(0);
   });
 
   test("filas e categorias: formulários de configuração", async ({ page }) => {
@@ -56,10 +64,11 @@ test.describe("Administração completa", () => {
     await expect(page.getByRole("heading", { name: "Gamificação" })).toBeVisible();
   });
 
-  test("gerente não acessa administração de usuários", async ({ page }) => {
+  test("gerente acessa central de campanhas", async ({ page }) => {
     await login(page, QA_USERS.managerNorth, qaPassword("user.manager.north"));
-    await page.goto("/administracao/usuarios");
-    await expect(page).toHaveURL(/acesso-negado/);
+    await page.goto("/gamificacao?tab=central");
+    await expect(page).toHaveURL(/tab=central/);
+    await expect(page.getByRole("heading", { name: "Gamificação" })).toBeVisible();
   });
 
   test("SDR não acessa auditoria", async ({ page }) => {

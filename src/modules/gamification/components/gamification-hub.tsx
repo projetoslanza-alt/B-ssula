@@ -24,6 +24,7 @@ import type {
   CampaignAdminRow,
   GamificationCampaign,
   JourneySummary,
+  MissionAdminRow,
   MissionProgressRow,
 } from "@/modules/gamification/domain/types";
 
@@ -36,10 +37,12 @@ type GamificationHubProps = {
   achievements: AchievementRow[];
   journey: JourneySummary;
   adminCampaigns: CampaignAdminRow[];
+  adminMissions: MissionAdminRow[];
   participants: CampaignParticipant[];
   currentUserId: string;
   userPosition?: number;
   canManageCampaigns?: boolean;
+  canManageMissions?: boolean;
   canAdjustPoints?: boolean;
   canExportRanking?: boolean;
 };
@@ -59,10 +62,12 @@ export function GamificationHub({
   achievements,
   journey,
   adminCampaigns,
+  adminMissions,
   participants,
   currentUserId,
   userPosition,
   canManageCampaigns = false,
+  canManageMissions = false,
   canAdjustPoints = false,
   canExportRanking = false,
   rankingFilters,
@@ -75,7 +80,7 @@ export function GamificationHub({
   const activeMissions = missions.filter((m) => m.status !== "completed");
 
   const tabs = GAMIFICATION_TABS.map((t) =>
-    t.id === "central" && !canManageCampaigns ? { ...t, hidden: true } : t,
+    t.id === "central" && !canManageCampaigns && !canManageMissions ? { ...t, hidden: true } : t,
   );
 
   function updateRankingParams(updates: Record<string, string | undefined>) {
@@ -370,11 +375,13 @@ export function GamificationHub({
       </DeTabPanel>
 
       <DeTabPanel id="central" activeTab={activeTab}>
-        {canManageCampaigns ? (
+        {canManageCampaigns || canManageMissions ? (
           <CampaignAdminPanel
             campaigns={adminCampaigns}
+            missions={adminMissions}
             activeCampaignId={campaign?.id}
             canAdjustPoints={canAdjustPoints}
+            canManageMissions={canManageMissions}
             participants={participants}
           />
         ) : (

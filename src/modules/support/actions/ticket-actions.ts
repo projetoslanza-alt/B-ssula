@@ -3,8 +3,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requirePermission, requireSession, hasPermission } from "@/modules/core/auth/session";
+import { parseAuditReason } from "@/modules/core/audit/require-audit-reason";
 import { recordAuditEvent } from "@/modules/core/audit/record";
+import { requireAnyPermission, requirePermission, requireSession, hasPermission } from "@/modules/core/auth/session";
 import { platformRoutes } from "@/lib/routes";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -111,12 +112,13 @@ export async function updateTicketStatusAction(ticketId: string, formData: FormD
   requirePermission(session, "support.ticket.manage_all");
 
   const status = String(formData.get("status") ?? "");
+  const reason = parseAuditReason(formData);
   if (!status) throw new Error("Status inválido");
 
   const supabase = await createClient();
   const { data: current } = await supabase
     .from("support_tickets")
-    .select("status")
+    .select("status, title")
     .eq("id", ticketId)
     .eq("tenant_id", session.tenantId)
     .single();
@@ -134,11 +136,116 @@ export async function updateTicketStatusAction(ticketId: string, formData: FormD
     ticket_id: ticketId,
     action: "status_changed",
     old_value: current ? { status: current.status } : null,
-    new_value: { status },
+    new_value: { status, reason },
     created_by: session.userId,
   });
 
+  await recordAuditEvent(supabase, {
+    tenantId: session.tenantId,
+    actorId: session.userId,
+    action: "SUPPORT_TICKET_STATUS_CHANGED",
+    entityType: "support_ticket",
+    entityId: ticketId,
+    origin: "support:tickets",
+    metadata: {
+      reason,
+      previousValue: current?.status,
+      newValue: status,
+      title: current?.title,
+    },
+  });
+
   revalidatePath(platformRoutes.support.ticket(ticketId));
+}
+
+export async function archiveTicketAction(ticketId: string, formData: FormData) {
+  const session = await requireSession();
+  requireAnyPermission(session, ["support.ticket.manage_all", "support.ticket.archive"]);
+
+  const reason = parseAuditReason(formData);
+  const supabase = await createClient();
+  const { data: current } = await supabase
+    .from("support_tickets")
+    .select("status, title")
+    .eq("id", ticketId)
+    .eq("tenant_id", session.tenantId)
+    .single();
+
+  const { error } = await supabase
+    .from("support_tickets")
+    .update({ status: "archived", updated_by: session.userId })
+    .eq("id", ticketId)
+    .eq("tenant_id", session.tenantId);
+
+  if (error) throw error;
+
+  await supabase.from("support_ticket_history").insert({
+    tenant_id: session.tenantId,
+    ticket_id: ticketId,
+    action: "archived",
+    old_value: { status: current?.status },
+    new_value: { status: "archived", reason },
+    created_by: session.userId,
+  });
+
+  await recordAuditEvent(supabase, {
+    tenantId: session.tenantId,
+    actorId: session.userId,
+    action: "SUPPORT_TICKET_ARCHIVED",
+    entityType: "support_ticket",
+    entityId: ticketId,
+    origin: "support:tickets",
+    metadata: { reason, previousValue: current?.status, newValue: "archived" },
+  });
+
+  revalidatePath(platformRoutes.support.ticket(ticketId));
+  revalidatePath(platformRoutes.support.all);
+}
+
+export async function reactivateTicketAction(ticketId: string, formData: FormData) {
+  const session = await requireSession();
+  requireAnyPermission(session, ["support.ticket.manage_all", "support.ticket.archive"]);
+
+  const reason = parseAuditReason(formData);
+  const nextStatus = String(formData.get("status") ?? "open");
+  const supabase = await createClient();
+
+  const { data: current } = await supabase
+    .from("support_tickets")
+    .select("status, title")
+    .eq("id", ticketId)
+    .eq("tenant_id", session.tenantId)
+    .single();
+
+  const { error } = await supabase
+    .from("support_tickets")
+    .update({ status: nextStatus, updated_by: session.userId })
+    .eq("id", ticketId)
+    .eq("tenant_id", session.tenantId);
+
+  if (error) throw error;
+
+  await supabase.from("support_ticket_history").insert({
+    tenant_id: session.tenantId,
+    ticket_id: ticketId,
+    action: "reactivated",
+    old_value: { status: current?.status },
+    new_value: { status: nextStatus, reason },
+    created_by: session.userId,
+  });
+
+  await recordAuditEvent(supabase, {
+    tenantId: session.tenantId,
+    actorId: session.userId,
+    action: "SUPPORT_TICKET_REACTIVATED",
+    entityType: "support_ticket",
+    entityId: ticketId,
+    origin: "support:tickets",
+    metadata: { reason, previousValue: current?.status, newValue: nextStatus },
+  });
+
+  revalidatePath(platformRoutes.support.ticket(ticketId));
+  revalidatePath(platformRoutes.support.all);
 }
 
 export async function assignTicketAction(ticketId: string, formData: FormData) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env npx tsx
-/** Grupos Master, Gerente, SDR, Closer + permissões por tenant */
+/** Grupos Master, Gerente, SDR, Closer + permissões operacionais por tenant */
 import { createClient } from "@supabase/supabase-js";
 import { loadCloudEnv } from "./qa-env";
 import { TENANTS } from "./qa-fixtures";
@@ -11,6 +11,7 @@ const GROUPS = [
     name: "Master",
     permissions: [
       "platform.users.manage",
+      "platform.users.status",
       "platform.audit.read",
       "platform.organization.manage",
       "reports.view",
@@ -19,10 +20,17 @@ const GROUPS = [
       "learning.certificate.issue",
       "gamification.view_all",
       "gamification.campaign.create",
+      "gamification.campaign.publish",
+      "gamification.campaign.pause",
+      "gamification.campaign.close",
+      "gamification.campaign.edit",
+      "gamification.mission.manage",
       "gamification.points.adjust",
       "gamification.audit.view",
       "gamification.export",
       "support.ticket.manage_all",
+      "support.ticket.archive",
+      "support.settings.manage",
       "news.manage",
       "one_on_one.meeting.manage",
     ],
@@ -32,15 +40,25 @@ const GROUPS = [
     fixtureKey: "access_group.gerente",
     name: "Gerente",
     permissions: [
+      "platform.users.status",
       "support.view",
       "support.ticket.create",
+      "support.ticket.manage_all",
+      "support.ticket.archive",
+      "support.settings.manage",
       "one_on_one.view",
       "one_on_one.team.view",
+      "one_on_one.meeting.manage",
       "learning.catalog.read",
       "learning.progress.read_team",
       "gamification.view_team",
       "gamification.ranking.view",
       "gamification.missions.view",
+      "gamification.campaign.publish",
+      "gamification.campaign.pause",
+      "gamification.campaign.close",
+      "gamification.campaign.edit",
+      "gamification.mission.manage",
     ],
   },
   {
@@ -75,9 +93,11 @@ const GROUPS = [
   },
 ] as const;
 
-const USER_GROUP_BY_NAME: { namePattern: string; groupCode: string }[] = [
-  { namePattern: "Eloise Machado", groupCode: "master" },
-  { namePattern: "Mauricio Brzezinski", groupCode: "gerente" },
+const USER_GROUP_BY_FIXTURE: { fixtureKey: string; groupCode: string }[] = [
+  { fixtureKey: "user.admin.north", groupCode: "master" },
+  { fixtureKey: "user.manager.north", groupCode: "gerente" },
+  { fixtureKey: "user.student.north", groupCode: "sdr" },
+  { fixtureKey: "user.director.north", groupCode: "closer" },
 ];
 
 async function main() {
@@ -113,12 +133,17 @@ async function main() {
         .single();
       if (error) throw error;
       groupId = row.id;
+    } else {
+      await admin.from("access_groups").update({ fixture_key: g.fixtureKey, name: g.name }).eq("id", groupId);
     }
     groupIds.set(g.code, groupId);
 
     for (const code of g.permissions) {
       const permId = permMap.get(code);
-      if (!permId) continue;
+      if (!permId) {
+        console.warn(`Permissão ausente no catálogo: ${code}`);
+        continue;
+      }
       await admin.from("access_group_permissions").upsert(
         { tenant_id: tenantId, group_id: groupId, permission_id: permId, granted: true },
         { onConflict: "group_id,permission_id" },
@@ -126,15 +151,15 @@ async function main() {
     }
   }
 
-  for (const link of USER_GROUP_BY_NAME) {
+  for (const link of USER_GROUP_BY_FIXTURE) {
     const { data: profile } = await admin
       .from("profiles")
       .select("id, full_name")
-      .ilike("full_name", `%${link.namePattern}%`)
+      .eq("fixture_key", link.fixtureKey)
       .maybeSingle();
 
     if (!profile) {
-      console.warn(`Pendente: usuário não encontrado para ${link.namePattern}`);
+      console.warn(`Pendente: fixture ${link.fixtureKey} não encontrada`);
       continue;
     }
 
@@ -146,7 +171,7 @@ async function main() {
       .maybeSingle();
 
     if (!membership) {
-      console.warn(`Pendente: membership não encontrada para ${profile.full_name}`);
+      console.warn(`Pendente: membership não encontrada para ${link.fixtureKey}`);
       continue;
     }
 
@@ -157,7 +182,7 @@ async function main() {
       { tenant_id: tenantId, membership_id: membership.id, group_id: groupId },
       { onConflict: "membership_id,group_id" },
     );
-    console.log(`${profile.full_name} → ${link.groupCode}`);
+    console.log(`${link.fixtureKey} → ${link.groupCode}`);
   }
 
   console.log("Grupos de acesso provisionados.");

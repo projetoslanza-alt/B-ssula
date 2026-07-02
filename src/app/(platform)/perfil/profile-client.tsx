@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { PageHeader } from "@/components/platform/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { platformRoutes } from "@/lib/routes";
+import { updateProfilePersonalAction } from "@/modules/profile/actions/profile-actions";
 import type { SessionContext } from "@/modules/core/auth/session";
 
 const TABS = [
@@ -50,6 +52,8 @@ export function ProfileClient({
   journey: JourneySummary;
 }) {
   const [tab, setTab] = useState<Tab>("Dados pessoais");
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profilePending, startProfileTransition] = useTransition();
 
   return (
     <div className="space-y-8">
@@ -74,12 +78,51 @@ export function ProfileClient({
 
       {tab === "Dados pessoais" && (
         <Card>
-          <CardContent className="space-y-3 p-6 text-sm">
-            <p>
-              <span className="text-[var(--foreground-muted)]">Nome:</span> {session.fullName ?? "—"}
-            </p>
-            <p>
-              <span className="text-[var(--foreground-muted)]">E-mail:</span> {session.email}
+          <CardContent className="space-y-4 p-6 text-sm">
+            <form
+              className="space-y-3"
+              action={(formData) => {
+                startProfileTransition(async () => {
+                  setProfileError(null);
+                  try {
+                    await updateProfilePersonalAction(formData);
+                  } catch (e) {
+                    setProfileError(e instanceof Error ? e.message : "Erro ao salvar perfil.");
+                  }
+                });
+              }}
+            >
+              <label className="block space-y-1">
+                <span className="text-[var(--foreground-muted)]">Nome</span>
+                <Input name="fullName" defaultValue={session.fullName ?? ""} required />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[var(--foreground-muted)]">E-mail</span>
+                <Input value={session.email} readOnly disabled aria-readonly />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[var(--foreground-muted)]">Telefone</span>
+                <Input name="phone" defaultValue="" placeholder="Opcional" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[var(--foreground-muted)]">Cargo</span>
+                <Input name="jobTitle" defaultValue="" placeholder="Opcional" />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[var(--foreground-muted)]">Motivo da alteração</span>
+                <Input name="reason" required minLength={3} placeholder="Ex.: atualização cadastral" />
+              </label>
+              {profileError ? <p className="text-red-400">{profileError}</p> : null}
+              <button
+                type="submit"
+                disabled={profilePending}
+                className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm text-white disabled:opacity-50"
+              >
+                Salvar dados pessoais
+              </button>
+            </form>
+            <p className="text-xs text-[var(--foreground-muted)]">
+              Grupo, tenant, permissões, equipe, pontos e certificados não podem ser alterados nesta tela.
             </p>
           </CardContent>
         </Card>
@@ -201,8 +244,11 @@ export function ProfileClient({
 
       {tab === "Segurança" && (
         <Card>
-          <CardContent className="p-6 text-sm text-[var(--foreground-muted)]">
-            Para alterar senha ou sessões, utilize o fluxo de recuperação de acesso da organização.
+          <CardContent className="space-y-3 p-6 text-sm text-[var(--foreground-muted)]">
+            <p>Para alterar a senha, utilize o fluxo seguro de recuperação de acesso.</p>
+            <a href="/login?recuperar=1" className="text-[var(--primary)] hover:underline">
+              Solicitar redefinição de senha
+            </a>
           </CardContent>
         </Card>
       )}

@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/input";
 import { platformRoutes } from "@/lib/routes";
+import { promptReason } from "@/components/platform/status-change-form";
 import {
   addTicketMessageAction,
+  archiveTicketAction,
+  reactivateTicketAction,
   updateTicketStatusAction,
 } from "@/modules/support/actions/ticket-actions";
 
@@ -21,6 +24,7 @@ const STATUS_LABELS: Record<string, string> = {
   resolved: "Resolvido",
   closed: "Fechado",
   cancelled: "Cancelado",
+  archived: "Arquivado",
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -58,11 +62,23 @@ type TicketDetailData = {
 type TicketDetailClientProps = {
   ticket: TicketDetailData;
   canManage: boolean;
+  canArchive: boolean;
   canReplyInternal: boolean;
 };
 
-export function TicketDetailClient({ ticket, canManage, canReplyInternal }: TicketDetailClientProps) {
+export function TicketDetailClient({ ticket, canManage, canArchive, canReplyInternal }: TicketDetailClientProps) {
   const [pending, startTransition] = useTransition();
+
+  const runWithReason = (
+    label: string,
+    action: (formData: FormData) => Promise<void>,
+    extra?: (fd: FormData) => void,
+  ) => {
+    const fd = promptReason(label);
+    if (!fd) return;
+    extra?.(fd);
+    startTransition(() => action(fd));
+  };
 
   return (
     <div className="space-y-6">
@@ -162,24 +178,71 @@ export function TicketDetailClient({ ticket, canManage, canReplyInternal }: Tick
             </CardContent>
           </Card>
 
-          {canManage && (
+          {(canManage || canArchive) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Ações administrativas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <form action={(fd) => startTransition(() => updateTicketStatusAction(ticket.id, fd))}>
-                  <select name="status" defaultValue={ticket.status} className="field w-full">
-                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
-                  <Button type="submit" className="mt-2 w-full" size="sm" disabled={pending}>
-                    Atualizar status
+              <CardContent className="space-y-3">
+                {canManage && ticket.status !== "archived" && (
+                  <form
+                    action={(fd) => {
+                      const reason = String(fd.get("reason") ?? "").trim();
+                      if (reason.length < 3) return;
+                      startTransition(() => updateTicketStatusAction(ticket.id, fd));
+                    }}
+                    className="space-y-2"
+                  >
+                    <select name="status" defaultValue={ticket.status} className="field w-full">
+                      {Object.entries(STATUS_LABELS)
+                        .filter(([k]) => k !== "archived")
+                        .map(([k, v]) => (
+                          <option key={k} value={k}>
+                            {v}
+                          </option>
+                        ))}
+                    </select>
+                    <input
+                      name="reason"
+                      required
+                      minLength={3}
+                      placeholder="Motivo da alteração (obrigatório)"
+                      className="field w-full"
+                    />
+                    <Button type="submit" className="w-full" size="sm" disabled={pending}>
+                      Atualizar status
+                    </Button>
+                  </form>
+                )}
+
+                {canArchive && ticket.status !== "archived" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={pending}
+                    onClick={() => runWithReason("Arquivar chamado", (fd) => archiveTicketAction(ticket.id, fd))}
+                  >
+                    Arquivar chamado
                   </Button>
-                </form>
+                )}
+
+                {canArchive && ticket.status === "archived" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full"
+                    disabled={pending}
+                    onClick={() =>
+                      runWithReason("Reativar chamado", (fd) => reactivateTicketAction(ticket.id, fd), (fd) =>
+                        fd.set("status", "open"),
+                      )
+                    }
+                  >
+                    Reativar chamado
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

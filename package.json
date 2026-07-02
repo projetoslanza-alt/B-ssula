@@ -34,6 +34,8 @@
     "staging:media": "tsx scripts/provision-staging-media.ts",
     "staging:gamification": "tsx scripts/provision-gamification-qa.ts",
     "staging:access-groups": "tsx scripts/provision-access-groups.ts",
+    "staging:fixtures": "tsx scripts/provision-staging-fixtures.ts",
+    "rbac:management": "tsx scripts/apply-management-rbac.ts",
     "course:import-videos:dry": "tsx scripts/import-learning-videos.ts --dry-run --environment=staging",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

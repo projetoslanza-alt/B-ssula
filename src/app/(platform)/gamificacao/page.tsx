@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 import { requirePageSession } from "@/lib/auth/page-guard";
 import { platformRoutes } from "@/lib/routes";
 import { resolveTabParam } from "@/lib/tab-params";
-import { hasPermission } from "@/modules/core/auth/session";
+import { hasAnyPermission, hasPermission } from "@/modules/core/auth/session";
 import { GamificationHub } from "@/modules/gamification/components/gamification-hub";
 import { getActiveCampaign, listCampaignsForAdmin } from "@/modules/gamification/queries/campaigns";
 import { listAchievementsForUser } from "@/modules/gamification/queries/achievements";
 import { getUserJourney } from "@/modules/gamification/queries/journey";
-import { listMissionProgress } from "@/modules/gamification/queries/missions";
+import { listMissionProgress, listMissionsForAdmin } from "@/modules/gamification/queries/missions";
 import { getCampaignRanking } from "@/modules/gamification/queries/ranking";
 import { searchCampaignParticipants } from "@/modules/gamification/queries/participants";
 import {
@@ -61,13 +61,22 @@ export default async function GamificacaoPage({
     campaignSlug: params.campanha ?? "rota-do-fechamento",
   };
 
-  const [campaign, ranking, journey, adminCampaigns] = await Promise.all([
+  const campaignManagePerms = [
+    "gamification.campaign.create",
+    "gamification.campaign.publish",
+    "gamification.campaign.pause",
+    "gamification.campaign.close",
+    "gamification.campaign.edit",
+  ] as const;
+  const canManageCampaigns = hasAnyPermission(session, [...campaignManagePerms]);
+  const canManageMissions = hasPermission(session, "gamification.mission.manage");
+
+  const [campaign, ranking, journey, adminCampaigns, adminMissions] = await Promise.all([
     getActiveCampaign(session.tenantId),
     getCampaignRanking(session.tenantId, session.userId, session.teamId, rankingFilters, 32),
     getUserJourney(session.tenantId, session.userId),
-    hasPermission(session, "gamification.campaign.create")
-      ? listCampaignsForAdmin(session.tenantId)
-      : Promise.resolve([]),
+    canManageCampaigns ? listCampaignsForAdmin(session.tenantId) : Promise.resolve([]),
+    canManageMissions ? listMissionsForAdmin(session.tenantId) : Promise.resolve([]),
   ]);
 
   const campaignId = campaign?.id ?? ranking?.campaignId;
@@ -93,10 +102,12 @@ export default async function GamificacaoPage({
       achievements={achievements}
       journey={journey}
       adminCampaigns={adminCampaigns}
+      adminMissions={adminMissions}
       participants={participants}
       currentUserId={session.userId}
       userPosition={userEntry?.position}
-      canManageCampaigns={hasPermission(session, "gamification.campaign.create")}
+      canManageCampaigns={canManageCampaigns}
+      canManageMissions={canManageMissions}
       canAdjustPoints={hasPermission(session, "gamification.points.adjust")}
       canExportRanking={hasPermission(session, "gamification.export")}
     />

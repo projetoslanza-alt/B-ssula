@@ -56,3 +56,11 @@ export type CampaignAdminRow = {
   participant_count: number;
   published_at: string | null;
 };
+
+export type MissionAdminRow = {
+  id: string;
+  title: string;
+  campaignId: string;
+  campaignName: string;
+  isActive: boolean;
+};

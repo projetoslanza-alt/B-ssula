@@ -70,6 +70,7 @@ export function NotificationDropdown({ notifications, unreadCount }: Notificatio
   const handleItem = (n: NotificationRow) => {
     startTransition(async () => {
       if (!n.read_at) await markNotificationReadAction(n.id);
+      router.refresh();
       close();
       if (n.link) router.push(n.link);
     });
@@ -78,6 +79,7 @@ export function NotificationDropdown({ notifications, unreadCount }: Notificatio
   const handleMarkAll = () => {
     startTransition(async () => {
       await markAllNotificationsReadAction();
+      router.refresh();
     });
   };
 

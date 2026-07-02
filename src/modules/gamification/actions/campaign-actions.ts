@@ -6,6 +6,8 @@ import { getErrorMessage } from "@/lib/errors";
 import { requireSession, requirePermission, hasPermission } from "@/modules/core/auth/session";
 import { platformRoutes } from "@/lib/routes";
 import { z } from "zod";
+import { parseAuditReason } from "@/modules/core/audit/require-audit-reason";
+import { recordAuditEvent } from "@/modules/core/audit/record";
 
 async function recordGamificationAudit(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -86,9 +88,11 @@ export async function createCampaignAction(formData: FormData) {
 export async function updateCampaignStatusAction(
   campaignId: string,
   status: "published" | "paused" | "closed" | "draft",
+  formData: FormData,
 ) {
   try {
     const session = await requireSession();
+    const reason = parseAuditReason(formData);
     const permission =
       status === "published"
         ? "gamification.campaign.publish"
@@ -100,6 +104,13 @@ export async function updateCampaignStatusAction(
     requirePermission(session, permission);
 
     const supabase = await createClient();
+    const { data: current } = await supabase
+      .from("gamification_campaigns")
+      .select("status")
+      .eq("tenant_id", session.tenantId)
+      .eq("id", campaignId)
+      .maybeSingle();
+
     const patch: Record<string, unknown> = { status };
     if (status === "published") {
       patch.published_at = new Date().toISOString();
@@ -120,6 +131,21 @@ export async function updateCampaignStatusAction(
       action: `CAMPAIGN_${status.toUpperCase()}`,
       entityType: "gamification_campaign",
       entityId: campaignId,
+      metadata: {
+        reason,
+        previousValue: current?.status ?? null,
+        newValue: status,
+      },
+    });
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: `CAMPAIGN_${status.toUpperCase()}`,
+      entityType: "gamification_campaign",
+      entityId: campaignId,
+      origin: "gamification:campaigns",
+      metadata: { reason, previousValue: current?.status, newValue: status },
     });
 
     revalidateGamification();

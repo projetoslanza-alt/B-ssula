@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requirePageSession } from "@/lib/auth/page-guard";
-import { hasPermission } from "@/modules/core/auth/session";
+import { hasAnyPermission, hasPermission } from "@/modules/core/auth/session";
 import { TicketDetailClient } from "@/modules/support/components/ticket-detail-client";
 import { getTicket } from "@/modules/support/queries/tickets";
 
@@ -20,9 +20,10 @@ export default async function ChamadoDetalhePage({
   }
 
   const canManageAll = hasPermission(session, "support.ticket.manage_all");
+  const canArchive = hasAnyPermission(session, ["support.ticket.manage_all", "support.ticket.archive"]);
   const isOwner = ticket.requester_id === session.userId;
 
-  if (!canManageAll && !isOwner) {
+  if (!canManageAll && !canArchive && !isOwner) {
     notFound();
   }
 
@@ -30,6 +31,7 @@ export default async function ChamadoDetalhePage({
     <TicketDetailClient
       ticket={ticket}
       canManage={canManageAll}
+      canArchive={canArchive}
       canReplyInternal={canManageAll}
     />
   );

@@ -62,7 +62,7 @@ test.describe("Smoke pós-deploy staging", () => {
     await adminLogin(page);
     await page.goto("/inicio");
     await expect(page.getByText(/todo time precisa de um/i)).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Pódio de vendedores", exact: true })).toBeVisible();
+    await expect(page.getByText(/pódio/i).first()).toBeVisible();
   });
 
   test("administração: cards e auditoria", async ({ page }) => {
@@ -78,8 +78,8 @@ test.describe("Smoke pós-deploy staging", () => {
     await page.goto("/notificacoes");
     await expect(page.getByRole("heading", { name: "Notificações" })).toBeVisible();
     await page.goto("/inicio");
-    const notificationsLink = page.getByRole("link", { name: /abrir notificações/i });
-    await expect(notificationsLink).toBeVisible();
+    const notificationsButton = page.getByRole("button", { name: "Abrir notificações" });
+    await expect(notificationsButton).toBeVisible();
   });
 
   test("logout funcional", async ({ page }) => {

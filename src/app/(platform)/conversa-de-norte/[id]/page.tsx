@@ -9,6 +9,7 @@ import { getMeeting } from "@/modules/one-on-one/queries/meetings";
 import { platformRoutes } from "@/lib/routes";
 
 const STATUS_LABELS: Record<string, string> = {
+  draft: "Rascunho",
   scheduled: "Programada",
   in_progress: "Em andamento",
   completed: "Concluída",
@@ -94,9 +95,17 @@ export default async function ConversaDetalhePage({
           </CardContent>
         </Card>
       </div>
-      {hasPermission(session, "one_on_one.meeting.manage") && (
-        <Link href={platformRoutes.northConversation.new} className="text-sm text-sky-400 hover:underline">
-          Continuar edição da conversa
+      {meeting.status === "completed" && (
+        <Link
+          href={`${platformRoutes.northConversation.conversation(id)}/relatorio`}
+          className="text-sm text-sky-400 hover:underline"
+        >
+          Ver relatório gerencial
+        </Link>
+      )}
+      {hasPermission(session, "one_on_one.meeting.manage") && meeting.status !== "completed" && (
+        <Link href={`${platformRoutes.northConversation.new}?meetingId=${id}`} className="text-sm text-sky-400 hover:underline">
+          Continuar wizard da conversa
         </Link>
       )}
     </div>

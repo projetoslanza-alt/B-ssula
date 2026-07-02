@@ -7,6 +7,7 @@ import { execSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 import { loadCloudEnv } from "./qa-env";
 import { TENANTS } from "./qa-fixtures";
+import { provisionReportFixtures } from "./qa-data/reports";
 
 function run(label: string, cmd: string) {
   console.log(`\n▶ ${label}`);
@@ -39,7 +40,7 @@ async function provisionSupplementaryFixtures(admin: ReturnType<typeof createCli
       title: "Chamado atualizado",
       message: "Seu chamado QA foi respondido pela equipe de suporte.",
       type: "support",
-      link: "/chamados/meus",
+      link: "/chamados/77777777-7777-7777-7777-77777777101",
       read_at: null as string | null,
     },
     {
@@ -114,28 +115,9 @@ async function provisionSupplementaryFixtures(admin: ReturnType<typeof createCli
     { onConflict: "id" },
   );
 
-  const { data: savedReport } = await admin
-    .from("report_definitions")
-    .select("id")
-    .eq("fixture_key", "north.report.saved")
-    .maybeSingle();
+  await provisionReportFixtures(admin, tenantId, adminProfile.id);
 
-  if (!savedReport) {
-    await admin.from("report_definitions").insert({
-      tenant_id: tenantId,
-      fixture_key: "north.report.saved",
-      name: "Relatório QA — Vendas por equipe",
-      source: "crm",
-      status: "active",
-      owner_id: adminProfile.id,
-      created_by: adminProfile.id,
-      filters: { period: "month" },
-      layout: {},
-      blocks: [],
-    });
-  }
-
-  console.log("Fixtures complementares (notificações, auditoria, chamado arquivado, relatório) OK.");
+  console.log("Fixtures complementares (notificações, auditoria, chamado arquivado, relatórios QA) OK.");
 }
 
 async function main() {

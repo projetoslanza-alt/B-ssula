@@ -23,7 +23,9 @@ export default async function ConversaDeNortePage({
 
   if (params.tab && isTabAlias(params.tab, NORTH_CONVERSATION_TAB_ALIASES)) {
     const canonical = NORTH_CONVERSATION_TAB_ALIASES[params.tab];
-    redirect(`${platformRoutes.northConversation.root}?tab=${canonical}`);
+    if (canonical !== params.tab) {
+      redirect(`${platformRoutes.northConversation.root}?tab=${canonical}`);
+    }
   }
 
   const activeTab = resolveTabParam(

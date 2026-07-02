@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { platformRoutes } from "@/lib/routes";
 import { filterModules, filterNavItems } from "@/lib/navigation";
+import { searchTicketsAction, type TicketSearchHit } from "@/modules/support/actions/search-tickets-action";
 
 type CommandItem = {
   id: string;
@@ -43,11 +44,27 @@ function CommandMenuDialog({
   permissions: string[];
 }) {
   const [query, setQuery] = useState("");
+  const [ticketHits, setTicketHits] = useState<TicketSearchHit[]>([]);
+  const [, startSearch] = useTransition();
   const router = useRouter();
   const items = buildCommandItems(permissions);
   const filtered = query.trim()
     ? items.filter((i) => i.label.toLowerCase().includes(query.toLowerCase()))
     : items.slice(0, 14);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) return;
+    const timer = setTimeout(() => {
+      startSearch(async () => {
+        const hits = await searchTicketsAction(term);
+        setTicketHits(hits);
+      });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const visibleTicketHits = query.trim().length >= 2 ? ticketHits : [];
 
   const handleClose = () => {
     setQuery("");
@@ -74,13 +91,35 @@ function CommandMenuDialog({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pesquisar páginas, módulos..."
+            placeholder="Pesquisar páginas, módulos ou chamados..."
             className="flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none"
           />
           <kbd className="rounded border border-[var(--border)] px-1.5 text-xs text-[var(--muted)]">Esc</kbd>
         </div>
         <ul className="max-h-72 overflow-y-auto py-2">
-          {filtered.length === 0 ? (
+          {visibleTicketHits.length > 0 && (
+            <>
+              <li className="px-4 py-1 text-xs font-semibold uppercase text-[var(--muted)]">Chamados</li>
+              {visibleTicketHits.map((hit) => (
+                <li key={hit.id}>
+                  <button
+                    type="button"
+                    className="flex w-full flex-col px-4 py-2 text-left hover:bg-[var(--panel-secondary)]"
+                    onClick={() => {
+                      handleClose();
+                      router.push(hit.href);
+                    }}
+                  >
+                    <span className="text-sm font-medium text-[var(--foreground)]">
+                      #{hit.ticket_number} — {hit.title}
+                    </span>
+                    <span className="text-xs text-[var(--muted)]">Chamados · {hit.status}</span>
+                  </button>
+                </li>
+              ))}
+            </>
+          )}
+          {filtered.length === 0 && visibleTicketHits.length === 0 ? (
             <li className="px-4 py-6 text-center text-sm text-[var(--muted)]">Nenhum resultado encontrado.</li>
           ) : (
             filtered.map((item) => (

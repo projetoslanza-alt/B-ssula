@@ -34,13 +34,13 @@ export default async function RelatoriosPage({
         }
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="report-canvas grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard label="Ativos" value={active} />
         <MetricCard label="Rascunhos" value={drafts} variant="info" />
         <MetricCard label="Total" value={reports.length} variant="purple" />
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="report-canvas builder-grid grid min-w-0 gap-4 sm:grid-cols-2">
         {reports.length === 0 ? (
           <p className="text-sm text-[var(--foreground-muted)]">
             Nenhum relatório salvo. Crie o primeiro relatório personalizado.

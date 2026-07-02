@@ -9,6 +9,7 @@ import {
   markNotificationReadAction,
 } from "@/modules/notifications/actions/notification-actions";
 import type { NotificationRow } from "@/modules/notifications/queries/notifications";
+import { resolveNotificationLink } from "@/lib/resolve-notification-link";
 import { platformRoutes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -72,7 +73,7 @@ export function NotificationDropdown({ notifications, unreadCount }: Notificatio
       if (!n.read_at) await markNotificationReadAction(n.id);
       router.refresh();
       close();
-      if (n.link) router.push(n.link);
+      if (n.link) router.push(resolveNotificationLink(n.link) ?? n.link);
     });
   };
 

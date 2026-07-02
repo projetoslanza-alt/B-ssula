@@ -191,11 +191,14 @@ export function LearningHub({
 
       <DeTabPanel id="avaliacoes" activeTab={activeTab}>
         <Card className="border-[var(--border)] bg-[var(--panel)]">
-          <CardContent className="p-5">
+          <CardContent className="space-y-3 p-5">
             <p className="font-medium">Contorno de Objeções — Avaliação final</p>
-            <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+            <p className="text-sm text-[var(--foreground-muted)]">
               Disponível após conclusão das aulas · Nota mínima: 7.0
             </p>
+            <Button asChild>
+              <Link href={platformRoutes.learning.adminAssessmentResults}>Ver avaliações</Link>
+            </Button>
           </CardContent>
         </Card>
       </DeTabPanel>

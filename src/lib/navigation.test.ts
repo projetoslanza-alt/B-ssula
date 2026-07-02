@@ -5,10 +5,11 @@ import { collectNavHrefs } from "@/lib/routes";
 describe("navigation registry", () => {
   it("menu links apontam para rotas conhecidas", () => {
     const known = new Set(collectNavHrefs());
+    const basePath = (href: string) => href.split("?")[0];
     for (const mod of PLATFORM_MODULES) {
-      expect(known.has(mod.href)).toBe(true);
+      expect(known.has(basePath(mod.href))).toBe(true);
       for (const item of mod.items) {
-        expect(known.has(item.href)).toBe(true);
+        expect(known.has(basePath(item.href))).toBe(true);
         expect(item.href).not.toBe("#");
         expect(item.href.startsWith("/")).toBe(true);
       }

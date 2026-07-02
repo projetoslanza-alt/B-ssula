@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTransition } from "react";
 import { markNotificationReadAction } from "@/modules/notifications/actions/notification-actions";
 import type { NotificationRow } from "@/modules/notifications/queries/notifications";
+import { resolveNotificationLink } from "@/lib/resolve-notification-link";
 import { cn } from "@/lib/utils";
 
 type NotificationsPageClientProps = {
@@ -23,7 +24,7 @@ export function NotificationsPageClient({ items, filter }: NotificationsPageClie
   const handleRead = (id: string, link: string | null) => {
     startTransition(async () => {
       await markNotificationReadAction(id);
-      if (link) window.location.href = link;
+      if (link) window.location.href = resolveNotificationLink(link) ?? link;
     });
   };
 

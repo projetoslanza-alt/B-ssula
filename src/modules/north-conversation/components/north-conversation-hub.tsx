@@ -180,6 +180,11 @@ export function NorthConversationHub({
       </DeTabPanel>
 
       <DeTabPanel id="checkin" activeTab={activeTab}>
+        <div className="mb-4">
+          <Button asChild variant="outline" size="sm">
+            <Link href={platformRoutes.northConversation.checkIn}>Responder check-in</Link>
+          </Button>
+        </div>
         <CheckInForm embedded />
       </DeTabPanel>
 

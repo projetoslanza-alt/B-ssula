@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Breadcrumbs } from "@/components/platform/breadcrumbs";
 import { Eyebrow } from "@/components/platform/eyebrow";
-import { BackLink } from "@/components/platform/navigation-primitives";
+import { ModuleBackLink } from "@/components/platform/module-back-link";
 import type { BreadcrumbSegment } from "@/lib/breadcrumb-config";
 
 type PageHeaderProps = {
@@ -34,7 +34,7 @@ export function PageHeader({
   return (
     <header className={cn("space-y-3", className)}>
       {breadcrumbs && breadcrumbs.length > 1 && <Breadcrumbs items={breadcrumbs} />}
-      {backHref && <BackLink href={backHref} label={backLabel} />}
+      {backHref && <ModuleBackLink href={backHref} label={backLabel ?? "Voltar"} />}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           {eyebrowText && <Eyebrow>{eyebrowText}</Eyebrow>}

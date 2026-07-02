@@ -56,7 +56,7 @@ export function CoverUpload({
         disabled={uploading}
         aria-label="Upload da capa"
       />
-      {uploading && <p className="mt-1 text-sm text-slate-500">Enviando...</p>}
+      {uploading && <p className="mt-1 text-sm text-[var(--muted)]">Enviando...</p>}
       {error && <p className="mt-1 text-sm text-red-600" role="alert">{error}</p>}
     </div>
   );

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionContext } from "@/modules/core/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { PlatformShell } from "@/components/layout/platform-shell";
 import { unwrapRelation } from "@/lib/supabase/relations";
 import { LearningPlayer } from "@/modules/learning/components/learning-player";
 
@@ -62,19 +61,8 @@ export default async function AprenderPage({
     .select("id, lesson_id")
     .eq("course_version_id", enrollment.course_version_id);
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("name")
-    .eq("id", session.tenantId)
-    .single();
-
   return (
-    <PlatformShell
-      organizationName={org?.name}
-      userName={session.fullName ?? session.email}
-      currentPath="/universidade"
-    >
-      <LearningPlayer
+    <LearningPlayer
         enrollmentId={enrollment.id}
         courseTitle={version.title}
         modules={modules}
@@ -96,6 +84,5 @@ export default async function AprenderPage({
         progressPercentage={enrollment.progress_percentage}
         initialLessonId={enrollment.last_lesson_id}
       />
-    </PlatformShell>
   );
 }

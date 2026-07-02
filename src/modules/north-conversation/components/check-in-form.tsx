@@ -19,7 +19,7 @@ const SCALE = [
   { value: 5, label: "Concordo totalmente" },
 ];
 
-export function CheckInForm() {
+export function CheckInForm({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [feeling, setFeeling] = useState("");
@@ -63,24 +63,40 @@ export function CheckInForm() {
           <p className="text-sm text-[var(--foreground-muted)]">
             Sua resposta foi registrada. O gestor poderá visualizar os indicadores agregados da equipe.
           </p>
-          <Button onClick={() => router.push(platformRoutes.northConversation.root)}>Voltar</Button>
+          <Button
+            onClick={() =>
+              router.push(
+                embedded
+                  ? `${platformRoutes.northConversation.root}?tab=overview`
+                  : platformRoutes.northConversation.root,
+              )
+            }
+          >
+            Voltar
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6">
-      <PageHeader
-        title="Check-in de Rota"
-        description="Uma leitura rápida sobre comportamento, colaboração e ambiente de trabalho."
-        backHref={platformRoutes.northConversation.root}
-      />
+    <form onSubmit={handleSubmit} className={cn("space-y-6", !embedded && "mx-auto max-w-2xl")}>
+      {!embedded ? (
+        <PageHeader
+          title="Check-in de Rota"
+          description="Uma leitura rápida sobre comportamento, colaboração e ambiente de trabalho."
+          backHref={platformRoutes.northConversation.root}
+        />
+      ) : (
+        <p className="text-sm text-[var(--muted)]">
+          Uma leitura rápida sobre comportamento, colaboração e ambiente de trabalho.
+        </p>
+      )}
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
       {CHECKIN_QUESTIONS.map((q) => (
-        <Card key={q.id}>
+        <Card key={q.id} className="border-[var(--border)] bg-[var(--panel)]">
           <CardContent className="space-y-3 p-5">
             <p className="text-xs font-medium text-sky-400">{q.dimension}</p>
             <p className="font-medium">{q.text}</p>
@@ -105,7 +121,7 @@ export function CheckInForm() {
         </Card>
       ))}
 
-      <Card>
+      <Card className="border-[var(--border)] bg-[var(--panel)]">
         <CardHeader>
           <CardTitle>Perguntas complementares</CardTitle>
         </CardHeader>

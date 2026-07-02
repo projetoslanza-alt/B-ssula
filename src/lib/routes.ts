@@ -82,7 +82,7 @@ export const platformRoutes = {
     report: (id: string) => `/relatorios/${id}`,
     edit: (id: string) => `/relatorios/${id}/editar`,
     crm: "/relatorios/comercial",
-    oneOnOne: "/relatorios/conversa-de-norte",
+    oneOnOne: "/relatorios/one-a-one",
     learning: "/relatorios/universidade",
     support: "/relatorios/chamados",
     operations: "/relatorios/operacao",

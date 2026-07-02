@@ -10,7 +10,14 @@ export default async function Page() {
     <div className="space-y-6">
       <PageHeader title="Todos os chamados" />
       <ul className="space-y-2">{items.map((t) => (
-        <li key={t.id}><Link href={platformRoutes.support.ticket(t.id)} className="block rounded-lg border bg-white px-4 py-3 hover:bg-slate-50">#{t.ticket_number} {t.title}</Link></li>
+        <li key={t.id}>
+          <Link
+            href={platformRoutes.support.ticket(t.id)}
+            className="block rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 hover:bg-[var(--card-elevated)]"
+          >
+            #{t.ticket_number} {t.title}
+          </Link>
+        </li>
       ))}</ul>
     </div>
   );

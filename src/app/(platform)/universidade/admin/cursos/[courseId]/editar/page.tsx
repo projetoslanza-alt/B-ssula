@@ -48,7 +48,7 @@ export default async function EditarCursoPage({
             category_id: formData.get("categoryId"),
           });
         }}
-        className="mx-auto max-w-2xl space-y-4 rounded-xl border border-slate-200 bg-white p-6"
+        className="mx-auto max-w-2xl space-y-4 rounded-xl border border-[var(--border)] bg-[var(--panel)] p-6"
       >
         <h2 className="text-lg font-semibold">Informações do curso</h2>
 
@@ -66,11 +66,11 @@ export default async function EditarCursoPage({
         </div>
         <div>
           <label htmlFor="description" className="mb-1 block text-sm font-medium">Descrição completa</label>
-          <textarea id="description" name="description" rows={4} defaultValue={v.description ?? ""} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" required />
+          <textarea id="description" name="description" rows={4} defaultValue={v.description ?? ""} className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm" required />
         </div>
         <div>
           <label htmlFor="categoryId" className="mb-1 block text-sm font-medium">Categoria</label>
-          <select id="categoryId" name="categoryId" defaultValue={data.course.category_id ?? ""} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm" required>
+          <select id="categoryId" name="categoryId" defaultValue={data.course.category_id ?? ""} className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm" required>
             <option value="">Selecione...</option>
             {categories?.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -80,7 +80,7 @@ export default async function EditarCursoPage({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="level" className="mb-1 block text-sm font-medium">Nível</label>
-            <select id="level" name="level" defaultValue={v.level} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm">
+            <select id="level" name="level" defaultValue={v.level} className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm">
               <option value="beginner">Iniciante</option>
               <option value="intermediate">Intermediário</option>
               <option value="advanced">Avançado</option>
@@ -96,7 +96,7 @@ export default async function EditarCursoPage({
         <input type="hidden" name="language" value={v.language ?? "pt-BR"} />
         <div>
           <label htmlFor="objectives" className="mb-1 block text-sm font-medium">Objetivos</label>
-          <textarea id="objectives" name="objectives" rows={3} defaultValue={v.objectives ?? ""} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+          <textarea id="objectives" name="objectives" rows={3} defaultValue={v.objectives ?? ""} className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm" />
         </div>
         <div>
           <label htmlFor="targetAudience" className="mb-1 block text-sm font-medium">Público-alvo</label>

@@ -56,10 +56,13 @@ export function PipelineBoard({
           const cards = opportunities.filter((o) => o.stage_id === stage.id);
           const stageTotal = cards.reduce((s, c) => s + Number(c.amount ?? 0), 0);
           return (
-            <div key={stage.id} className="min-w-[280px] flex-1 rounded-xl border border-slate-200 bg-slate-100/50">
-              <div className="border-b border-slate-200 px-4 py-3">
-                <h3 className="font-semibold text-slate-900">{stage.name}</h3>
-                <p className="text-xs text-slate-500">
+            <div
+              key={stage.id}
+              className="min-w-[280px] flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-elevated)]"
+            >
+              <div className="border-b border-[var(--border)] px-4 py-3">
+                <h3 className="font-semibold text-[var(--foreground)]">{stage.name}</h3>
+                <p className="text-xs text-[var(--muted)]">
                   {cards.length} oportunidade(s) · R$ {stageTotal.toLocaleString("pt-BR")}
                 </p>
               </div>
@@ -69,16 +72,19 @@ export function PipelineBoard({
                   const company = unwrap(opp.crm_companies);
                   const stageIdx = stages.findIndex((s) => s.id === opp.stage_id);
                   return (
-                    <article key={opp.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                    <article
+                      key={opp.id}
+                      className="rounded-lg border border-[var(--border)] bg-[var(--panel)] p-3 shadow-[var(--shadow)]"
+                    >
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-medium text-slate-900">{opp.title}</h4>
+                        <h4 className="font-medium text-[var(--foreground)]">{opp.title}</h4>
                         <StatusBadge label={opp.priority} tone={priorityTone[opp.priority] ?? "default"} />
                       </div>
-                      <p className="mt-1 text-sm font-semibold text-slate-700">
+                      <p className="mt-1 text-sm font-semibold text-[var(--foreground-secondary)]">
                         R$ {Number(opp.amount).toLocaleString("pt-BR")}
                       </p>
                       {(contact || company) && (
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-[var(--muted)]">
                           {[contact?.full_name, company?.trade_name ?? company?.legal_name].filter(Boolean).join(" · ")}
                         </p>
                       )}
@@ -102,7 +108,7 @@ export function PipelineBoard({
                           Próxima →
                         </Button>
                         <select
-                          className="rounded border border-slate-200 px-2 py-1 text-xs"
+                          className="field rounded px-2 py-1 text-xs"
                           value={opp.stage_id}
                           onChange={(e) => move(opp.id, e.target.value)}
                           disabled={pending}

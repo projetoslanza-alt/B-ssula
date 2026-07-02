@@ -39,7 +39,7 @@ export default async function PreviewCursoPage({
         </p>
         <Link
           href={`/universidade/catalogo/${data.course.slug}`}
-          className="inline-flex rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50"
+          className="inline-flex rounded-lg border border-[var(--border)] px-4 py-2 text-sm hover:bg-[var(--card-elevated)]"
         >
           Ver no catálogo
         </Link>

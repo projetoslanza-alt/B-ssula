@@ -23,7 +23,7 @@ export default async function PublicarCursoPage({
       <div className="max-w-xl space-y-6">
         <div>
           <h2 className="text-lg font-semibold">Checklist de publicação</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Revise os requisitos antes de tornar o curso visível no catálogo.
           </p>
         </div>
@@ -35,7 +35,7 @@ export default async function PublicarCursoPage({
             {checklist.items.map((item) => (
               <li
                 key={item.id}
-                className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4"
+                className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--panel)] p-4"
               >
                 {item.passed ? (
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
@@ -45,7 +45,7 @@ export default async function PublicarCursoPage({
                 <div className="flex-1">
                   <p className="font-medium">{item.label}</p>
                   {!item.passed && item.message && (
-                    <p className="mt-1 text-sm text-slate-500">{item.message}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{item.message}</p>
                   )}
                   {item.href && !item.passed && (
                     <Link href={item.href} className="mt-2 inline-block text-sm text-amber-700 hover:underline">

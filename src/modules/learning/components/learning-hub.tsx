@@ -177,29 +177,51 @@ export function LearningHub({
       </DeTabPanel>
 
       <DeTabPanel id="aulas" activeTab={activeTab}>
-        <Button asChild>
-          <Link href={platformRoutes.learning.catalog}>
-            Ver catálogo e aulas <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
+        <Card className="border-[var(--border)] bg-[var(--panel)]">
+          <CardContent className="space-y-3 p-5">
+            <p className="text-sm text-[var(--muted)]">Explore o catálogo para acessar aulas e matrículas.</p>
+            <Button asChild>
+              <Link href={platformRoutes.learning.catalog}>
+                Abrir catálogo <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </DeTabPanel>
 
       <DeTabPanel id="avaliacoes" activeTab={activeTab}>
-        <Button variant="outline" asChild>
-          <Link href={platformRoutes.learning.assessments}>Ver avaliações</Link>
-        </Button>
+        <Card className="border-[var(--border)] bg-[var(--panel)]">
+          <CardContent className="p-5">
+            <p className="font-medium">Contorno de Objeções — Avaliação final</p>
+            <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+              Disponível após conclusão das aulas · Nota mínima: 7.0
+            </p>
+          </CardContent>
+        </Card>
       </DeTabPanel>
 
       <DeTabPanel id="certificados" activeTab={activeTab}>
-        <Button asChild>
-          <Link href={platformRoutes.learning.certificates}>Ver certificados</Link>
-        </Button>
+        <Card className="border-[var(--border)] bg-[var(--panel)]">
+          <CardContent className="space-y-3 p-5">
+            <p className="text-sm text-[var(--muted)]">Consulte certificados emitidos e códigos de validação.</p>
+            <Button asChild>
+              <Link href={platformRoutes.learning.certificates}>Ver certificados</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </DeTabPanel>
 
       <DeTabPanel id="progresso" activeTab={activeTab}>
-        <Button asChild>
-          <Link href={platformRoutes.learning.progress}>Minha jornada de aprendizado</Link>
-        </Button>
+        <Card className="border-[var(--border)] bg-[var(--panel)]">
+          <CardContent className="space-y-3 p-5">
+            <p className="text-sm text-[var(--muted)]">
+              Horas estudadas: {hoursStudied}h · Em andamento: {stats.inProgress} · Concluídos: {stats.completed}
+            </p>
+            <Button asChild>
+              <Link href={platformRoutes.learning.progress}>Detalhar progresso</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </DeTabPanel>
     </div>
   );

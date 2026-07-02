@@ -10,6 +10,7 @@ import { DeTabPanel, DeTabs } from "@/components/platform/de-tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/states";
+import { CheckInForm } from "@/modules/north-conversation/components/check-in-form";
 import { platformRoutes } from "@/lib/routes";
 import { LineChartWidget } from "@/components/charts/chart-widgets";
 import {
@@ -179,34 +180,56 @@ export function NorthConversationHub({
       </DeTabPanel>
 
       <DeTabPanel id="checkin" activeTab={activeTab}>
+        <CheckInForm embedded />
+      </DeTabPanel>
+
+      <DeTabPanel id="planos" activeTab={activeTab}>
         <Card className="border-[var(--border)] bg-[var(--panel)]">
-          <CardContent className="p-5">
+          <CardContent className="space-y-3 p-5">
             <p className="text-sm text-[var(--muted)]">
-              Uma leitura rápida sobre comportamento, colaboração e ambiente de trabalho.
+              {overview.acoesAbertas} ações em aberto
+              {overview.acoesAtrasadas > 0 ? ` · ${overview.acoesAtrasadas} atrasadas` : ""}.
             </p>
-            <Button className="mt-4" asChild>
-              <Link href={platformRoutes.northConversation.checkIn}>Responder check-in</Link>
-            </Button>
+            <p className="text-sm text-[var(--foreground-secondary)]">
+              Planos definidos nas Conversas de Norte aparecem aqui para acompanhamento do gestor.
+            </p>
           </CardContent>
         </Card>
       </DeTabPanel>
 
-      <DeTabPanel id="planos" activeTab={activeTab}>
-        <Button variant="outline" asChild>
-          <Link href={platformRoutes.northConversation.actionPlans}>Ver planos de ação</Link>
-        </Button>
-      </DeTabPanel>
-
       <DeTabPanel id="jornada" activeTab={activeTab}>
-        <Button variant="outline" asChild>
-          <Link href={platformRoutes.northConversation.myJourney}>Minha jornada</Link>
-        </Button>
+        <Card className="border-[var(--border)] bg-[var(--panel)]">
+          <CardContent className="p-5 text-sm text-[var(--foreground-secondary)]">
+            Acompanhe sua evolução de performance ao longo dos ciclos de Conversa de Norte.
+          </CardContent>
+        </Card>
       </DeTabPanel>
 
       <DeTabPanel id="equipe" activeTab={activeTab}>
-        <Button variant="outline" asChild>
-          <Link href={platformRoutes.northConversation.team}>Mapa da equipe</Link>
-        </Button>
+        {!canViewTeam ? (
+          <EmptyState title="Acesso restrito" description="Você não possui permissão para ver o mapa da equipe." />
+        ) : conversations.length === 0 ? (
+          <EmptyState title="Sem dados de equipe" description="Nenhuma conversa registrada para consolidar o mapa." />
+        ) : (
+          <div className="space-y-3">
+            {conversations.map((c) => (
+              <Link key={c.id} href={platformRoutes.northConversation.conversation(c.id)}>
+                <Card className="border-[var(--border)] bg-[var(--panel)] hover:border-[var(--border-active)]">
+                  <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                    <div>
+                      <p className="font-semibold">{c.employeeName}</p>
+                      <p className="text-sm text-[var(--muted)]">{c.managerName}</p>
+                    </div>
+                    <StatusBadge
+                      label={STATUS_MAP[c.status]?.label ?? c.status}
+                      tone={STATUS_MAP[c.status]?.tone ?? "default"}
+                    />
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </DeTabPanel>
     </div>
   );

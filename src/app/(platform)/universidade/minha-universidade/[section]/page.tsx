@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/feedback/states";
 import Link from "next/link";
 import { platformRoutes } from "@/lib/routes";
 import { unwrapRelation } from "@/lib/supabase/relations";
+import { cn } from "@/lib/utils";
 
 type Filter = "all" | "mandatory" | "completed" | "favorites";
 
@@ -55,8 +56,8 @@ export default async function MyCoursesSectionPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title={TITLES[filter]} />
-      <nav className="flex flex-wrap gap-2 text-sm">
+      <PageHeader title={TITLES[filter]} backHref={platformRoutes.learning.myUniversity} />
+      <nav className="tabs text-sm">
         {[
           ["cursos", "Meus cursos"],
           ["obrigatorios", "Obrigatórios"],
@@ -66,7 +67,7 @@ export default async function MyCoursesSectionPage({
           <Link
             key={slug}
             href={`${platformRoutes.learning.myUniversity}/${slug}`}
-            className="rounded-lg border px-3 py-1.5 hover:bg-slate-50"
+            className={cn("tab-btn", section === slug && "active")}
           >
             {label}
           </Link>
@@ -77,7 +78,7 @@ export default async function MyCoursesSectionPage({
           title="Nenhum curso nesta seção"
           description="Explore o catálogo para iniciar um novo treinamento."
           action={
-            <Link href={platformRoutes.learning.catalog} className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">
+            <Link href={platformRoutes.learning.catalog} className="btn btn-primary btn-sm">
               Ir ao catálogo
             </Link>
           }
@@ -91,7 +92,7 @@ export default async function MyCoursesSectionPage({
               <li key={item.id}>
                 <Link
                   href={course?.id ? platformRoutes.learning.learn(course.id) : platformRoutes.learning.catalog}
-                  className="block rounded-lg border bg-white px-4 py-3 hover:bg-slate-50"
+                  className="block rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3 hover:bg-[var(--card-elevated)]"
                 >
                   {version?.title ?? "Curso"} — {item.progress_percentage}%
                 </Link>

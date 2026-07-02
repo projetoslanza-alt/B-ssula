@@ -39,23 +39,23 @@ export function CourseCard({
 
   return (
     <Card className="flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
-      <div className="relative aspect-video bg-gradient-to-br from-slate-100 to-slate-200">
+      <div className="relative aspect-video bg-gradient-to-br from-[var(--card-elevated)] to-[var(--panel)]">
         {coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={coverUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center">
-            <BookOpen className="h-10 w-10 text-slate-300" />
+            <BookOpen className="h-10 w-10 text-[var(--foreground-muted)]" />
           </div>
         )}
         <div className="absolute left-3 top-3 flex flex-wrap gap-1">
           {isGlobal && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-300">
               <Globe2 className="h-3 w-3" /> Bússola
             </span>
           )}
           {mandatory && (
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+            <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-medium text-red-300">
               Obrigatório
             </span>
           )}
@@ -63,7 +63,7 @@ export function CourseCard({
       </div>
       <CardHeader className="pb-2">
         {categoryName && (
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--foreground-muted)]">
             {categoryName}
           </p>
         )}
@@ -71,9 +71,9 @@ export function CourseCard({
       </CardHeader>
       <CardContent className="mt-auto flex flex-col gap-3">
         {shortDescription && (
-          <p className="line-clamp-2 text-sm text-slate-500">{shortDescription}</p>
+          <p className="line-clamp-2 text-sm text-[var(--muted)]">{shortDescription}</p>
         )}
-        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
           <span>{COURSE_LEVEL_LABELS[level] ?? level}</span>
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" />
@@ -86,7 +86,7 @@ export function CourseCard({
               <span>Progresso</span>
               <span>{formatPercent(progressPercentage)}</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--border)]">
               <div
                 className="h-full rounded-full bg-amber-500 transition-all"
                 style={{ width: `${progressPercentage}%` }}
@@ -95,7 +95,7 @@ export function CourseCard({
           </div>
         )}
         {isOverdue && dueAt && (
-          <p className="flex items-center gap-1 text-xs text-red-600">
+          <p className="flex items-center gap-1 text-xs text-red-400">
             <AlertCircle className="h-3 w-3" />
             Prazo encerrado — {ENROLLMENT_STATUS_LABELS[enrollmentStatus as EnrollmentStatus]}
           </p>
@@ -103,7 +103,7 @@ export function CourseCard({
         <div className="flex gap-2">
           <Link
             href={`/universidade/catalogo/${slug}`}
-            className="inline-flex flex-1 items-center justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            className="btn btn-primary inline-flex flex-1 items-center justify-center rounded-lg px-3 py-2 text-sm font-medium"
           >
             {hasProgress ? "Continuar curso" : "Ver detalhes"}
           </Link>
@@ -127,17 +127,17 @@ export function StatCard({
   return (
     <Card>
       <CardContent className="p-4">
-        <p className="text-sm text-slate-500">{label}</p>
+        <p className="text-sm text-[var(--muted)]">{label}</p>
         <p
           className={cn(
             "mt-1 text-2xl font-semibold",
-            variant === "warning" && "text-amber-600",
-            variant === "success" && "text-emerald-600",
+            variant === "warning" && "text-amber-400",
+            variant === "success" && "text-emerald-400",
           )}
         >
           {value}
         </p>
-        {description && <p className="mt-1 text-xs text-slate-400">{description}</p>}
+        {description && <p className="mt-1 text-xs text-[var(--foreground-muted)]">{description}</p>}
       </CardContent>
     </Card>
   );

@@ -17,12 +17,13 @@ type ValidationResult =
 
 export default function ValidarCertificadoClient() {
   const searchParams = useSearchParams();
-  const [code, setCode] = useState(searchParams.get("code") ?? "");
+  const initialCode = searchParams.get("code") ?? searchParams.get("codigo") ?? "";
+  const [code, setCode] = useState(initialCode);
   const [result, setResult] = useState<ValidationResult | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    const initial = searchParams.get("code");
+    const initial = searchParams.get("code") ?? searchParams.get("codigo");
     if (initial) handleValidate(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);

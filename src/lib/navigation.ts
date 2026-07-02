@@ -72,9 +72,9 @@ export const PLATFORM_MODULES: PlatformModule[] = [
     items: [
       { href: r.learning.root, label: "Início", permissionsAny: ["learning.catalog.read"] },
       { href: r.learning.myUniversity, label: "Meus cursos", permissionsAny: ["learning.progress.read_own"] },
-      { href: r.learning.paths, label: "Trilhas", permissionsAny: ["learning.catalog.read"] },
+      { href: `${r.learning.root}?tab=trilhas`, label: "Trilhas", permissionsAny: ["learning.catalog.read"] },
       { href: r.learning.catalog, label: "Catálogo", permissionsAny: ["learning.catalog.read"] },
-      { href: r.learning.assessments, label: "Avaliações", permissionsAny: ["learning.catalog.read"] },
+      { href: `${r.learning.root}?tab=avaliacoes`, label: "Avaliações", permissionsAny: ["learning.catalog.read"] },
       { href: r.learning.certificates, label: "Certificados", permissionsAny: ["learning.progress.read_own"] },
       { href: r.learning.progress, label: "Meu progresso", permissionsAny: ["learning.progress.read_own"] },
       { href: r.learning.adminCourses, label: "Gestão da Universidade", permission: "learning.course.create" },

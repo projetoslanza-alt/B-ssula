@@ -10,7 +10,7 @@ export default async function Page() {
       <PageHeader title="Desenvolvimento da equipe" />
       <ul className="space-y-2">{data?.map((e) => {
         const p = Array.isArray(e.profiles) ? e.profiles[0] : e.profiles;
-        return <li key={e.id} className="rounded-lg border bg-white px-4 py-3">{p?.full_name} — {e.progress_percentage}% ({e.status})</li>;
+        return <li key={e.id} className="rounded-lg border border-[var(--border)] bg-[var(--panel)] px-4 py-3">{p?.full_name} — {e.progress_percentage}% ({e.status})</li>;
       })}</ul>
     </div>
   );

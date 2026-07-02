@@ -32,10 +32,10 @@ export default async function ConfiguracoesCursoPage({
           const visibilityType = formData.get("visibilityType") as string;
           await saveVisibilityAction(courseId, visibilityType, []);
         }}
-        className="max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-6"
+        className="max-w-xl space-y-4 rounded-xl border border-[var(--border)] bg-[var(--panel)] p-6"
       >
         <h2 className="text-lg font-semibold">Público e visibilidade</h2>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-[var(--muted)]">
           Defina quem pode visualizar este curso no catálogo.
         </p>
         <div>
@@ -44,14 +44,14 @@ export default async function ConfiguracoesCursoPage({
             id="visibilityType"
             name="visibilityType"
             defaultValue={data.version.visibility_type}
-            className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm"
+            className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm"
           >
             <option value="organization">Toda a organização</option>
             <option value="restricted">Público personalizado (regras)</option>
           </select>
         </div>
         {rules && rules.length > 0 && (
-          <p className="text-sm text-slate-600">{rules.length} regra(s) configurada(s).</p>
+          <p className="text-sm text-[var(--foreground-secondary)]">{rules.length} regra(s) configurada(s).</p>
         )}
         <Button type="submit">Salvar visibilidade</Button>
       </form>

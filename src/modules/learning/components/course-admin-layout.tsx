@@ -1,6 +1,5 @@
 import { redirect, notFound } from "next/navigation";
 import { getSessionContext, requirePermission } from "@/modules/core/auth/session";
-import { PlatformShell } from "@/components/layout/platform-shell";
 import { CourseAdminNav } from "@/modules/learning/components/course-admin-nav";
 import { CourseVersionBanner } from "@/modules/learning/components/course-version-banner";
 import { ensureDraftForEditAction } from "@/modules/learning/actions/version-actions";
@@ -41,14 +40,7 @@ export async function CourseAdminLayout({
   };
 
   return (
-    <PlatformShell
-      organizationName={session.tenantName}
-      userName={session.fullName ?? session.email}
-      currentPath="/universidade/admin/cursos"
-      showAdminNav
-      organizations={session.organizations}
-      activeTenantId={session.tenantId}
-    >
+    <div className="space-y-6">
       <CourseAdminNav
         courseId={courseId}
         courseTitle={version.title}
@@ -62,6 +54,6 @@ export async function CourseAdminLayout({
         isEditingPublished={Boolean(data.publishedVersion && data.hasDraft)}
       />
       {children}
-    </PlatformShell>
+    </div>
   );
 }

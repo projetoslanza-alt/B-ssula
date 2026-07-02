@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { platformRoutes } from "@/lib/routes";
 
 const TABS = [
   { href: "editar", label: "Informações" },
@@ -22,25 +23,20 @@ export function CourseAdminNav({
   const base = `/universidade/admin/cursos/${courseId}`;
 
   return (
-    <div className="mb-6 space-y-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-        <Link href="/universidade/admin/cursos" className="hover:text-slate-900">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+        <Link href={platformRoutes.learning.adminCourses} className="hover:text-[var(--foreground)]">
           Cursos
         </Link>
         <span>/</span>
-        <span className="text-slate-900">{courseTitle}</span>
+        <span className="text-[var(--foreground)]">{courseTitle}</span>
       </div>
-      <nav className="flex flex-wrap gap-1 border-b border-slate-200" aria-label="Edição do curso">
+      <nav className="tabs" aria-label="Edição do curso">
         {TABS.map((tab) => (
           <Link
             key={tab.href}
             href={`${base}/${tab.href}`}
-            className={cn(
-              "rounded-t-lg px-4 py-2 text-sm font-medium transition-colors",
-              currentTab === tab.href
-                ? "border border-b-0 border-slate-200 bg-white text-slate-900"
-                : "text-slate-500 hover:text-slate-900",
-            )}
+            className={cn("tab-btn", currentTab === tab.href && "active")}
           >
             {tab.label}
           </Link>

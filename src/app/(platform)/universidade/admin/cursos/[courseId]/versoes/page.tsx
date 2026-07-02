@@ -31,7 +31,7 @@ export default async function VersoesCursoPage({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Histórico de versões</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--muted)]">
               Versões publicadas permanecem disponíveis para alunos que já iniciaram o curso.
             </p>
           </div>
@@ -50,14 +50,14 @@ export default async function VersoesCursoPage({
         {"error" in history && history.error ? (
           <p className="text-red-600">{history.error}</p>
         ) : (
-          <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-200 rounded-xl border border-[var(--border)] bg-[var(--panel)]">
             {history.versions?.map((v) => (
               <li key={v.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="font-medium">
                     v{v.version_number} — {v.title}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[var(--muted)]">
                     {STATUS_LABELS[v.status] ?? v.status}
                     {v.published_at && ` · Publicada em ${new Date(v.published_at).toLocaleDateString("pt-BR")}`}
                   </p>
@@ -68,7 +68,7 @@ export default async function VersoesCursoPage({
                       ? "bg-emerald-100 text-emerald-800"
                       : v.status === "draft"
                         ? "bg-amber-100 text-amber-800"
-                        : "bg-slate-100 text-slate-600"
+                        : "bg-[var(--card-elevated)] text-[var(--muted)]"
                   }`}
                 >
                   {STATUS_LABELS[v.status] ?? v.status}

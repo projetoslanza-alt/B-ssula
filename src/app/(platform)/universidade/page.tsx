@@ -1,7 +1,9 @@
+import { redirect } from "next/navigation";
 import { requirePageSession } from "@/lib/auth/page-guard";
-import { resolveTabParam } from "@/lib/tab-params";
+import { isTabAlias, resolveTabParam } from "@/lib/tab-params";
+import { platformRoutes } from "@/lib/routes";
 import { LearningHub } from "@/modules/learning/components/learning-hub";
-import { LEARNING_TAB_IDS } from "@/modules/learning/tabs";
+import { LEARNING_TAB_ALIASES, LEARNING_TAB_IDS } from "@/modules/learning/tabs";
 import {
   getCatalogCourses,
   getLearningPaths,
@@ -15,7 +17,15 @@ export default async function UniversidadePage({
 }) {
   const session = await requirePageSession();
   const params = await searchParams;
-  const activeTab = resolveTabParam(params.tab, LEARNING_TAB_IDS, "inicio");
+
+  if (params.tab && isTabAlias(params.tab, LEARNING_TAB_ALIASES)) {
+    const canonical = LEARNING_TAB_ALIASES[params.tab];
+    if (canonical !== params.tab) {
+      redirect(`${platformRoutes.learning.root}?tab=${canonical}`);
+    }
+  }
+
+  const activeTab = resolveTabParam(params.tab, LEARNING_TAB_IDS, "inicio", LEARNING_TAB_ALIASES);
 
   const [home, paths, catalog] = await Promise.all([
     getUniversityHomeData(session),

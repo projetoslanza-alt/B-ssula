@@ -232,7 +232,7 @@ export function LearningPlayer({
                           {isCompleted ? (
                             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
                           ) : (
-                            <Circle className="h-4 w-4 shrink-0 text-slate-300" />
+                            <Circle className="h-4 w-4 shrink-0 text-[var(--foreground-muted)]" />
                           )}
                           <span className="line-clamp-2">{lesson.title}</span>
                         </button>

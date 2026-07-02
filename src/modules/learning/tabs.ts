@@ -10,3 +10,13 @@ export const LEARNING_TABS = [
 
 export type LearningTabId = (typeof LEARNING_TABS)[number]["id"];
 export const LEARNING_TAB_IDS = LEARNING_TABS.map((t) => t.id);
+
+export const LEARNING_TAB_ALIASES: Record<string, LearningTabId> = {
+  cursos: "cursos",
+  trilhas: "trilhas",
+  aulas: "aulas",
+  avaliacoes: "avaliacoes",
+  certificados: "certificados",
+  progresso: "progresso",
+  catalogo: "aulas",
+};

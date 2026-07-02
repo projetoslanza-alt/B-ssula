@@ -40,7 +40,7 @@ export function RankingPodium({
     return (
       <div className={cn("card podium-card", className)}>
         <p className="muted" style={{ textAlign: "center", padding: "2rem 1rem" }}>
-          Ranking em preparação para esta campanha.
+          Ainda não há participantes no ranking desta campanha.
         </p>
       </div>
     );

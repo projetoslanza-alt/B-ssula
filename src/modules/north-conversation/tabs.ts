@@ -9,3 +9,16 @@ export const NORTH_CONVERSATION_TABS = [
 
 export type NorthConversationTabId = (typeof NORTH_CONVERSATION_TABS)[number]["id"];
 export const NORTH_CONVERSATION_TAB_IDS = NORTH_CONVERSATION_TABS.map((t) => t.id);
+
+/** URLs legadas redirecionam para os IDs canônicos. */
+export const NORTH_CONVERSATION_TAB_ALIASES: Record<string, NorthConversationTabId> = {
+  "visao-geral": "overview",
+  conversas: "conversas",
+  "check-in": "checkin",
+  checkin: "checkin",
+  planos: "planos",
+  "planos-de-acao": "planos",
+  jornada: "jornada",
+  "minha-jornada": "jornada",
+  equipe: "equipe",
+};

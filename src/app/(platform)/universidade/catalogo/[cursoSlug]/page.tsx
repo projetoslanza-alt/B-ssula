@@ -2,8 +2,9 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getSessionContext } from "@/modules/core/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { PlatformShell } from "@/components/layout/platform-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/platform/page-header";
+import { platformRoutes } from "@/lib/routes";
 import { unwrapRelation } from "@/lib/supabase/relations";
 import { COURSE_LEVEL_LABELS } from "@/modules/learning/domain/progress";
 import { Clock, Globe2, BookOpen } from "lucide-react";
@@ -55,36 +56,28 @@ export default async function CursoDetalhePage({
     .eq("course_id", course.id)
     .maybeSingle();
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("name")
-    .eq("id", session.tenantId)
-    .single();
-
   const category = unwrapRelation(course.learning_categories);
 
   return (
-    <PlatformShell
-      organizationName={org?.name}
-      userName={session.fullName ?? session.email}
-      currentPath="/universidade/catalogo"
-    >
-      <div className="mx-auto max-w-4xl space-y-8">
-        <div className="flex flex-wrap gap-2 text-sm text-slate-500">
-          <Link href="/universidade/catalogo" className="hover:text-slate-900">Catálogo</Link>
-          <span>/</span>
-          <span className="text-slate-900">{version.title}</span>
-        </div>
+    <div className="mx-auto max-w-4xl space-y-8">
+      <PageHeader title={version.title} backHref={platformRoutes.learning.catalog} />
+      <div className="flex flex-wrap gap-2 text-sm text-[var(--muted)]">
+        <Link href={platformRoutes.learning.catalog} className="hover:text-[var(--foreground)]">
+          Catálogo
+        </Link>
+        <span>/</span>
+        <span className="text-[var(--foreground)]">{version.title}</span>
+      </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <div className="aspect-video overflow-hidden rounded-xl bg-slate-100">
+            <div className="aspect-video overflow-hidden rounded-xl bg-[var(--card-elevated)]">
               {version.cover_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={version.cover_url} alt="" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <BookOpen className="h-16 w-16 text-slate-300" />
+                  <BookOpen className="h-16 w-16 text-[var(--muted)]" />
                 </div>
               )}
             </div>
@@ -92,24 +85,24 @@ export default async function CursoDetalhePage({
             <div>
               <div className="flex flex-wrap gap-2">
                 {course.is_global && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-300">
                     <Globe2 className="h-3 w-3" /> Conteúdo oficial Bússola
                   </span>
                 )}
                 {category && (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                  <span className="rounded-full bg-[var(--card-elevated)] px-2 py-0.5 text-xs font-medium text-[var(--foreground-secondary)]">
                     {category.name}
                   </span>
                 )}
               </div>
               <h1 className="mt-3 text-3xl font-semibold">{version.title}</h1>
-              <p className="mt-4 text-slate-600">{version.description}</p>
+              <p className="mt-4 text-[var(--foreground-secondary)]">{version.description}</p>
             </div>
 
             {version.objectives && (
               <section>
                 <h2 className="text-lg font-semibold">Objetivos</h2>
-                <p className="mt-2 text-slate-600 whitespace-pre-line">{version.objectives}</p>
+                <p className="mt-2 text-[var(--foreground-secondary)] whitespace-pre-line">{version.objectives}</p>
               </section>
             )}
 
@@ -128,7 +121,7 @@ export default async function CursoDetalhePage({
                         {(Array.isArray(mod.lessons) ? mod.lessons : [])
                           ?.sort((a, b) => a.id.localeCompare(b.id))
                           .map((lesson, j) => (
-                            <li key={lesson.id} className="flex justify-between text-sm text-slate-600">
+                            <li key={lesson.id} className="flex justify-between text-sm text-[var(--foreground-secondary)]">
                               <span>{j + 1}. {lesson.title}</span>
                               <span>{lesson.duration_minutes} min</span>
                             </li>
@@ -146,11 +139,11 @@ export default async function CursoDetalhePage({
               <CardContent className="space-y-4 p-6">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Nível</span>
+                    <span className="text-[var(--muted)]">Nível</span>
                     <span>{COURSE_LEVEL_LABELS[version.level]}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Carga horária</span>
+                    <span className="text-[var(--muted)]">Carga horária</span>
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {Math.round(version.workload_minutes / 60)}h
@@ -158,13 +151,13 @@ export default async function CursoDetalhePage({
                   </div>
                   {version.certificate_enabled && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Certificado</span>
+                      <span className="text-[var(--muted)]">Certificado</span>
                       <span>Sim</span>
                     </div>
                   )}
                   {enrollment && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Seu progresso</span>
+                      <span className="text-[var(--muted)]">Seu progresso</span>
                       <span>{enrollment.progress_percentage}%</span>
                     </div>
                   )}
@@ -180,7 +173,6 @@ export default async function CursoDetalhePage({
             </Card>
           </div>
         </div>
-      </div>
-    </PlatformShell>
+    </div>
   );
 }

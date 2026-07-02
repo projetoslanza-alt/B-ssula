@@ -104,7 +104,7 @@ export function CourseContentBuilder({
   return (
     <div className="space-y-6">
       {error && (
-        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300" role="alert">
           {error}
         </p>
       )}
@@ -122,7 +122,7 @@ export function CourseContentBuilder({
       </div>
 
       {modules.length === 0 ? (
-        <p className="text-sm text-slate-500">Nenhum módulo criado. Comece adicionando o primeiro módulo.</p>
+        <p className="text-sm text-[var(--muted)]">Nenhum módulo criado. Comece adicionando o primeiro módulo.</p>
       ) : (
         modules.map((mod, modIndex) => (
           <ModuleEditor
@@ -204,9 +204,9 @@ function ModuleEditor({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white">
-      <div className="flex items-center gap-2 border-b border-slate-100 p-4">
-        <GripVertical className="h-4 w-4 text-slate-300" aria-hidden />
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)]">
+      <div className="flex items-center gap-2 border-b border-[var(--border-soft)] p-4">
+        <GripVertical className="h-4 w-4 text-[var(--foreground-muted)]" aria-hidden />
         <button
           type="button"
           onClick={() => setOpen(!open)}
@@ -331,9 +331,9 @@ function LessonEditor({
   }
 
   return (
-    <div className="ml-4 rounded-lg border border-slate-100 bg-slate-50 p-4">
+    <div className="ml-4 rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-slate-700">
+        <span className="text-sm font-medium text-[var(--foreground-secondary)]">
           Aula {lessonIndex + 1}
         </span>
         <Input
@@ -453,9 +453,9 @@ function ContentEditor({
   }
 
   return (
-    <div className="mb-2 rounded border border-slate-200 bg-white p-3">
+    <div className="mb-2 rounded border border-[var(--border)] bg-[var(--panel)] p-3">
       <div className="mb-2 flex items-center gap-2">
-        <span className="text-xs uppercase text-slate-400">{content.content_type}</span>
+        <span className="text-xs uppercase text-[var(--foreground-muted)]">{content.content_type}</span>
         <Input className="h-8 flex-1 text-sm" value={title} onChange={(e) => setTitle(e.target.value)} />
         <Button type="button" size="sm" variant="ghost" onClick={onMoveUp} disabled={contentIndex === 0} aria-label="Mover conteúdo para cima">
           <ChevronUp className="h-3 w-3" />
@@ -470,7 +470,7 @@ function ContentEditor({
 
       {content.content_type === "text" && (
         <textarea
-          className="mb-2 w-full rounded border border-slate-200 p-2 text-sm"
+          className="field mb-2 w-full text-sm"
           rows={4}
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -501,7 +501,7 @@ function ContentEditor({
             aria-label="Enviar arquivo"
           />
           {content.file_path && (
-            <p className="mt-1 text-xs text-slate-500">Arquivo: {content.file_path}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Arquivo: {content.file_path}</p>
           )}
         </div>
       )}

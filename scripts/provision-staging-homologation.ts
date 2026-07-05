@@ -1,7 +1,10 @@
 #!/usr/bin/env npx tsx
 /** Fixture QA homologação — matrícula Gestor Norte com certificado demo */
 import { createClient } from "@supabase/supabase-js";
+import { assertQaScriptNotInProduction } from "./lib/production-guard";
 import { loadCloudEnv } from "./qa-env";
+
+assertQaScriptNotInProduction();
 import { SALES_COURSE_CONFIG } from "./data/sales-course-assessments";
 import { TENANTS } from "./qa-fixtures";
 

@@ -1,8 +1,11 @@
 #!/usr/bin/env npx tsx
 /** Grupos Master, Gerente, SDR, Closer + permissões operacionais por tenant */
 import { createClient } from "@supabase/supabase-js";
+import { assertQaScriptNotInProduction } from "./lib/production-guard";
 import { loadCloudEnv } from "./qa-env";
 import { TENANTS } from "./qa-fixtures";
+
+assertQaScriptNotInProduction();
 
 const GROUPS = [
   {

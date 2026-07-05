@@ -1,4 +1,23 @@
 import { platformRoutes as r } from "@/lib/routes";
+import { env } from "@/lib/env";
+
+/** Itens de menu ocultos em produção (rotas placeholder ou não prontas para go-live). */
+export const PRODUCTION_HIDDEN_NAV_HREFS: ReadonlySet<string> = new Set([
+  r.admin.organization,
+  r.admin.teams,
+  r.admin.units,
+  r.admin.positions,
+  r.admin.roles,
+  r.admin.customFields,
+  r.admin.automations,
+  r.admin.integrations,
+  r.admin.settings,
+  r.support.categories,
+  r.support.sla,
+  r.support.knowledge,
+  r.support.settings,
+  r.reports.operations,
+]);
 
 export type NavItem = {
   href: string;
@@ -141,11 +160,29 @@ export function canSeeNavItem(item: NavItem | PlatformModule, permissions: strin
 }
 
 export function filterNavItems(items: NavItem[], permissions: string[]): NavItem[] {
-  return items.filter((item) => canSeeNavItem(item, permissions));
+  const visible = items.filter((item) => canSeeNavItem(item, permissions));
+  return filterNavItemsForEnvironment(visible);
+}
+
+function filterNavItemsForEnvironment(items: NavItem[]): NavItem[] {
+  if (env.APP_ENV !== "production") return items;
+  return items.filter((item) => !PRODUCTION_HIDDEN_NAV_HREFS.has(item.href.split("?")[0]));
 }
 
 export function filterModules(permissions: string[]): PlatformModule[] {
-  return PLATFORM_MODULES.filter((mod) => canSeeNavItem(mod, permissions));
+  return filterModulesForEnvironment(
+    PLATFORM_MODULES.filter((mod) => canSeeNavItem(mod, permissions)),
+  );
+}
+
+export function filterModulesForEnvironment(modules: PlatformModule[]): PlatformModule[] {
+  if (env.APP_ENV !== "production") return modules;
+  return modules
+    .map((mod) => ({
+      ...mod,
+      items: filterNavItemsForEnvironment(mod.items),
+    }))
+    .filter((mod) => !PRODUCTION_HIDDEN_NAV_HREFS.has(mod.href.split("?")[0]));
 }
 
 export function detectModuleFromPath(pathname: string): PlatformModule | undefined {

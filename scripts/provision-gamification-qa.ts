@@ -1,8 +1,11 @@
 #!/usr/bin/env npx tsx
 /** Campanhas, ranking, missões, conquistas e prêmios QA para homologação */
 import { createClient } from "@supabase/supabase-js";
+import { assertQaScriptNotInProduction } from "./lib/production-guard";
 import { loadCloudEnv } from "./qa-env";
 import { provisionGamificationData } from "./qa-data/gamification";
+
+assertQaScriptNotInProduction();
 
 async function main() {
   const env = loadCloudEnv();

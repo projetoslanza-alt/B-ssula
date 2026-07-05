@@ -9,7 +9,10 @@ import { createReadStream, existsSync, mkdirSync, readdirSync, statSync, unlinkS
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { assertQaScriptNotInProduction } from "./lib/production-guard";
 import { loadCloudEnv } from "./qa-env";
+
+assertQaScriptNotInProduction();
 import { SALES_COURSE_CONFIG, VIDEO_LESSON_MAPPING } from "./data/sales-course-assessments";
 import {
   downloadPublicDriveFile,

@@ -5,6 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { QA_BLOCK_MESSAGE } from "./lib/production-guard";
 import { loadCloudEnv, loadLocalSupabaseEnv } from "./qa-env";
 import { provisionCrmData } from "./qa-data/crm";
 import { provisionCrmActivities, provisionNewsData } from "./qa-data/news";
@@ -66,6 +67,13 @@ function parseArgs(): Args {
     confirmProductionQa: has("--confirm-production-qa"),
     confirmProductionCleanup: has("--confirm-production-cleanup"),
   };
+}
+
+function guardQaBlockedInProduction(args: Args) {
+  if (process.env.APP_ENV !== "production") return;
+  if (args.environment === "production" && (args.disable || args.delete || args.confirmProductionQa)) return;
+  console.error(QA_BLOCK_MESSAGE);
+  process.exit(1);
 }
 
 function guardProduction(args: Args) {
@@ -711,6 +719,7 @@ function mapUsersForEnvironment(env: Environment): UserFixture[] {
 
 async function main() {
   const args = parseArgs();
+  guardQaBlockedInProduction(args);
   guardProduction(args);
   guardStaging(args);
 

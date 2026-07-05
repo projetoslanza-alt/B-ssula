@@ -11,6 +11,9 @@ import { execSync } from "node:child_process";
 import { writeFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { assertQaScriptNotInProduction } from "./lib/production-guard";
+
+assertQaScriptNotInProduction();
 
 type AdminDb = SupabaseClient;
 

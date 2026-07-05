@@ -6,7 +6,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { assertQaScriptNotInProduction } from "./lib/production-guard";
 import { loadCloudEnv } from "./qa-env";
+
+assertQaScriptNotInProduction();
 import { TENANTS } from "./qa-fixtures";
 import {
   SALES_COURSE_ASSESSMENTS,

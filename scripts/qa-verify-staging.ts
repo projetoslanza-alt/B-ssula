@@ -4,7 +4,10 @@
  * Não imprime senhas ou tokens.
  */
 import { createClient } from "@supabase/supabase-js";
+import { assertQaScriptNotInProduction } from "./lib/production-guard";
 import { loadCloudEnv } from "./qa-env";
+
+assertQaScriptNotInProduction();
 import { TENANTS } from "./qa-fixtures";
 
 type CheckResult = { ok: boolean; message: string };

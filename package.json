@@ -37,6 +37,10 @@
     "staging:fixtures": "tsx scripts/provision-staging-fixtures.ts",
     "rbac:management": "tsx scripts/apply-management-rbac.ts",
     "course:import-videos:dry": "tsx scripts/import-learning-videos.ts --dry-run --environment=staging",
+    "production:check": "tsx scripts/production-check.ts",
+    "production:access-groups": "tsx scripts/production/provision-production-access-groups.ts",
+    "production:organization": "tsx scripts/production/bootstrap-production-organization.ts",
+    "test:e2e:production-smoke": "node scripts/run-e2e-production-smoke.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

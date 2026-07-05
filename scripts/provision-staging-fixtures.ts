@@ -5,7 +5,10 @@
  */
 import { execSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
+import { assertQaScriptNotInProduction } from "./lib/production-guard";
 import { loadCloudEnv } from "./qa-env";
+
+assertQaScriptNotInProduction();
 import { TENANTS } from "./qa-fixtures";
 import { provisionLearningSupplementary } from "./qa-data/learning";
 import { provisionPlatformSupplementary } from "./qa-data/platform";
@@ -38,6 +41,10 @@ async function provisionTenantSupplementary(
 }
 
 async function main() {
+  if (process.env.APP_ENV === "production") {
+    console.error("Este script não pode ser executado em produção.");
+    process.exit(1);
+  }
   if (process.env.APP_ENV !== "staging") {
     console.error("provision-staging-fixtures requer APP_ENV=staging");
     process.exit(1);

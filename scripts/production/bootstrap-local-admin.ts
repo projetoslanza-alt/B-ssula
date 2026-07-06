@@ -3,10 +3,10 @@
  * Bootstrap do admin local (PostgreSQL + auth local).
  * npm run bootstrap:local-admin
  */
-import { query, withTransaction } from "../../src/lib/db/pool";
+import { scriptQuery as query, withScriptTransaction as withTransaction } from "../lib/script-pool";
 import { assertProductionOnly, requireEnv } from "../lib/production-guard";
-import { createLocalUserWithPassword } from "../../src/modules/core/auth/local/auth-service";
-import { assertStrongPassword } from "../../src/modules/core/auth/local/password";
+import { createLocalUserWithPassword } from "../lib/script-auth";
+import { assertStrongPassword } from "../../src/modules/core/auth/local/password-core";
 
 const ORG_ADMIN_ROLE_ID = "00000000-0000-0000-0000-000000000006";
 const STUDENT_ROLE_ID = "00000000-0000-0000-0000-000000000001";

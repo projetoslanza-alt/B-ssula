@@ -4,12 +4,9 @@ const isProductionRun =
   process.env.APP_ENV === "production" &&
   process.env.PRODUCTION_SMOKE_CONFIRMATION === "RODAR_SMOKE_PRODUCAO";
 
-const QA_READY = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    process.env.PRODUCTION_SMOKE_ADMIN_EMAIL &&
-    process.env.PRODUCTION_SMOKE_ADMIN_PASSWORD,
-);
+import { isE2eStackReady } from "./helpers/stack";
+
+const QA_READY = isE2eStackReady();
 
 async function adminLogin(page: Page) {
   const email = process.env.PRODUCTION_SMOKE_ADMIN_EMAIL!;

@@ -7,9 +7,9 @@ const REFERENCE_HTML = path.resolve("docs/design/bussola-dark-executive-gamifica
 const DESKTOP = { width: 1280, height: 800 };
 const MOBILE = { width: 390, height: 844 };
 
-const QA_READY = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-);
+import { isE2eStackReady } from "./helpers/stack";
+
+const QA_READY = isE2eStackReady();
 
 const APP_ROUTES = [
   "/inicio",

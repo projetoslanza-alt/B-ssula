@@ -16,10 +16,13 @@ export async function switchTenantAction(tenantId: string) {
     }
 
     const supabase = await createClient();
-    const { error } = await supabase.from("user_organization_context").upsert({
-      user_id: session.userId,
-      active_tenant_id: tenantId,
-    });
+    const { error } = await supabase.from("user_organization_context").upsert(
+      {
+        user_id: session.userId,
+        active_tenant_id: tenantId,
+      },
+      { onConflict: "user_id" },
+    );
 
     if (error) {
       return { error: "Não foi possível trocar a organização." };

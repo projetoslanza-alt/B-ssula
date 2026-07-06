@@ -6,6 +6,7 @@
 
 ALTER TYPE support_ticket_status ADD VALUE IF NOT EXISTS 'blocked';
 ALTER TYPE support_ticket_status ADD VALUE IF NOT EXISTS 'waiting_validation';
+ALTER TYPE support_ticket_status ADD VALUE IF NOT EXISTS 'archived';
 
 CREATE TABLE IF NOT EXISTS support_kanban_columns (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS support_kanban_transitions (
   from_column_id UUID NOT NULL REFERENCES support_kanban_columns(id) ON DELETE CASCADE,
   to_column_id UUID NOT NULL REFERENCES support_kanban_columns(id) ON DELETE CASCADE,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  rules JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (tenant_id, from_column_id, to_column_id)
 );

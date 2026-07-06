@@ -79,14 +79,7 @@ WHERE r.code = 'platform_admin'
 ON CONFLICT DO NOTHING;
 
 -- source: 20250702140000_access_groups_media_status.sql
--- Grupos de acesso comerciais (Master, Gerente, SDR, Closer) e status de mídia
-
-ALTER TABLE learning_media_assets
-  ADD COLUMN IF NOT EXISTS media_status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (media_status IN ('pending', 'pending_external_storage', 'uploading', 'ready', 'failed')),
-  ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS is_test_data BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS environment TEXT NOT NULL DEFAULT 'staging';
+-- Grupos de acesso comerciais (Master, Gerente, SDR, Closer)
 
 CREATE TABLE IF NOT EXISTS access_groups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -107,7 +100,10 @@ CREATE TABLE IF NOT EXISTS access_group_permissions (
   tenant_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   group_id UUID NOT NULL REFERENCES access_groups(id) ON DELETE CASCADE,
   permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
-  
+  granted BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (group_id, permission_id)
+);
 
 CREATE TABLE IF NOT EXISTS membership_access_groups (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -140,12 +136,8 @@ INSERT INTO permissions (code, name, module) VALUES
   ('support.ticket.archive', 'Arquivar e reativar chamados', 'support')
 ON CONFLICT (code) DO NOTHING;
 
--- Gestão pode atualizar status de membership sem platform.users.manage completo
-DROP POLICY IF EXISTS memberships_manage ON organization_memberships;
-
-
--- Status arquivado para chamados
-ALTER TYPE support_ticket_status ADD VALUE IF NOT EXISTS 'archived';
+-- Gestão pode atualizar status de membership
+-- (RLS removido — autorização no servidor)
 
 -- fixture_key para notificações e auditoria QA
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS fixture_key TEXT;
@@ -172,9 +164,5 @@ WHERE r.code = 'manager' AND p.code IN (
 )
 ON CONFLICT DO NOTHING;
 
--- Master/Gestão podem ler perfis do tenant para listagem de usuários
-DROP POLICY IF EXISTS profiles_select_tenant_admin ON profiles;
-
-
 -- Papéis de membership visíveis para quem administra usuários
-DROP POLICY IF EXISTS membership_roles_admin_read ON membership_roles;
+-- (RLS removido)

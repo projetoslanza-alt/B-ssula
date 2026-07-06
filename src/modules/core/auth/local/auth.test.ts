@@ -1,14 +1,16 @@
+/** @vitest-environment node */
 import { describe, expect, it } from "vitest";
-import { assertStrongPassword, hashPassword, verifyPassword } from "@/modules/core/auth/local/password";
+import { assertStrongPassword, hashPassword, verifyPassword } from "@/modules/core/auth/local/password-core";
 
 describe("local password", () => {
   it("rejeita senha fraca", () => {
     expect(() => assertStrongPassword("abc")).toThrow();
+    expect(() => assertStrongPassword("Bussola@123")).toThrow();
   });
 
   it("hash e verifica senha com pepper", async () => {
-    const hash = await hashPassword("SenhaForte123", "pepper-teste-local");
-    const ok = await verifyPassword("SenhaForte123", hash, "pepper-teste-local");
+    const hash = await hashPassword("SenhaForte1234", "pepper-teste-local");
+    const ok = await verifyPassword("SenhaForte1234", hash, "pepper-teste-local");
     expect(ok).toBe(true);
   });
 });

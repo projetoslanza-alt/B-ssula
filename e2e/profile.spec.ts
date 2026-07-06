@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { login, QA_USERS, qaPassword } from "./helpers/auth";
 
-const QA_READY = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-);
+import { isE2eStackReady } from "./helpers/stack";
+
+const QA_READY = isE2eStackReady();
 
 test.describe("Perfil", () => {
   test.skip(!QA_READY, "Requer Supabase configurado");

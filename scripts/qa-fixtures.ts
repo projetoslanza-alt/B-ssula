@@ -12,7 +12,7 @@ export const ROLE_IDS = {
 
 export type RoleCode = keyof typeof ROLE_IDS;
 
-export const LOCAL_PASSWORD = "Bussola@123";
+export const LOCAL_PASSWORD = "Bussola@1234";
 
 export const TENANTS = {
   north: {

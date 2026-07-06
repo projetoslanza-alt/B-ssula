@@ -245,6 +245,7 @@ export function GuidedTicketWizard({ categories, permissions }: { categories: Ca
                 <button
                   key={cat.id}
                   type="button"
+                  aria-label={cat.name}
                   onClick={() => { setCategoryId(cat.id); setSubcategoryId(""); }}
                   className={cn("rounded-xl border p-4 text-left transition", categoryId === cat.id ? "border-sky-500/50 bg-sky-500/10" : "border-[var(--border)] hover:border-sky-500/30")}
                 >

@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { QA_USERS, qaPassword } from "./helpers/auth";
 
-const hasSupabase = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-);
+import { isE2eStackReady } from "./helpers/stack";
+
+const hasSupabase = isE2eStackReady();
 
 const adminEmail = process.env.TEST_ADMIN_A_EMAIL ?? QA_USERS.adminNorth;
 const adminPassword = process.env.TEST_ADMIN_A_PASSWORD ?? qaPassword("user.admin.north");

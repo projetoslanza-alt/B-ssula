@@ -304,7 +304,7 @@ CREATE TABLE one_on_one_action_plans (
   priority crm_priority NOT NULL DEFAULT 'medium',
   status one_on_one_action_status NOT NULL DEFAULT 'pending',
   origin TEXT,
-  related_course_id UUID REFERENCES courses(id) ON DELETE SET NULL,
+  related_course_id UUID,
   related_indicator TEXT,
   fixture_key TEXT,
   is_test_data BOOLEAN NOT NULL DEFAULT false,

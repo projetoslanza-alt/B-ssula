@@ -47,6 +47,17 @@ AS $$
       AND om.tenant_id = user_active_tenant_id()
       AND om.status = 'active'
       AND p.code = p_code
+  )
+  OR EXISTS (
+    SELECT 1
+    FROM organization_memberships om
+    JOIN membership_access_groups mag ON mag.membership_id = om.id
+    JOIN access_group_permissions agp ON agp.group_id = mag.group_id AND agp.granted = true
+    JOIN permissions p ON p.id = agp.permission_id
+    WHERE om.user_id = NULL::uuid
+      AND om.tenant_id = user_active_tenant_id()
+      AND om.status = 'active'
+      AND p.code = p_code
   );
 $$;
 
@@ -339,3 +350,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_courses_fixture_key
 
 COMMENT ON COLUMN profiles.fixture_key IS 'Chave estável para fixtures de QA (ex: aluno.norte)';
 COMMENT ON COLUMN organizations.fixture_key IS 'Chave estável do tenant de teste (ex: tenant.north)';
+
+DO $$ BEGIN
+  ALTER TABLE one_on_one_action_plans
+    ADD CONSTRAINT fk_one_on_one_action_plans_course
+    FOREIGN KEY (related_course_id) REFERENCES courses(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

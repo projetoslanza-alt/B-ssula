@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /** Grupos Master/Gerente/SDR/Closer via PostgreSQL local */
-import { query } from "../../src/lib/db/pool";
+import { scriptQuery as query } from "../lib/script-pool";
 import { ACCESS_GROUP_DEFINITIONS } from "../lib/access-group-definitions";
 import { assertProductionOnly, requireEnv } from "../lib/production-guard";
 

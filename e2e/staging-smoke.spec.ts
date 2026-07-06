@@ -2,9 +2,9 @@ import { test, expect, type Page } from "@playwright/test";
 import { QA_USERS, qaPassword, login } from "./helpers/auth";
 
 const isStagingRun = process.env.PLAYWRIGHT_BASE_URL?.includes("bussola-staging") ?? false;
-const QA_READY = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-);
+import { isE2eStackReady } from "./helpers/stack";
+
+const QA_READY = isE2eStackReady();
 
 async function adminLogin(page: Page) {
   await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));

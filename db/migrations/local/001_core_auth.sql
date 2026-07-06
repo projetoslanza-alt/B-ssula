@@ -9,35 +9,12 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Enums
-CREATE TYPE membership_status AS ENUM ('active', 'invited', 'suspended', 'removed');
-CREATE TYPE organization_status AS ENUM ('active', 'suspended', 'archived');
+DO $$ BEGIN CREATE TYPE membership_status AS ENUM ('active', 'invited', 'suspended', 'removed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE organization_status AS ENUM ('active', 'suspended', 'archived');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Organizações
-CREATE TABLE organizations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  status organization_status NOT NULL DEFAULT 'active',
-  timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
-  logo_url TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_by UUID REFERENCES profiles(id),
-  updated_by UUID REFERENCES profiles(id)
-);
-
-CREATE TABLE organization_settings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
-  terms_required BOOLEAN NOT NULL DEFAULT false,
-  terms_url TEXT,
-  default_locale TEXT NOT NULL DEFAULT 'pt-BR',
-  settings JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Perfis (espelho de auth.users)
+-- Perfis primeiro (organizations referencia profiles)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL,
@@ -50,8 +27,33 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Organizações
+CREATE TABLE IF NOT EXISTS organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  status organization_status NOT NULL DEFAULT 'active',
+  timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
+  logo_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by UUID REFERENCES profiles(id),
+  updated_by UUID REFERENCES profiles(id)
+);
+
+CREATE TABLE IF NOT EXISTS organization_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
+  terms_required BOOLEAN NOT NULL DEFAULT false,
+  terms_url TEXT,
+  default_locale TEXT NOT NULL DEFAULT 'pt-BR',
+  settings JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Estrutura organizacional
-CREATE TABLE units (
+CREATE TABLE IF NOT EXISTS units (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,

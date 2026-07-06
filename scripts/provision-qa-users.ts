@@ -5,12 +5,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createLocalAdminClient } from "./lib/local-admin-client";
 import { QA_BLOCK_MESSAGE } from "./lib/production-guard";
 import { loadCloudEnv, loadLocalSupabaseEnv } from "./qa-env";
 import { provisionCrmData } from "./qa-data/crm";
 import { provisionCrmActivities, provisionNewsData } from "./qa-data/news";
 import { provisionOneOnOneData } from "./qa-data/one-on-one";
 import { provisionSupportData } from "./qa-data/tickets";
+import { provisionQaAccessGroups } from "./qa-data/access-groups";
 import {
   ROLE_IDS,
   LOCAL_PASSWORD,
@@ -723,10 +725,20 @@ async function main() {
   guardProduction(args);
   guardStaging(args);
 
-  const envConfig = args.environment === "local" ? loadLocalSupabaseEnv() : loadCloudEnv();
-  const admin = createClient(envConfig.url, envConfig.serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  }) as AdminDb;
+  const useLocalPostgres =
+    process.env.DATABASE_PROVIDER === "local_postgres" && process.env.AUTH_PROVIDER === "local";
+  const envConfig = useLocalPostgres
+    ? null
+    : args.environment === "local"
+      ? loadLocalSupabaseEnv()
+      : loadCloudEnv();
+  const admin = (
+    useLocalPostgres
+      ? createLocalAdminClient()
+      : createClient(envConfig!.url, envConfig!.serviceKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+  ) as AdminDb;
 
   if (args.list) {
     await listFixtures(admin);
@@ -793,11 +805,12 @@ async function main() {
         await provisionNewsData(admin, tk, owners[0]);
         await provisionOneOnOneData(admin, tk, owners, employees.length ? employees : owners, courses);
         await provisionSupportData(admin, tk, [...userIds.values()]);
+        await provisionQaAccessGroups(admin, tk);
       }
     }
   }
 
-  if (args.environment === "local") {
+  if (args.environment === "local" && envConfig) {
     writeLocalEnv(envConfig.url, envConfig.anonKey, envConfig.serviceKey);
   } else if (credentialRecords.length) {
     writeStagingCredentials(credentialRecords);

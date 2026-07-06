@@ -10,12 +10,3 @@ CREATE TABLE IF NOT EXISTS user_ui_preferences (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, tenant_id, pref_key)
 );
-
-
-
-
-
-
-
-ALTER TABLE support_kanban_transitions
-  ADD COLUMN IF NOT EXISTS rules JSONB NOT NULL DEFAULT '{}'::jsonb;

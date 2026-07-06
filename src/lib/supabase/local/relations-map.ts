@@ -11,6 +11,11 @@ export const TABLE_RELATIONS: Record<string, Record<string, RelationDef>> = {
   support_categories: {
     support_subcategories: { foreignKey: "category_id", cardinality: "many" },
   },
+  news_publications: {
+    author: { foreignKey: "author_id", cardinality: "one" },
+    news_publication_teams: { foreignKey: "publication_id", cardinality: "many" },
+    news_publication_groups: { foreignKey: "publication_id", cardinality: "many" },
+  },
   support_tickets: {
     profiles: { foreignKey: "requester_id", cardinality: "one" },
     requester: { foreignKey: "requester_id", cardinality: "one" },
@@ -18,6 +23,20 @@ export const TABLE_RELATIONS: Record<string, Record<string, RelationDef>> = {
     support_categories: { foreignKey: "category_id", cardinality: "one" },
     teams: { foreignKey: "team_id", cardinality: "one" },
     support_kanban_columns: { foreignKey: "kanban_column_id", cardinality: "one" },
+    support_subcategories: { foreignKey: "subcategory_id", cardinality: "one" },
+    support_ticket_messages: { foreignKey: "ticket_id", cardinality: "many" },
+    support_ticket_attachments: { foreignKey: "ticket_id", cardinality: "many" },
+    support_ticket_history: { foreignKey: "ticket_id", cardinality: "many" },
+  },
+  support_ticket_messages: {
+    author: { foreignKey: "created_by", cardinality: "one" },
+    profiles: { foreignKey: "created_by", cardinality: "one" },
+  },
+  support_knowledge_articles: {
+    support_categories: { foreignKey: "category_id", cardinality: "one" },
+  },
+  support_subcategories: {
+    support_categories: { foreignKey: "category_id", cardinality: "one" },
   },
   organization_memberships: {
     profiles: { foreignKey: "user_id", cardinality: "one" },
@@ -41,7 +60,7 @@ export const TABLE_RELATIONS: Record<string, Record<string, RelationDef>> = {
     permissions: { foreignKey: "permission_id", cardinality: "one" },
   },
   courses: {
-    course_versions: { foreignKey: "course_id", cardinality: "many" },
+    course_versions: { foreignKey: "current_version_id", cardinality: "one" },
     learning_categories: { foreignKey: "category_id", cardinality: "one" },
   },
   course_versions: {
@@ -68,21 +87,21 @@ export const TABLE_RELATIONS: Record<string, Record<string, RelationDef>> = {
     one_on_one_meeting_insights: { foreignKey: "meeting_id", cardinality: "many" },
     profiles: { foreignKey: "participant_id", cardinality: "one" },
   },
-  news_publications: {
-    news_publication_teams: { foreignKey: "publication_id", cardinality: "many" },
-    news_publication_groups: { foreignKey: "publication_id", cardinality: "many" },
-  },
   gamification_campaigns: {
     gamification_campaign_participants: { foreignKey: "campaign_id", cardinality: "many" },
   },
+  audit_events: {
+    profiles: { foreignKey: "actor_id", cardinality: "one" },
+  },
   gamification_missions: {
+    gamification_campaigns: { foreignKey: "campaign_id", cardinality: "one" },
     gamification_mission_progress: { foreignKey: "mission_id", cardinality: "many" },
   },
 };
 
 /** Alias comum requester/assignee → profiles */
 export function resolveRelationTable(parentTable: string, embedName: string): string {
-  if (embedName === "requester" || embedName === "assignee") return "profiles";
+  if (embedName === "requester" || embedName === "assignee" || embedName === "author") return "profiles";
   return embedName;
 }
 
@@ -95,8 +114,8 @@ export function resolveForeignKey(
   if (rel) return rel.foreignKey;
 
   // Heurística: child.tenant_id ou child.{parent_singular}_id
-  if (childTable === "profiles" && (embedName === "requester" || embedName === "assignee")) {
-    return `${embedName}_id`;
+  if (childTable === "profiles" && (embedName === "requester" || embedName === "assignee" || embedName === "author")) {
+    return `${embedName === "author" ? "author" : embedName}_id`;
   }
   const singular = parentTable.replace(/s$/, "");
   return `${singular}_id`;

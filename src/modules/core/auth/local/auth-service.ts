@@ -55,14 +55,28 @@ export async function createLocalUserWithPassword(input: {
   const passwordHash = await hashPassword(input.password, pepper);
 
   return withTransaction(async (client) => {
-    const profile = await client.query<{ id: string }>(
-      `INSERT INTO profiles (id, email, full_name, status)
-       VALUES (gen_random_uuid(), $1, $2, $3)
-       ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name
-       RETURNING id`,
-      [input.email.toLowerCase(), input.fullName, input.status ?? "active"],
+    const normalizedEmail = input.email.toLowerCase();
+    const existing = await client.query<{ id: string }>(
+      `SELECT id FROM profiles WHERE lower(email) = $1 LIMIT 1`,
+      [normalizedEmail],
     );
-    const userId = profile.rows[0]?.id;
+
+    let userId = existing.rows[0]?.id;
+    if (userId) {
+      await client.query(
+        `UPDATE profiles SET full_name = $2, status = $3, updated_at = now() WHERE id = $1`,
+        [userId, input.fullName, input.status ?? "active"],
+      );
+    } else {
+      const profile = await client.query<{ id: string }>(
+        `INSERT INTO profiles (id, email, full_name, status)
+         VALUES (gen_random_uuid(), $1, $2, $3)
+         RETURNING id`,
+        [normalizedEmail, input.fullName, input.status ?? "active"],
+      );
+      userId = profile.rows[0]?.id;
+    }
+
     if (!userId) throw new Error("Falha ao criar perfil.");
 
     await client.query(

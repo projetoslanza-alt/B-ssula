@@ -366,7 +366,11 @@ CREATE TABLE certificates (
   validation_code TEXT NOT NULL UNIQUE,
   issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ,
-  status TEXT NOT NULL DEFAULT 'valid' CHECK (status IN ('valid', '
+  status TEXT NOT NULL DEFAULT 'valid' CHECK (status IN ('valid', 'revoked', 'expired')),
+  file_url TEXT,
+  template_id UUID REFERENCES certificate_templates(id),
+  UNIQUE (tenant_id, user_id, course_id, course_version_id)
+);
 
 CREATE TABLE learning_action_links (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -881,11 +885,9 @@ ALTER TABLE certificates ADD COLUMN IF NOT EXISTS file_path TEXT;
 ALTER TABLE certificates ADD COLUMN IF NOT EXISTS checksum_sha256 TEXT;
 ALTER TABLE certificates ADD COLUMN IF NOT EXISTS qr_code_url TEXT;
 ALTER TABLE certificates ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE certificates ADD COLUMN IF NOT EXISTS 
-ALTER TABLE certificates ADD COLUMN IF NOT EXISTS 
-ALTER TABLE certificates ADD COLUMN IF NOT EXISTS 
-
--- Buckets dedicados
+ALTER TABLE certificates ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;
+ALTER TABLE certificates ADD COLUMN IF NOT EXISTS revoked_by UUID REFERENCES profiles(id);
+ALTER TABLE certificates ADD COLUMN IF NOT EXISTS revoke_reason TEXT;
 
 -- Permissões adicionais
 INSERT INTO permissions (code, name, module, description) VALUES
@@ -899,7 +901,13 @@ INSERT INTO permissions (code, name, module, description) VALUES
   ('learning.certificate.view_team', 'Ver certificados da equipe', 'learning', 'Visualizar certificados da equipe'),
   ('learning.certificate.view_all', 'Ver todos certificados', 'learning', 'Visualizar certificados do tenant'),
   ('learning.certificate.issue', 'Emitir certificados', 'learning', 'Emitir certificados autorizados'),
-  ('learning.certificate.
+  ('learning.certificate.revoke', 'Revogar certificados', 'learning', 'Revogar certificados'),
+  ('learning.certificate.template_manage', 'Gerenciar modelos', 'learning', 'Gerenciar templates de certificado'),
+  ('learning.course.assign_instructor', 'Atribuir professor', 'learning', 'Definir professor do curso'),
+  ('learning.enrollment.manage', 'Gerenciar matrículas', 'learning', 'Matricular e gerenciar alunos'),
+  ('profile.view_own', 'Ver próprio perfil', 'core', 'Visualizar perfil próprio'),
+  ('profile.update_own', 'Atualizar próprio perfil', 'core', 'Atualizar dados pessoais')
+ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
@@ -1102,7 +1110,8 @@ BEGIN
   IF NOT FOUND THEN
     RETURN jsonb_build_object('status', 'not_found');
   END IF;
-  IF v_cert.status = '
+  IF v_cert.status = 'revoked' THEN
+    RETURN jsonb_build_object('status', 'revoked');
   END IF;
   IF v_cert.expires_at IS NOT NULL AND v_cert.expires_at < now() THEN
     RETURN jsonb_build_object('status', 'expired', 'certificate', jsonb_build_object(

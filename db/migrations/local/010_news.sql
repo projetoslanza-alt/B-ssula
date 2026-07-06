@@ -97,7 +97,13 @@ AS $$
     SELECT 1
     FROM organization_memberships om
     JOIN membership_access_groups mag ON mag.membership_id = om.id
-    JOIN access_group_permissions agp ON agp.group_id = mag.group_id AND agp.
+    JOIN access_group_permissions agp ON agp.group_id = mag.group_id AND agp.granted = true
+    JOIN permissions p ON p.id = agp.permission_id
+    WHERE om.user_id = NULL::uuid
+      AND om.tenant_id = user_active_tenant_id()
+      AND om.status = 'active'
+      AND p.code = p_code
+  );
 $$;
 
 CREATE OR REPLACE FUNCTION user_can_view_news(p_pub news_publications)

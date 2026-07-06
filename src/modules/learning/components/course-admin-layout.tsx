@@ -31,7 +31,8 @@ export async function CourseAdminLayout({
     data = await loadCourseForAdmin(courseId, session.tenantId);
   }
 
-  if (!data?.version || !data.editableVersionId) notFound();
+  if (!data?.version) notFound();
+  if (!data.editableVersionId && currentTab !== "preview") notFound();
 
   const version = data.version as {
     title: string;

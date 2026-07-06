@@ -19,6 +19,7 @@ export default async function PreviewCursoPage({
   if (!data?.version) redirect("/universidade/admin/cursos");
 
   const supabase = await createClient();
+  const previewVersionId = data.editableVersionId || data.publishedVersion?.id || data.version.id;
   const { data: modules } = await supabase
     .from("course_modules")
     .select(`
@@ -28,7 +29,7 @@ export default async function PreviewCursoPage({
         lesson_contents ( id, content_type, title, content, external_url, file_url, sort_order )
       )
     `)
-    .eq("course_version_id", data.editableVersionId)
+    .eq("course_version_id", previewVersionId)
     .order("sort_order");
 
   return (

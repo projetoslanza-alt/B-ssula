@@ -29,6 +29,9 @@ export async function localAuthMiddleware(request: NextRequest): Promise<NextRes
 
   if (!session) {
     if (isPublic) return NextResponse.next();
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

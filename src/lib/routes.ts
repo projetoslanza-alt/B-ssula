@@ -60,6 +60,7 @@ export const platformRoutes = {
     team: "/universidade/equipe",
     reports: "/universidade/relatorios",
     adminCourses: "/universidade/admin/cursos",
+    adminAssessments: "/universidade/admin/avaliacoes",
     adminAssessmentResults: "/universidade/admin/avaliacoes/resultados",
     learn: (courseId: string) => `/universidade/curso/${courseId}/aprender`,
   },

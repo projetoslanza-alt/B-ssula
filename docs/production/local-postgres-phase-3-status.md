@@ -1,10 +1,10 @@
 # Fase 3 — Status PostgreSQL local Windows
 
-**Branch:** `feat/local-postgres-windows-production-phase-3`  
+**Branch:** `main` (+ `fix/final-local-production-screen-audit`)  
 **Última validação:** 2026-07-06  
 **Ambiente:** PostgreSQL real em Docker (`bussola-pg-validation`, porta 5434) + Next.js `npm run start` porta 3099
 
-> **Não** instalado no servidor Windows. **Não** mergeado na main. **Não** é go-live publicado.
+> **Não** instalado no servidor Windows. **Não** é go-live publicado.
 
 ---
 
@@ -17,9 +17,13 @@
 | Grupos de acesso (`production:local-access-groups`) | OK |
 | Storage local (upload/download/segurança) | OK |
 | Smoke manual 20 passos | OK (passo 7 = OBSERVAÇÃO) |
-| Checks automatizados | OK |
+| Auditoria telas/rotas (Fase 4) | **38/38 rotas OK** — ver `final-screen-route-audit.md` |
+| Universidade / Avaliações resultados | **Corrigido** (`course_versions.title`, não `courses.title`) |
+| E2E completo (`test:e2e:local-postgres`) | **Não repetido** nesta auditoria |
+| Visual (`test:visual`) | **Não repetido** nesta auditoria |
+| Checks automatizados (pré-commit) | OK |
 | Documentação runbook/checklist | OK |
-| Deploy servidor Windows | Pendente |
+| Deploy servidor Windows | **Pendente** — próximo passo após merge |
 
 ---
 
@@ -28,7 +32,9 @@
 | Commit | Descrição |
 |--------|-----------|
 | `2875dfa` | test: validate local postgres runtime and e2e |
-| *(próximo)* | docs: finalize local postgres smoke and production runbook |
+| `8c43636` | docs: finalize local postgres smoke and production runbook |
+| `2097c18` | chore: exclude local test artifacts from repository |
+| *(esta branch)* | fix: audit local postgres routes and assessments |
 
 ---
 
@@ -78,7 +84,20 @@ Relatório: `.local/smoke-manual-report.json` (gitignored)
 
 ---
 
-## Checks automatizados (baseline `2875dfa` + pós-correção middleware)
+## Smoke E2E de rotas (auditoria 2026-07-06)
+
+| Item | Resultado |
+|------|-----------|
+| `npm run test:e2e:local-postgres:routes` | **38/38** (~34s) |
+| `PLAYWRIGHT_SKIP_WEBSERVER` | `"1"` = servidor manual; outro valor = gerenciado |
+| `/api/health` | OK (`local` / `local_postgres` / `local`) |
+| Bug `/universidade/admin/avaliacoes/resultados` | Corrigido — `course_versions.title` |
+| `npm run test:e2e:local-postgres` | **Não repetido** |
+| `npm run test:visual` | **Não repetido** |
+
+---
+
+## Checks automatizados (baseline + auditoria 2026-07-06)
 
 | Comando | Resultado |
 |---------|-----------|
@@ -89,8 +108,9 @@ Relatório: `.local/smoke-manual-report.json` (gitignored)
 | `npm run build` | OK |
 | `npm run production:check -- --strict` | OK |
 | `npm run assert:no-supabase-local` | OK |
-| `npm run test:e2e:local-postgres` | 100 passed |
-| `npm run test:visual` | 23 passed |
+| `npm run test:e2e:local-postgres:routes` | **38/38** (auditoria) |
+| `npm run test:e2e:local-postgres` | 100 passed (baseline `2875dfa`; **não repetido** na auditoria) |
+| `npm run test:visual` | 23 passed (baseline; **não repetido** na auditoria) |
 | `npx playwright test e2e/smoke-manual-local-postgres.spec.ts` | 1 passed |
 
 ---
@@ -109,13 +129,14 @@ Relatório: `.local/smoke-manual-report.json` (gitignored)
 
 ## Próximos passos
 
-1. Merge da branch após revisão do PR.
-2. Tutorial de instalação no servidor Windows (PostgreSQL nativo, NSSM, Caddy).
+1. **Merge** da branch `fix/final-local-production-screen-audit` na `main`.
+2. **Instalação** no servidor Windows (PostgreSQL nativo, NSSM, Caddy).
 3. Repetir smoke manual 20 passos no servidor.
-4. Agendar backups e testar restore.
+4. Repetir `test:e2e:local-postgres:routes` no servidor (opcional).
+5. Agendar backups e testar restore.
 
 ---
 
 ## Veredito
 
-**PRONTO PARA MERGE DA PRODUÇÃO LOCAL** — smoke e storage validados em localhost com PostgreSQL real; pendente apenas validação no servidor Windows.
+**PRONTO PARA MERGE E INSTALAÇÃO NO SERVIDOR WINDOWS** — smoke de rotas 38/38, bug de avaliações corrigido, checks pré-commit OK; E2E completo e visual **não** repetidos nesta auditoria; pendente instalação e smoke no servidor real.

@@ -54,6 +54,18 @@ describe("buildSelectClause", () => {
     expect(sql).not.toContain("support_categories.category_id");
   });
 
+  it("gera embed learning_assessment_attempts com profiles e assessments", () => {
+    const spec = `
+      id,
+      profiles!learning_assessment_attempts_user_id_fkey ( full_name, email ),
+      assessments ( title, course_versions ( courses ( id, title ) ) )
+    `;
+    const sql = buildSelectClause("learning_assessment_attempts", parseSelectSpec(spec));
+    expect(sql).toContain("AS profiles");
+    expect(sql).toContain("learning_assessment_attempts.user_id");
+    expect(sql).toContain("AS assessments");
+  });
+
   it("gera requester e assignee em tickets", () => {
     const spec = `
       id,

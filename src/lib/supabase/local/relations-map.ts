@@ -68,8 +68,18 @@ export const TABLE_RELATIONS: Record<string, Record<string, RelationDef>> = {
   },
   course_enrollments: {
     courses: { foreignKey: "course_id", cardinality: "one" },
-    course_versions: { foreignKey: "version_id", cardinality: "one" },
+    course_versions: { foreignKey: "course_version_id", cardinality: "one" },
     profiles: { foreignKey: "user_id", cardinality: "one" },
+  },
+  learning_assessment_questions: {
+    learning_assessment_options: { foreignKey: "question_id", cardinality: "many" },
+  },
+  learning_assessment_attempts: {
+    profiles: { foreignKey: "user_id", cardinality: "one" },
+    assessments: { foreignKey: "assessment_id", cardinality: "one" },
+  },
+  assessments: {
+    course_versions: { foreignKey: "course_version_id", cardinality: "one" },
   },
   course_modules: {
     lessons: { foreignKey: "module_id", cardinality: "many" },

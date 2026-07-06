@@ -49,6 +49,7 @@
     "assert:no-supabase-local": "tsx scripts/assert-no-supabase-local.ts",
     "qa:setup:local-postgres": "tsx scripts/qa-setup-local-postgres.ts",
     "test:e2e:local-postgres": "node scripts/run-e2e-local-postgres.mjs",
+    "test:e2e:local-postgres:routes": "node scripts/run-e2e-local-postgres.mjs test e2e/local-postgres-routes.spec.ts --retries=0",
     "test:e2e:production-smoke": "node scripts/run-e2e-production-smoke.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

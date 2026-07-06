@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { unwrapRelation } from "@/lib/supabase/relations";
+import { getDatabaseProvider } from "@/lib/providers";
 import type { SessionContext } from "@/modules/core/auth/session";
 import { hasPermission } from "@/modules/core/auth/session";
+import { listAssessmentResultsLocal } from "@/modules/learning/queries/assessment-results-local";
 
 export type AssessmentResultRow = {
   id: string;
@@ -35,6 +37,10 @@ export async function listAssessmentResults(
   session: SessionContext,
   filters: AssessmentResultFilters = {},
 ): Promise<AssessmentResultRow[]> {
+  if (getDatabaseProvider() === "local_postgres") {
+    return listAssessmentResultsLocal(session, filters);
+  }
+
   const supabase = await createClient();
 
   const canViewAll = hasPermission(session, "learning.assessment.results.view_all");
@@ -56,7 +62,7 @@ export async function listAssessmentResults(
       submitted_at,
       user_id,
       assessment_id,
-      profiles!learning_assessment_attempts_user_id_fkey ( full_name, email, team_id, teams ( name ) ),
+      profiles!learning_assessment_attempts_user_id_fkey ( full_name, email ),
       assessments ( title, passing_score, course_versions ( courses ( id, title ) ) )
     `)
     .eq("tenant_id", session.tenantId)
@@ -67,11 +73,11 @@ export async function listAssessmentResults(
   if (!canViewAll) {
     if (canViewTeam && session.teamId) {
       const { data: teamMembers } = await supabase
-        .from("profiles")
-        .select("id")
+        .from("organization_memberships")
+        .select("user_id")
         .eq("tenant_id", session.tenantId)
         .eq("team_id", session.teamId);
-      const ids = (teamMembers ?? []).map((m) => m.id);
+      const ids = (teamMembers ?? []).map((m) => m.user_id);
       if (ids.length === 0) return [];
       query = query.in("user_id", ids);
     } else {
@@ -90,8 +96,7 @@ export async function listAssessmentResults(
   if (error) throw error;
 
   const rows = (data ?? []).map((row) => {
-    const profile = unwrapRelation(row.profiles as { full_name?: string; email?: string; teams?: { name?: string } } | null);
-    const team = unwrapRelation(profile?.teams as { name?: string } | null);
+    const profile = unwrapRelation(row.profiles as { full_name?: string; email?: string } | null);
     const assessment = unwrapRelation(row.assessments as {
       title?: string;
       passing_score?: number;
@@ -114,7 +119,7 @@ export async function listAssessmentResults(
       id: row.id,
       userName: profile?.full_name ?? profile?.email ?? "Usuário",
       userEmail: profile?.email ?? null,
-      teamName: team?.name ?? null,
+      teamName: null,
       courseTitle: course?.title ?? null,
       courseId: course?.id ?? null,
       assessmentTitle: assessment?.title ?? "Avaliação",

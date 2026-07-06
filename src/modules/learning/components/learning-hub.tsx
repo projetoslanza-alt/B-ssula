@@ -41,6 +41,8 @@ type LearningHubProps = {
   catalog: CatalogCourse[];
   paths: PathRow[];
   continueStudying: EnrollmentContinue[];
+  assessmentsHref: string;
+  assessmentsLabel: string;
 };
 
 function courseTitle(enrollment: EnrollmentContinue) {
@@ -60,6 +62,8 @@ export function LearningHub({
   catalog,
   paths,
   continueStudying,
+  assessmentsHref,
+  assessmentsLabel,
 }: LearningHubProps) {
   const mandatory = catalog.filter((c) => c.mandatory);
 
@@ -197,7 +201,7 @@ export function LearningHub({
               Disponível após conclusão das aulas · Nota mínima: 7.0
             </p>
             <Button asChild>
-              <Link href={platformRoutes.learning.adminAssessmentResults}>Ver avaliações</Link>
+              <Link href={assessmentsHref}>{assessmentsLabel}</Link>
             </Button>
           </CardContent>
         </Card>

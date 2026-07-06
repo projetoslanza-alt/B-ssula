@@ -58,11 +58,16 @@ export default defineConfig({
     : {
         webServer: {
           command: isCiE2e
-            ? "npm run build && npx next start --port 3099"
+            ? "npx next start --port 3099"
             : "npm run dev",
-          url: isCiE2e ? "http://localhost:3099/login" : "http://localhost:3000/api/health",
+          url: isCiE2e ? "http://localhost:3099/api/health" : "http://localhost:3000/api/health",
           reuseExistingServer: !isCiE2e,
           timeout: 300_000,
+          env: {
+            ...(process.env as Record<string, string>),
+            PORT: isCiE2e ? "3099" : (process.env.PORT ?? "3000"),
+            NODE_ENV: "production",
+          },
         },
       }),
 });

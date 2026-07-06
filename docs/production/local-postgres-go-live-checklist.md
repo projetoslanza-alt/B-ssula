@@ -83,16 +83,17 @@ Legenda:
 
 - [V] `npm run typecheck`
 - [V] `npm run lint`
-- [V] `npm run test` (86/86)
+- [V] `npm run test` (86/86 baseline)
 - [V] `npm run test:authz:local` (7/7)
-- [V] `npm run test:e2e:local-postgres` (100)
-- [V] `npm run test:visual` (23)
+- [V] `npm run test:e2e:local-postgres:routes` (**38/38**, auditoria 2026-07-06)
+- [V] `npm run test:e2e:local-postgres` (100 — baseline `2875dfa`; **não repetido** na auditoria)
+- [V] `npm run test:visual` (23 — baseline; **não repetido** na auditoria)
 
 ## Funcional (módulos)
 
 - [V] Chamados (wizard, anexo, kanban)
 - [V] Conversa de Norte + relatório
-- [V] Universidade (catálogo + admin cursos)
+- [V] Universidade (catálogo + admin cursos + **resultados avaliações** — `course_versions.title`)
 - [V] News
 - [V] Administração (usuários, grupos, auditoria)
 - [V] Gamificação (E2E + visual com massa QA)
@@ -103,5 +104,8 @@ Legenda:
 - [V] Smoke manual local aprovado
 - [V] Storage local validado
 - [V] Runbook atualizado
+- [V] Smoke E2E de rotas 38/38 (`test:e2e:local-postgres:routes`)
+- [V] Bug `/universidade/admin/avaliacoes/resultados` corrigido
 - [ ] PR revisado
-- [ ] Smoke repetido no servidor (pós-tutorial de instalação)
+- [ ] Smoke repetido no servidor (pós-instalação Windows)
+- [ ] Servidor Windows **não instalado** ainda — próximo passo após merge

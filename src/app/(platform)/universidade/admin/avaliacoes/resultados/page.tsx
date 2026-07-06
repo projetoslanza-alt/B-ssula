@@ -1,17 +1,22 @@
 import Link from "next/link";
-import { requirePagePermission } from "@/lib/auth/page-guard";
+import { requireAnyPermission } from "@/lib/auth/page-guard";
 import { PageHeader } from "@/components/platform/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/platform/status-badge";
 import { listAssessmentResults } from "@/modules/learning/queries/assessment-results";
 import { platformRoutes } from "@/lib/routes";
+import { hasAnyPermission } from "@/modules/core/auth/session";
 
 export default async function AssessmentResultsAdminPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requirePagePermission("learning.assessment.results.view_own");
+  const session = await requireAnyPermission([
+    "learning.assessment.results.view_own",
+    "learning.assessment.results.view_team",
+    "learning.assessment.results.view_all",
+  ]);
   const params = await searchParams;
   const get = (k: string) => {
     const v = params[k];
@@ -27,6 +32,15 @@ export default async function AssessmentResultsAdminPage({
     minScore: get("minScore") ? Number(get("minScore")) : undefined,
     maxScore: get("maxScore") ? Number(get("maxScore")) : undefined,
   });
+
+  const backHref = hasAnyPermission(session, [
+    "learning.assessment.manage",
+    "learning.assessment.results.view_team",
+    "learning.assessment.results.view_all",
+  ])
+    ? platformRoutes.learning.adminAssessments
+    : `${platformRoutes.learning.root}?tab=avaliacoes`;
+  const backLabel = backHref.includes("admin") ? "Voltar às avaliações" : "Voltar à universidade";
 
   const buildHref = (overrides: Record<string, string>) => {
     const qs = new URLSearchParams();
@@ -44,8 +58,8 @@ export default async function AssessmentResultsAdminPage({
         title="Resultados das avaliações"
         subtitle="Universidade — Administração"
         description="Notas, tentativas e certificados por usuário, curso e equipe."
-        backHref={platformRoutes.learning.adminCourses}
-        backLabel="Voltar aos cursos"
+        backHref={backHref}
+        backLabel={backLabel}
       />
 
       <div className="flex flex-wrap gap-2">

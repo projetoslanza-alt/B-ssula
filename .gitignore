@@ -44,6 +44,8 @@ yarn-error.log*
 # credenciais QA (nunca versionar)
 .local/
 *.credentials.json
+*.dump
+*.backup
 
 # vercel
 .vercel

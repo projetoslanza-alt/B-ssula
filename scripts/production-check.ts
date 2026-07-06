@@ -132,12 +132,24 @@ function checkStrictEnv() {
   const isLocal = authProvider === "local" && process.env.DATABASE_PROVIDER === "local_postgres";
 
   if (isLocal) {
-    for (const key of ["DATABASE_URL", "AUTH_SECRET", "SESSION_SECRET", "PASSWORD_PEPPER", "STORAGE_LOCAL_PATH"]) {
+    for (const key of [
+      "AUTH_PROVIDER",
+      "DATABASE_PROVIDER",
+      "STORAGE_DRIVER",
+      "DATABASE_URL",
+      "AUTH_SECRET",
+      "SESSION_SECRET",
+      "PASSWORD_PEPPER",
+      "STORAGE_LOCAL_PATH",
+      "NEXT_PUBLIC_APP_URL",
+    ]) {
       if (!process.env[key]?.trim()) fail(`Variável local obrigatória ausente: ${key}`);
     }
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      warn("Variáveis Supabase presentes em stack local — remover em produção local.");
-    }
+    if (process.env.AUTH_PROVIDER !== "local") fail("AUTH_PROVIDER deve ser local.");
+    if (process.env.DATABASE_PROVIDER !== "local_postgres") fail("DATABASE_PROVIDER deve ser local_postgres.");
+    if (process.env.STORAGE_DRIVER !== "local") fail("STORAGE_DRIVER deve ser local.");
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) fail("NEXT_PUBLIC_SUPABASE_URL não deve existir em produção local.");
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) fail("SUPABASE_SERVICE_ROLE_KEY não deve existir em produção local.");
     return;
   }
 

@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Json } from "@/types/database";
+import { isLocalProductionStack } from "@/lib/providers";
+import { insertAuditEvent } from "@/server/db";
 
 type AuditInput = {
   tenantId?: string | null;
@@ -13,9 +13,18 @@ type AuditInput = {
 };
 
 export async function recordAuditEvent(
-  supabase: SupabaseClient,
+  _supabase: unknown,
   input: AuditInput,
 ): Promise<void> {
+  if (isLocalProductionStack()) {
+    await insertAuditEvent(input);
+    return;
+  }
+
+  const supabase = _supabase as {
+    from: (table: string) => { insert: (row: Record<string, unknown>) => PromiseLike<unknown> };
+  };
+
   await supabase.from("audit_events").insert({
     tenant_id: input.tenantId ?? null,
     actor_id: input.actorId ?? null,
@@ -23,7 +32,7 @@ export async function recordAuditEvent(
     action: input.action,
     entity_type: input.entityType,
     entity_id: input.entityId ?? null,
-    metadata: (input.metadata ?? {}) as Json,
+    metadata: input.metadata ?? {},
     origin: input.origin ?? "web",
   });
 }

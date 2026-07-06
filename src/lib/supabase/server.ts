@@ -1,8 +1,16 @@
+import "server-only";
 import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
+import { isLocalProductionStack } from "@/lib/providers";
+import { createLocalServerClient } from "@/lib/supabase/local/client";
 
-export async function createClient() {
+export async function createClient(): Promise<SupabaseClient> {
+  if (isLocalProductionStack()) {
+    return (await createLocalServerClient()) as unknown as SupabaseClient;
+  }
+
   const cookieStore = await cookies();
 
   return createServerClient(

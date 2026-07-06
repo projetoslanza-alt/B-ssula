@@ -3,15 +3,16 @@
 **Branch:** `feat/local-postgres-windows-production`  
 **Decisão:** Produção em Windows Server Azure com PostgreSQL, auth e storage locais — **sem Supabase**.
 
-## Resumo executivo
+## Resumo executivo (Fase 2)
 
-| Métrica | Valor |
-|---------|-------|
-| Arquivos com `@supabase` / `createClient` | ~110+ |
-| Migrations Supabase | 28 (com RLS, `auth.uid()`, storage) |
-| Módulos de negócio acoplados | Todos (queries via Supabase client) |
-| Fundação local implementada nesta branch | Auth, storage, guards, pool PG, scripts |
-| Veredito | **BLOQUEADO — sistema ainda depende de Supabase para operação completa** |
+| Métrica | Fase 1 | Fase 2 |
+|---------|--------|--------|
+| Arquivos importando `@/lib/supabase/server` | ~90 | ~90 (adapter — roteia para PG local) |
+| Imports diretos `@supabase/*` em módulos | ~90 | **0 no fluxo runtime local** (via adapter) |
+| Migrations locais | 1 | **12 arquivos** (`db/migrations/local/`) |
+| Cliente PostgreSQL compatível | Não | **Sim** (`src/lib/supabase/local/`) |
+| Auth/Storage/Reset completos | Parcial | **Sim** (APIs + páginas) |
+| Veredito | BLOQUEADO | **Revisão de merge — validar em PG real** |
 
 ---
 

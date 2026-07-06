@@ -43,6 +43,10 @@
     "production:local-access-groups": "tsx scripts/production/provision-local-access-groups.ts",
     "bootstrap:local-admin": "tsx scripts/production/bootstrap-local-admin.ts",
     "db:migrate:local-prod": "tsx scripts/db-migrate-local-prod.ts",
+    "test:authz:local": "vitest run src/modules/core/auth/local/authz-local.test.ts",
+    "assert:no-supabase-local": "tsx scripts/assert-no-supabase-local.ts",
+    "qa:setup:local-postgres": "tsx scripts/qa-setup-local-postgres.ts",
+    "test:e2e:local-postgres": "node scripts/run-e2e-local-postgres.mjs",
     "test:e2e:production-smoke": "node scripts/run-e2e-production-smoke.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

@@ -23,8 +23,12 @@ export function SignOutButton({
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      await supabase.auth.signOut({ scope: "global" });
+      const useLocalAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "local";
+
+      if (!useLocalAuth) {
+        const supabase = createClient();
+        await supabase.auth.signOut({ scope: "global" });
+      }
 
       const res = await fetch("/api/auth/signout", {
         method: "POST",

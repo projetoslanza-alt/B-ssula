@@ -1,18 +1,24 @@
 import "server-only";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseJsClient, type SupabaseClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { requireServiceRoleKey } from "@/lib/env.server";
+import { isLocalProductionStack } from "@/lib/providers";
+import { createLocalAdminClient } from "@/lib/supabase/local/client";
 
 /**
  * Cliente administrativo — usar APENAS em bootstrap e manutenção controlada.
- * Nunca importar em Client Components ou fluxos CRUD normais.
+ * Em stack local, delega para PostgreSQL direto (sem Supabase service role).
  */
-export function createAdminClient() {
+export function createAdminClient(): SupabaseClient {
+  if (isLocalProductionStack()) {
+    return createLocalAdminClient() as unknown as SupabaseClient;
+  }
+
   if (!env.NEXT_PUBLIC_SUPABASE_URL) {
     throw new Error("Supabase URL não configurada.");
   }
 
-  return createClient(
+  return createSupabaseJsClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     requireServiceRoleKey(),
     { auth: { autoRefreshToken: false, persistSession: false } },

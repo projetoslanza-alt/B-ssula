@@ -8,6 +8,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
   APP_ENV: appEnvSchema.default("development"),
   AUTH_PROVIDER: z.enum(["supabase", "local"]).default("supabase"),
+  NEXT_PUBLIC_AUTH_PROVIDER: z.enum(["supabase", "local"]).optional(),
 });
 
 const parsed = envSchema.safeParse({
@@ -16,6 +17,7 @@ const parsed = envSchema.safeParse({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   APP_ENV: process.env.APP_ENV,
   AUTH_PROVIDER: process.env.AUTH_PROVIDER ?? process.env.NEXT_PUBLIC_AUTH_PROVIDER,
+  NEXT_PUBLIC_AUTH_PROVIDER: process.env.NEXT_PUBLIC_AUTH_PROVIDER ?? process.env.AUTH_PROVIDER,
 });
 
 if (!parsed.success && process.env.NODE_ENV !== "test") {

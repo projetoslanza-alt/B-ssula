@@ -25,6 +25,27 @@ const APP_ROUTES = [
   "/notificacoes",
 ] as const;
 
+/** Regiões com dados de CRM/QA variáveis — mascaradas para regressão de layout, não de números. */
+async function dynamicScreenshotMasks(
+  page: import("@playwright/test").Page,
+  route: string,
+): Promise<import("@playwright/test").Locator[]> {
+  if (route === "/dashboards") {
+    return [page.locator(".space-y-8 > section"), page.locator(".chart-card")];
+  }
+  return [];
+}
+
+async function stabilizeRoute(page: import("@playwright/test").Page, route: string) {
+  if (route === "/gamificacao") {
+    await expect(page.getByRole("heading", { name: "Gamificação" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("tablist")).toBeVisible({ timeout: 10_000 });
+  }
+  if (route === "/dashboards") {
+    await expect(page.getByRole("heading", { name: "Dashboards" })).toBeVisible({ timeout: 20_000 });
+  }
+}
+
 test.describe("Regressão visual — referência Dark Executive", () => {
   test.beforeAll(() => {
     expect(existsSync(REFERENCE_HTML), `HTML de referência em ${REFERENCE_HTML}`).toBeTruthy();
@@ -50,11 +71,14 @@ test.describe("Regressão visual — referência Dark Executive", () => {
       await page.goto(route);
       await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
       await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 20_000 });
+      await stabilizeRoute(page, route);
       await page.evaluate(() => document.fonts.ready);
       const slug = route.replace(/\//g, "-").replace(/^-/, "") || "root";
+      const mask = await dynamicScreenshotMasks(page, route);
       await expect(page).toHaveScreenshot(`${slug}-desktop.png`, {
         maxDiffPixelRatio: 0.02,
         fullPage: false,
+        mask,
       });
     });
 
@@ -67,11 +91,14 @@ test.describe("Regressão visual — referência Dark Executive", () => {
       await page.goto(route);
       await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
       await expect(page.locator(".dark-executive-app")).toBeVisible({ timeout: 20_000 });
+      await stabilizeRoute(page, route);
       await page.evaluate(() => document.fonts.ready);
       const slug = route.replace(/\//g, "-").replace(/^-/, "") || "root";
+      const mask = await dynamicScreenshotMasks(page, route);
       await expect(page).toHaveScreenshot(`${slug}-mobile.png`, {
         maxDiffPixelRatio: 0.08,
         fullPage: false,
+        mask,
       });
     });
   }

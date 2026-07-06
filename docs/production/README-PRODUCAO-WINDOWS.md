@@ -3,7 +3,8 @@
 **Para:** Guilherme (operador do servidor)  
 **Objetivo:** Subir a Bússola em produção econômica usando Windows Server Azure + Supabase.
 
-> Este guia **não faz deploy automaticamente**. Siga as fases na ordem.
+> Este guia **não faz deploy automaticamente**. Siga as fases na ordem.  
+> **Plano de produção:** Windows Server Azure + Supabase. A Vercel foi usada apenas em homologação/staging — não é o caminho desta produção.
 
 ---
 

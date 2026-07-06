@@ -30,7 +30,7 @@ function assertFile(path: string, label?: string) {
   }
 }
 
-function checkDangerousArtifacts() {
+function checkGitignore() {
   const gitignore = readText(".gitignore");
   for (const pattern of [".env", ".env.local", ".env.production", ".local/"]) {
     if (!gitignore.includes(pattern.replace(/\*$/, ""))) {

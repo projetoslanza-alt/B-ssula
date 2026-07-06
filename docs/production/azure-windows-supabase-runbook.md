@@ -2,6 +2,9 @@
 
 Guia completo para subir a Bússola em produção econômica.
 
+> **Produção alvo:** Windows Server Azure + Supabase Cloud.  
+> Vercel permanece apenas como histórico de homologação/staging — não use Vercel Production para este go-live.
+
 ## Arquitetura
 
 ```

@@ -1,10 +1,9 @@
 # Bússola — Guia de Produção no Windows Server
 
-**Para:** Guilherme (operador do servidor)  
-**Objetivo:** Subir a Bússola em produção econômica usando Windows Server Azure + Supabase.
+**Arquitetura atual aprovada:** Windows Server Azure com **PostgreSQL local**, auth local, storage local — **sem Supabase**.
 
-> Este guia **não faz deploy automaticamente**. Siga as fases na ordem.  
-> **Plano de produção:** Windows Server Azure + Supabase. A Vercel foi usada apenas em homologação/staging — não é o caminho desta produção.
+> Runbook Supabase (legado/homologação): `azure-windows-supabase-runbook.md`  
+> Runbook produção local: `local-windows-postgres-runbook.md`
 
 ---
 

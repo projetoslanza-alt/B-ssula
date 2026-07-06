@@ -69,6 +69,9 @@ function checkProductionDocs() {
     "docs/production/env.production.example",
     "docs/production/go-live-checklist.md",
     "docs/production/production-readiness-audit.md",
+    "docs/production/local-postgres-migration-audit.md",
+    "docs/production/env.local-postgres.production.example",
+    "docs/production/local-windows-postgres-runbook.md",
   ];
   for (const doc of docs) assertFile(doc);
 }
@@ -80,6 +83,9 @@ function checkProductionScripts() {
     "scripts/production/bootstrap-production-admin.ps1",
     "scripts/production/bootstrap-production-organization.ps1",
     "scripts/production/provision-production-access-groups.ts",
+    "scripts/production/bootstrap-local-admin.ts",
+    "scripts/production/provision-local-access-groups.ts",
+    "scripts/db-migrate-local-prod.ts",
   ];
   for (const s of scripts) assertFile(s);
 }
@@ -120,6 +126,19 @@ function checkNavigationProductionFilter() {
 function checkStrictEnv() {
   if (process.env.APP_ENV !== "production") {
     fail("APP_ENV deve ser production (modo --strict).");
+  }
+
+  const authProvider = process.env.AUTH_PROVIDER ?? "supabase";
+  const isLocal = authProvider === "local" && process.env.DATABASE_PROVIDER === "local_postgres";
+
+  if (isLocal) {
+    for (const key of ["DATABASE_URL", "AUTH_SECRET", "SESSION_SECRET", "PASSWORD_PEPPER", "STORAGE_LOCAL_PATH"]) {
+      if (!process.env[key]?.trim()) fail(`Variável local obrigatória ausente: ${key}`);
+    }
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      warn("Variáveis Supabase presentes em stack local — remover em produção local.");
+    }
+    return;
   }
 
   for (const key of [

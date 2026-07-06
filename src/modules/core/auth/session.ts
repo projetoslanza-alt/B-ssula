@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { ForbiddenError, UnauthorizedError } from "@/lib/errors";
+import { getAuthProvider } from "@/lib/providers";
 
-export type OrganizationSummary = {
-  id: string;
+export type OrganizationSummary = {  id: string;
   name: string;
   slug: string;
   status: string;
@@ -107,6 +107,15 @@ async function loadPermissionsForMembership(
 }
 
 export async function getSessionContext(): Promise<SessionContext | null> {
+  if (getAuthProvider() === "local") {
+    const { getSessionTokenFromCookies } = await import("@/modules/core/auth/local/session-cookie");
+    const { resolveLocalSessionUser } = await import("@/modules/core/auth/local/auth-service");
+    const { getLocalSessionContext } = await import("@/modules/core/auth/local/session-context");
+    const token = await getSessionTokenFromCookies();    const user = await resolveLocalSessionUser(token);
+    if (!user) return null;
+    return getLocalSessionContext(user.id);
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

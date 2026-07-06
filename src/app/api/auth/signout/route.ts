@@ -2,7 +2,23 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 
+import { getAuthProvider } from "@/lib/providers";
+import { SESSION_COOKIE, sessionCookieOptions } from "@/modules/core/auth/local/session-cookie";
+import { revokeLocalSession } from "@/modules/core/auth/local/auth-service";
+
 export async function POST(request: NextRequest) {
+  if (getAuthProvider() === "local") {
+    const token = request.cookies.get(SESSION_COOKIE)?.value ?? null;
+    await revokeLocalSession(token);
+
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "reason=logout";
+    const redirectResponse = NextResponse.redirect(loginUrl, { status: 303 });
+    redirectResponse.cookies.set(SESSION_COOKIE, "", { ...sessionCookieOptions(0), maxAge: 0 });
+    return redirectResponse;
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

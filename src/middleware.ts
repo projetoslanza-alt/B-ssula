@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
+import { isLocalAuthEnabled } from "@/lib/auth/middleware-local";
+import { localAuthMiddleware } from "@/middleware.local";
 import { isSafeReturnPath } from "@/lib/navigation-utils";
 import { isPlatformRoute, platformRoutes } from "@/lib/routes";
 
@@ -16,6 +18,10 @@ const PUBLIC_ROUTES = [
 ];
 
 export async function middleware(request: NextRequest) {
+  if (isLocalAuthEnabled()) {
+    return localAuthMiddleware(request);
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {

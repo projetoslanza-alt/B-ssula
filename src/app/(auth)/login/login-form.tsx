@@ -43,6 +43,24 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
 
+    const useLocalAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "local";
+
+    if (useLocalAuth) {
+      const res = await fetch("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        setError("E-mail ou senha incorretos.");
+        setLoading(false);
+        return;
+      }
+      router.push(redirect);
+      router.refresh();
+      return;
+    }
+
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,

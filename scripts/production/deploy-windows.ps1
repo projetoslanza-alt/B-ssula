@@ -64,7 +64,25 @@ try {
     Invoke-Step "npm run test:rls" { npm run test:rls }
     Invoke-Step "npm run build" { npm run build }
 
-    Write-Log "ℹ Rodar migrations antes do deploy conforme runbook (não automatizado neste script)."
+    $authProvider = $env:AUTH_PROVIDER
+    $dbProvider = $env:DATABASE_PROVIDER
+    if (-not $authProvider -and (Test-Path ".env.production")) {
+        $envLines = Get-Content ".env.production" -ErrorAction SilentlyContinue
+        foreach ($line in $envLines) {
+            if ($line -match '^\s*AUTH_PROVIDER\s*=\s*(.+)\s*$') { $authProvider = $Matches[1].Trim().Trim('"').Trim("'") }
+            if ($line -match '^\s*DATABASE_PROVIDER\s*=\s*(.+)\s*$') { $dbProvider = $Matches[1].Trim().Trim('"').Trim("'") }
+        }
+    }
+
+    if ($dbProvider -eq "local_postgres") {
+        Invoke-Step "npm run db:migrate:local-prod" { npm run db:migrate:local-prod }
+    } else {
+        Write-Log "ℹ Stack Supabase: rodar migrations conforme runbook (db push / SQL manual)."
+    }
+
+    if ($authProvider -eq "local") {
+        Invoke-Step "npm run production:check --strict" { npm run production:check -- --strict }
+    }
 
     Invoke-Step "Reiniciar serviço $ServiceName" {
         nssm restart $ServiceName

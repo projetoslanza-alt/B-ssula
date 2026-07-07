@@ -7,6 +7,18 @@ export function isExternalVideoUrl(url: string | null | undefined): url is strin
   return typeof url === "string" && /^https?:\/\//i.test(url.trim());
 }
 
+/** Link de pasta compartilhada do Drive — não é embutível como vídeo individual. */
+export function isGoogleDriveFolderUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /drive\.google\.com\/drive\/folders\//i.test(url.trim());
+}
+
+export function normalizeLessonVideoUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (isGoogleDriveFolderUrl(trimmed)) return trimmed;
+  return toVideoEmbedUrl(trimmed) ?? trimmed;
+}
+
 export function toVideoEmbedUrl(rawUrl: string | null | undefined): string | null {
   if (!isExternalVideoUrl(rawUrl)) return null;
   const url = rawUrl.trim();

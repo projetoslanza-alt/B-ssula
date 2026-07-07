@@ -28,20 +28,56 @@ export default async function CursoDetalhePage({
       slug,
       is_global,
       current_version_id,
-      course_versions!fk_courses_current_version (
-        id, title, description, objectives, target_audience,
-        level, workload_minutes, cover_url, status, certificate_enabled
-      ),
       learning_categories ( name )
     `)
     .eq("slug", cursoSlug)
-    .single();
+    .maybeSingle();
 
   if (!course) notFound();
 
-  const version = unwrapRelation(course.course_versions);
+  const VERSION_FIELDS =
+    "id, title, description, objectives, target_audience, level, workload_minutes, cover_url, status, certificate_enabled";
 
-  if (!version || version.status !== "published") notFound();
+  type CourseVersionDetail = {
+    id: string;
+    title: string;
+    description: string | null;
+    objectives: string | null;
+    target_audience: string | null;
+    level: string;
+    workload_minutes: number;
+    cover_url: string | null;
+    status: string;
+    certificate_enabled: boolean;
+  };
+
+  // Resolve a versão publicada: prioriza current_version_id, com fallback para a
+  // última versão publicada do curso. Mantém a tela alinhada ao catálogo, que
+  // lista pela versão publicada (não depende de current_version_id estar consistente).
+  let version: CourseVersionDetail | null = null;
+
+  if (course.current_version_id) {
+    const { data } = await supabase
+      .from("course_versions")
+      .select(VERSION_FIELDS)
+      .eq("id", course.current_version_id)
+      .eq("status", "published")
+      .maybeSingle();
+    version = (data as CourseVersionDetail | null) ?? null;
+  }
+
+  if (!version) {
+    const { data } = await supabase
+      .from("course_versions")
+      .select(VERSION_FIELDS)
+      .eq("course_id", course.id)
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(1);
+    version = unwrapRelation(data as CourseVersionDetail[] | CourseVersionDetail | null);
+  }
+
+  if (!version) notFound();
 
   const { data: modules } = await supabase
     .from("course_modules")

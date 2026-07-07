@@ -101,6 +101,57 @@ test.describe("Rotas públicas — PostgreSQL local", () => {
   }
 });
 
+test.describe("Universidade — rotas profundas de curso (PostgreSQL local)", () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));
+    await page.waitForURL(/inicio|universidade/, { timeout: 25_000 });
+  });
+
+  test("detalhe do curso abre a partir do catálogo (sem 404)", async ({ page }) => {
+    const response = await page.goto("/universidade/catalogo", { waitUntil: "domcontentloaded" });
+    expect(response?.status() ?? 0).toBeLessThan(400);
+
+    const detailLink = page.locator('a[href^="/universidade/catalogo/"]').first();
+    await expect(detailLink).toBeVisible({ timeout: 15_000 });
+    const href = await detailLink.getAttribute("href");
+    expect(href, "card do catálogo deve ter href de detalhe").toBeTruthy();
+
+    const detailResponse = await page.goto(href!, { waitUntil: "domcontentloaded" });
+    const status = detailResponse?.status() ?? 0;
+    expect(status, `detalhe ${href} não pode ser 404`).not.toBe(404);
+    expect(status).toBeLessThan(500);
+    await expect(page.locator("body")).not.toBeEmpty();
+    // Não deve renderizar a página de "não encontrado"
+    await expect(page.getByText(/rota não encontrada|not found|página não encontrada/i)).toHaveCount(0);
+    // Botão de acesso/começar/continuar presente
+    await expect(
+      page.getByRole("button", { name: /começar curso|acessar curso|continuar curso/i }).first(),
+    ).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("rota /universidade/curso/[id]/aprender não retorna 500", async ({ page }) => {
+    // Descobre um slug de curso pelo catálogo e navega ao detalhe
+    await page.goto("/universidade/catalogo", { waitUntil: "domcontentloaded" });
+    const detailLink = page.locator('a[href^="/universidade/catalogo/"]').first();
+    await expect(detailLink).toBeVisible({ timeout: 15_000 });
+    const href = await detailLink.getAttribute("href");
+    await page.goto(href!, { waitUntil: "domcontentloaded" });
+
+    const startButton = page
+      .getByRole("button", { name: /começar curso|acessar curso|continuar curso/i })
+      .first();
+    await expect(startButton).toBeVisible({ timeout: 15_000 });
+    await startButton.click();
+
+    // Deve navegar para o player (aprender) sem erro de servidor
+    await page.waitForURL(/\/universidade\/curso\/.+\/aprender|\/universidade\/catalogo/, {
+      timeout: 20_000,
+    });
+    await expect(page.locator("body")).not.toBeEmpty();
+    await expect(page.getByText(/rota não encontrada|not found/i)).toHaveCount(0);
+  });
+});
+
 test.describe("Rotas autenticadas — PostgreSQL local", () => {
   test.beforeEach(async ({ page }) => {
     await login(page, QA_USERS.adminNorth, qaPassword("user.admin.north"));

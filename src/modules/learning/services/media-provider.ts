@@ -55,7 +55,7 @@ export const supabaseLearningMediaProvider: LearningMediaProvider = {
     const { data: content } = await supabase
       .from("lesson_contents")
       .select(`
-        id, file_path, metadata, external_url, title,
+        id, file_path, file_url, metadata, external_url, title,
         lessons!inner ( id, course_modules!inner ( course_version_id ) )
       `)
       .eq("id", contentId)
@@ -72,6 +72,18 @@ export const supabaseLearningMediaProvider: LearningMediaProvider = {
     }
 
     const meta = (content.metadata ?? {}) as Record<string, unknown>;
+
+    // Vídeos externos (Google Drive, YouTube, etc.) são servidos diretamente pela URL.
+    const externalUrl =
+      typeof content.external_url === "string" && /^https?:\/\//i.test(content.external_url)
+        ? content.external_url
+        : typeof content.file_url === "string" && /^https?:\/\//i.test(content.file_url)
+          ? content.file_url
+          : null;
+    if (externalUrl) {
+      return { kind: "ready", signedUrl: externalUrl, isDemo: meta.is_demo === true };
+    }
+
     const mediaStatus = contentMediaStatus(meta);
 
     if (mediaStatus === "pending_external_storage" || mediaStatus === "pending") {

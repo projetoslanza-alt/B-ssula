@@ -5,11 +5,14 @@ import { Loader2 } from "lucide-react";
 import { updateVideoProgressAction } from "@/modules/learning/actions/enrollment-actions";
 import { LearningContentPending } from "@/modules/learning/components/learning-content-pending";
 import { formatPercent } from "@/lib/utils";
+import { isExternalVideoUrl, toVideoEmbedUrl } from "@/modules/learning/domain/video-embed";
 
 type LessonContent = {
   id: string;
   content_type: string;
   title: string;
+  external_url?: string | null;
+  file_url?: string | null;
   file_path?: string | null;
   metadata?: Record<string, unknown>;
 };
@@ -100,6 +103,60 @@ function SignedUrlFetcher({ content, enrollmentId, onStateChange }: SignedUrlFet
   return null;
 }
 
+function ExternalVideoProgress({
+  enrollmentId,
+  lessonId,
+  contentId,
+  initialWatchPercent,
+}: {
+  enrollmentId: string;
+  lessonId: string;
+  contentId: string;
+  initialWatchPercent: number;
+}) {
+  const [watchPercent, setWatchPercent] = useState(initialWatchPercent);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const completed = watchPercent >= 100;
+
+  function markWatched() {
+    startTransition(async () => {
+      setError(null);
+      const result = await updateVideoProgressAction({
+        enrollmentId,
+        lessonId,
+        contentId,
+        durationSeconds: 100,
+        currentPositionSeconds: 100,
+        deltaWatchedSeconds: 100,
+      });
+      if (result.error) setError(result.error);
+      else if ("videoPercent" in result && result.videoPercent !== undefined) {
+        setWatchPercent(result.videoPercent);
+      } else {
+        setWatchPercent(100);
+      }
+    });
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 text-xs text-[var(--foreground-muted)]">
+      <span>Progresso do vídeo: {formatPercent(watchPercent)}</span>
+      <div className="flex items-center gap-2">
+        {error && <span className="text-[var(--accent-red)]">{error}</span>}
+        <button
+          type="button"
+          onClick={markWatched}
+          disabled={pending || completed}
+          className="rounded-md border border-[var(--border)] px-3 py-1 text-[var(--primary)] disabled:opacity-60"
+        >
+          {completed ? "Assistido" : pending ? "Salvando..." : "Marcar como assistido"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   enrollmentId: string;
   lessonId: string;
@@ -127,6 +184,11 @@ export function LearningVideoPlayer({
   const [signedUrlState, setSignedUrlState] = useState<SignedUrlState>(IDLE_SIGNED_URL_STATE);
   const onSignedUrlStateChange = useCallback((next: SignedUrlState) => setSignedUrlState(next), []);
   const refresh = useCallback(() => setFetchKey((key) => key + 1), []);
+
+  // Vídeos externos (Google Drive, YouTube, Vimeo) são embutidos via <iframe>,
+  // sem passar pela geração de URL assinada (que é exclusiva de arquivos locais).
+  const externalSource = content.external_url ?? content.file_url ?? null;
+  const embedUrl = isExternalVideoUrl(externalSource) ? toVideoEmbedUrl(externalSource) : null;
 
   const { url, loading, error, pending } = previewMode ? IDLE_SIGNED_URL_STATE : signedUrlState;
 
@@ -191,6 +253,32 @@ export function LearningVideoPlayer({
       video.removeEventListener("error", onError);
     };
   }, [url, initialPositionSeconds, persistProgress, refresh]);
+
+  if (embedUrl) {
+    return (
+      <div className="space-y-3">
+        <div className="aspect-video overflow-hidden rounded-lg bg-black">
+          <iframe
+            key={embedUrl}
+            src={embedUrl}
+            title={content.title}
+            className="h-full w-full"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+        {!previewMode && (
+          <ExternalVideoProgress
+            enrollmentId={enrollmentId}
+            lessonId={lessonId}
+            contentId={content.id}
+            initialWatchPercent={initialWatchPercent}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <>

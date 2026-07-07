@@ -15,7 +15,7 @@ export default async function AprenderPage({
   const { cursoId } = await params;
   const supabase = await createClient();
 
-  const { data: enrollment } = await supabase
+  const { data: enrollments } = await supabase
     .from("course_enrollments")
     .select(`
       id,
@@ -28,14 +28,17 @@ export default async function AprenderPage({
           id, title, sort_order,
           lessons (
             id, title, sort_order, completion_rule, completion_config,
-            lesson_contents ( id, content_type, title, content, external_url, file_path, metadata, sort_order )
+            lesson_contents ( id, content_type, title, content, external_url, file_url, file_path, metadata, sort_order )
           )
         )
       )
     `)
     .eq("user_id", session.userId)
     .eq("course_id", cursoId)
-    .single();
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const enrollment = unwrapRelation(enrollments);
 
   if (!enrollment) {
     redirect(`/universidade/catalogo`);

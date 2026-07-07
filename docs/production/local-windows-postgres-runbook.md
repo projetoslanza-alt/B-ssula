@@ -16,11 +16,24 @@ Este runbook reflete o que foi validado na **Fase 3** em ambiente de desenvolvim
 
 ## 2. Estrutura de pastas
 
+Defina a raiz de instalação com **`BUSSOLA_ROOT`** (recomendado no servidor real: `C:\Bussola`).  
+Os scripts de backup (`backup-local-postgres.ps1`, `backup-local-uploads.ps1`) resolvem a raiz nesta ordem:
+
+1. `$env:BUSSOLA_ROOT` (se existir no disco)
+2. `C:\Bussola`
+3. `D:\Bussola` (fallback legado)
+
 ```
-D:\Bussola\app              # código (clone do repositório)
-D:\Bussola\shared\uploads   # STORAGE_LOCAL_PATH — arquivos privados
-D:\Bussola\shared\logs      # logs NSSM
-D:\Bussola\backups          # pg_dump + cópia de uploads
+%BUSSOLA_ROOT%\app              # código (clone do repositório)
+%BUSSOLA_ROOT%\shared\uploads   # STORAGE_LOCAL_PATH — arquivos privados
+%BUSSOLA_ROOT%\shared\logs      # logs NSSM e backup
+%BUSSOLA_ROOT%\backups          # pg_dump + cópia de uploads
+```
+
+Exemplo no servidor:
+
+```powershell
+[Environment]::SetEnvironmentVariable("BUSSOLA_ROOT", "C:\Bussola", "Machine")
 ```
 
 ## 3. PostgreSQL
@@ -30,7 +43,7 @@ D:\Bussola\backups          # pg_dump + cópia de uploads
 Como superuser `postgres`:
 
 ```powershell
-psql -U postgres -f D:\Bussola\app\scripts\production\init-local-postgres.sql
+psql -U postgres -f C:\Bussola\app\scripts\production\init-local-postgres.sql
 ```
 
 Definir senhas fortes para:
@@ -44,7 +57,7 @@ Definir senhas fortes para:
 ### 3.2 Aplicar migrations
 
 ```powershell
-cd D:\Bussola\app
+cd C:\Bussola\app
 $env:DATABASE_URL="postgresql://bussola_admin:SENHA@localhost:5432/bussola_prod"
 npm run db:migrate:local-prod
 ```
@@ -83,7 +96,8 @@ Copiar `docs/production/env.local-postgres.production.example` → `.env.product
 | `AUTH_SECRET` | ≥ 48 bytes |
 | `SESSION_SECRET` | ≥ 48 bytes |
 | `PASSWORD_PEPPER` | segredo de hash de senha |
-| `STORAGE_LOCAL_PATH` | ex.: `D:\Bussola\shared\uploads` |
+| `STORAGE_LOCAL_PATH` | ex.: `C:\Bussola\shared\uploads` |
+| `BUSSOLA_ROOT` | (opcional) ex.: `C:\Bussola` — usado pelos scripts de backup |
 | `NEXT_PUBLIC_APP_URL` | URL pública HTTPS |
 
 **Não definir:** `NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`.
@@ -161,7 +175,7 @@ Ver guia detalhado: `docs/production/caddy-nssm-windows.md`.
 
 Resumo:
 
-1. **BussolaApp** — `next start -p 3000`, logs em `D:\Bussola\shared\logs\`
+1. **BussolaApp** — `next start -p 3000`, logs em `%BUSSOLA_ROOT%\shared\logs\`
 2. **Caddy** — `reverse_proxy localhost:3000`, TLS automático
 3. Portas **80/443** públicas; **3000** e **5432** apenas localhost
 
@@ -170,6 +184,8 @@ Resumo:
 ## 8. Backup e restore
 
 ```powershell
+# Opcional: fixar raiz (recomendado no servidor)
+$env:BUSSOLA_ROOT = "C:\Bussola"
 .\scripts\production\backup-local-postgres.ps1
 .\scripts\production\backup-local-uploads.ps1
 ```
@@ -177,10 +193,10 @@ Resumo:
 Restore PostgreSQL:
 
 ```powershell
-.\scripts\production\restore-local-postgres.ps1 -DumpFile D:\Bussola\backups\pg-YYYYMMDD.dump
+.\scripts\production\restore-local-postgres.ps1 -DumpFile C:\Bussola\backups\postgres\bussola_prod_YYYYMMDD-HHMMSS.dump
 ```
 
-Copiar `D:\Bussola\backups` para storage externo regularmente. Vídeos e anexos grandes dependem de disco local e deste backup.
+Copiar `%BUSSOLA_ROOT%\backups` para storage externo regularmente. Vídeos e anexos grandes dependem de disco local e deste backup.
 
 ---
 

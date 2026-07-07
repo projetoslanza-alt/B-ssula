@@ -16,6 +16,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  isGoogleDriveFolderUrl,
+  normalizeLessonVideoUrl,
+} from "@/modules/learning/domain/video-embed";
+import {
   createModuleAction,
   createLessonAction,
   createContentAction,
@@ -413,16 +417,32 @@ function ContentEditor({
   const [title, setTitle] = useState(content.title);
   const [body, setBody] = useState(content.content ?? "");
   const [url, setUrl] = useState(content.external_url ?? "");
+  const [urlHint, setUrlHint] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [, startTransition] = useTransition();
 
   function save() {
+    if (content.content_type === "video" && url.trim() && isGoogleDriveFolderUrl(url)) {
+      setUrlHint(
+        "Use o link de cada vídeo individual (drive.google.com/file/d/.../view), não o link da pasta.",
+      );
+      return;
+    }
+    const normalizedUrl =
+      content.content_type === "video" && url.trim()
+        ? normalizeLessonVideoUrl(url)
+        : url.trim() || content.external_url;
+
     startTransition(async () => {
       await updateContentAction(courseId, content.id, {
         title,
         content: content.content_type === "text" ? body : content.content,
-        external_url: ["video", "link"].includes(content.content_type) ? url : content.external_url,
+        external_url: ["video", "link"].includes(content.content_type) ? normalizedUrl : content.external_url,
+        ...(content.content_type === "video" && normalizedUrl
+          ? { file_url: normalizedUrl, metadata: { provider: "google_drive" } }
+          : {}),
       });
+      setUrlHint(null);
       onRefresh();
     });
   }
@@ -479,13 +499,29 @@ function ContentEditor({
       )}
 
       {["video", "link"].includes(content.content_type) && (
-        <Input
-          className="mb-2"
-          placeholder="URL (https://...)"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          aria-label="URL externa"
-        />
+        <>
+          <Input
+            className="mb-2"
+            placeholder={
+              content.content_type === "video"
+                ? "URL do vídeo (ex.: https://drive.google.com/file/d/ID/view)"
+                : "URL (https://...)"
+            }
+            value={url}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setUrlHint(null);
+            }}
+            aria-label="URL externa"
+          />
+          {content.content_type === "video" && (
+            <p className="mb-2 text-xs text-[var(--foreground-muted)]">
+              Para Google Drive, cole o link de cada vídeo individual. O sistema converte automaticamente para
+              reprodução (/preview). Links de pasta não funcionam no player.
+            </p>
+          )}
+          {urlHint && <p className="mb-2 text-xs text-red-400">{urlHint}</p>}
+        </>
       )}
 
       {["pdf", "image", "video"].includes(content.content_type) && (

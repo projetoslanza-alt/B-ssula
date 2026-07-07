@@ -15,7 +15,11 @@ export default async function ChamadosPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await requirePageSession();
-  if (!hasPermission(session, "support.view")) {
+  const canAccessSupport =
+    hasPermission(session, "support.view") ||
+    hasPermission(session, "support.ticket.manage_all") ||
+    hasPermission(session, "support.ticket.create");
+  if (!canAccessSupport) {
     await requirePagePermission("support.view");
   }
 

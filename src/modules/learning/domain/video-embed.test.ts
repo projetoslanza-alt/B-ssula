@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isExternalVideoUrl, toVideoEmbedUrl } from "@/modules/learning/domain/video-embed";
+import { isExternalVideoUrl, isGoogleDriveFolderUrl, normalizeLessonVideoUrl, toVideoEmbedUrl } from "@/modules/learning/domain/video-embed";
 
 describe("isExternalVideoUrl", () => {
   it("aceita http/https", () => {
@@ -71,5 +71,16 @@ describe("toVideoEmbedUrl — fallback e inválidos", () => {
   it("retorna null para valores não-http", () => {
     expect(toVideoEmbedUrl(null)).toBeNull();
     expect(toVideoEmbedUrl("tenant/bucket/file.mp4")).toBeNull();
+  });
+
+  it("detecta link de pasta do Google Drive", () => {
+    expect(isGoogleDriveFolderUrl("https://drive.google.com/drive/folders/abc123")).toBe(true);
+    expect(isGoogleDriveFolderUrl("https://drive.google.com/file/d/abc/view")).toBe(false);
+  });
+
+  it("normaliza URL de vídeo para preview", () => {
+    expect(normalizeLessonVideoUrl("https://drive.google.com/file/d/ID/view")).toBe(
+      "https://drive.google.com/file/d/ID/preview",
+    );
   });
 });

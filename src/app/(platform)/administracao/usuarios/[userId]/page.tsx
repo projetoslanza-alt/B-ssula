@@ -7,15 +7,48 @@ import { StatusChangeForm } from "@/components/platform/status-change-form";
 import { createClient } from "@/lib/supabase/server";
 import {
   assignMembershipGroupAction,
+  forcePasswordChangeAction,
+  resetTemporaryPasswordAction,
   updateMembershipStatusAction,
 } from "@/modules/admin/actions/user-actions";
 import { canManageUsersFully } from "@/modules/admin/user-permissions";
+import { isLocalProductionStack } from "@/lib/providers";
 import { platformRoutes } from "@/lib/routes";
 
-export default async function UsuarioDetalhePage({ params }: { params: Promise<{ userId: string }> }) {
+const NOTICES: Record<string, { tone: "success" | "warning" | "error"; message: string }> = {
+  "reset-sent": {
+    tone: "success",
+    message: "Nova senha temporária gerada e enviada por e-mail. O usuário deverá trocá-la no próximo acesso.",
+  },
+  "reset-nomail": {
+    tone: "warning",
+    message:
+      "Nova senha temporária gerada, mas o e-mail não foi enviado. Verifique as configurações de SMTP.",
+  },
+  "force-set": {
+    tone: "success",
+    message: "O usuário deverá trocar a senha no próximo login.",
+  },
+  error: {
+    tone: "error",
+    message: "Não foi possível concluir a ação. Tente novamente.",
+  },
+};
+
+export default async function UsuarioDetalhePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ userId: string }>;
+  searchParams: Promise<{ notice?: string }>;
+}) {
   const session = await requireAnyPermission(["platform.users.manage", "platform.users.status"]);
   const canManageGroups = canManageUsersFully(session.permissions);
+  const canManageUsers = canManageUsersFully(session.permissions);
+  const isLocal = isLocalProductionStack();
   const { userId: membershipId } = await params;
+  const { notice } = await searchParams;
+  const noticeInfo = notice ? NOTICES[notice] : undefined;
   const supabase = await createClient();
 
   const { data: membership } = await supabase
@@ -61,6 +94,21 @@ export default async function UsuarioDetalhePage({ params }: { params: Promise<{
         backHref={platformRoutes.admin.users}
       />
 
+      {noticeInfo && (
+        <div
+          role="status"
+          className={
+            noticeInfo.tone === "success"
+              ? "rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+              : noticeInfo.tone === "warning"
+                ? "rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300"
+                : "rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          }
+        >
+          {noticeInfo.message}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge label={membership.status} tone={membership.status === "active" ? "success" : "warning"} />
         <span className="text-sm text-[var(--muted)]">Papéis: {roles.join(", ") || "—"}</span>
@@ -96,6 +144,33 @@ export default async function UsuarioDetalhePage({ params }: { params: Promise<{
           </button>
         </form>
       ) : null}
+
+      {canManageUsers && isLocal && (
+        <div className="space-y-3 rounded-xl border border-[var(--border)] p-4">
+          <h2 className="text-sm font-medium">Acesso e senha</h2>
+          <p className="text-xs text-[var(--muted)]">
+            O usuário recebe a senha temporária apenas por e-mail e deve trocá-la no primeiro acesso.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <form action={resetTemporaryPasswordAction.bind(null, membership.id)}>
+              <button
+                type="submit"
+                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:bg-[var(--card-elevated)]"
+              >
+                Reenviar acesso (nova senha temporária)
+              </button>
+            </form>
+            <form action={forcePasswordChangeAction.bind(null, membership.id)}>
+              <button
+                type="submit"
+                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm hover:bg-[var(--card-elevated)]"
+              >
+                Forçar troca de senha no próximo login
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <p className="text-sm">
         <Link href={platformRoutes.admin.audit} className="text-sky-400 hover:underline">

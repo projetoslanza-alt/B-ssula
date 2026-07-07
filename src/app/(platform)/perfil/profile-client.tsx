@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/platform/page-header";
+import { ConfirmModal } from "@/components/platform/confirm-modal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { platformRoutes } from "@/lib/routes";
-import { updateProfilePersonalAction } from "@/modules/profile/actions/profile-actions";
+import {
+  changeProfilePasswordAction,
+  updateProfilePersonalAction,
+} from "@/modules/profile/actions/profile-actions";
 import type { SessionContext } from "@/modules/core/auth/session";
+import type { JourneySummary } from "@/modules/gamification/domain/types";
 
 const TABS = [
   "Dados pessoais",
@@ -19,8 +25,6 @@ const TABS = [
 ] as const;
 
 type Tab = (typeof TABS)[number];
-
-import type { JourneySummary } from "@/modules/gamification/domain/types";
 
 type Cert = {
   id: string;
@@ -42,18 +46,69 @@ type Enrollment = {
 
 export function ProfileClient({
   session,
+  phone,
+  jobTitle,
+  localAuth,
   enrollments,
   certificates,
   journey,
 }: {
   session: SessionContext;
+  phone: string;
+  jobTitle: string;
+  localAuth: boolean;
   enrollments: Enrollment[];
   certificates: Cert[];
   journey: JourneySummary;
 }) {
   const [tab, setTab] = useState<Tab>("Dados pessoais");
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [profilePending, startProfileTransition] = useTransition();
+  const [passwordPending, startPasswordTransition] = useTransition();
+
+  const [confirmProfileOpen, setConfirmProfileOpen] = useState(false);
+  const [confirmPasswordOpen, setConfirmPasswordOpen] = useState(false);
+
+  const profileFormRef = useRef<HTMLFormElement>(null);
+  const passwordFormRef = useRef<HTMLFormElement>(null);
+
+  function submitProfile() {
+    const form = profileFormRef.current;
+    if (!form) return;
+    const formData = new FormData(form);
+    startProfileTransition(async () => {
+      setProfileError(null);
+      setProfileSuccess(false);
+      const result = await updateProfilePersonalAction(formData);
+      setConfirmProfileOpen(false);
+      if (!result.ok) {
+        setProfileError(result.error);
+        return;
+      }
+      setProfileSuccess(true);
+    });
+  }
+
+  function submitPassword() {
+    const form = passwordFormRef.current;
+    if (!form) return;
+    const formData = new FormData(form);
+    startPasswordTransition(async () => {
+      setPasswordError(null);
+      setPasswordSuccess(false);
+      const result = await changeProfilePasswordAction(formData);
+      setConfirmPasswordOpen(false);
+      if (!result.ok) {
+        setPasswordError(result.error);
+        return;
+      }
+      setPasswordSuccess(true);
+      form.reset();
+    });
+  }
 
   return (
     <div className="space-y-8">
@@ -80,16 +135,11 @@ export function ProfileClient({
         <Card>
           <CardContent className="space-y-4 p-6 text-sm">
             <form
+              ref={profileFormRef}
               className="space-y-3"
-              action={(formData) => {
-                startProfileTransition(async () => {
-                  setProfileError(null);
-                  try {
-                    await updateProfilePersonalAction(formData);
-                  } catch (e) {
-                    setProfileError(e instanceof Error ? e.message : "Erro ao salvar perfil.");
-                  }
-                });
+              onSubmit={(e) => {
+                e.preventDefault();
+                setConfirmProfileOpen(true);
               }}
             >
               <label className="block space-y-1">
@@ -102,24 +152,41 @@ export function ProfileClient({
               </label>
               <label className="block space-y-1">
                 <span className="text-[var(--foreground-muted)]">Telefone</span>
-                <Input name="phone" defaultValue="" placeholder="Opcional" />
+                <Input name="phone" defaultValue={phone} placeholder="Opcional" />
               </label>
               <label className="block space-y-1">
                 <span className="text-[var(--foreground-muted)]">Cargo</span>
-                <Input name="jobTitle" defaultValue="" placeholder="Opcional" />
+                <Input name="jobTitle" defaultValue={jobTitle} placeholder="Opcional" />
               </label>
               <label className="block space-y-1">
                 <span className="text-[var(--foreground-muted)]">Motivo da alteração</span>
                 <Input name="reason" required minLength={3} placeholder="Ex.: atualização cadastral" />
               </label>
-              {profileError ? <p className="text-red-400">{profileError}</p> : null}
-              <button
-                type="submit"
-                disabled={profilePending}
-                className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm text-white disabled:opacity-50"
-              >
-                Salvar dados pessoais
-              </button>
+              {profileError ? (
+                <p className="text-red-400" role="alert">
+                  {profileError}
+                </p>
+              ) : null}
+              {profileSuccess ? (
+                <p className="text-emerald-400" role="status">
+                  Perfil atualizado com sucesso.
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={profilePending}
+                  className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm text-white disabled:opacity-50"
+                >
+                  {profilePending ? "Salvando..." : "Salvar dados pessoais"}
+                </button>
+                <Link
+                  href={platformRoutes.home}
+                  className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm hover:bg-[var(--card-elevated)]"
+                >
+                  Cancelar
+                </Link>
+              </div>
             </form>
             <p className="text-xs text-[var(--foreground-muted)]">
               Grupo, tenant, permissões, equipe, pontos e certificados não podem ser alterados nesta tela.
@@ -173,9 +240,6 @@ export function ProfileClient({
                     <p className="font-medium">{version?.title ?? "Curso"}</p>
                     <p className="text-[var(--foreground-muted)]">
                       Progresso: {e.progress_percentage}% · Status: {e.status}
-                    </p>
-                    <p className="text-xs text-amber-400/90">
-                      Vídeos das aulas principais: em preparação (homologação staging)
                     </p>
                     <a
                       href={platformRoutes.learning.learn(e.course_id)}
@@ -244,14 +308,104 @@ export function ProfileClient({
 
       {tab === "Segurança" && (
         <Card>
-          <CardContent className="space-y-3 p-6 text-sm text-[var(--foreground-muted)]">
-            <p>Para alterar a senha, utilize o fluxo seguro de recuperação de acesso.</p>
-            <a href="/login?recuperar=1" className="text-[var(--primary)] hover:underline">
-              Solicitar redefinição de senha
-            </a>
+          <CardContent className="space-y-4 p-6 text-sm">
+            {localAuth ? (
+              <>
+                <p className="text-[var(--foreground-muted)]">
+                  Altere sua senha informando a senha atual. A sessão permanece ativa após a troca.
+                </p>
+                <form
+                  ref={passwordFormRef}
+                  className="max-w-md space-y-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setConfirmPasswordOpen(true);
+                  }}
+                >
+                  <label className="block space-y-1">
+                    <span className="text-[var(--foreground-muted)]">Senha atual</span>
+                    <Input
+                      name="currentPassword"
+                      type="password"
+                      required
+                      autoComplete="current-password"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-[var(--foreground-muted)]">Nova senha</span>
+                    <Input
+                      name="newPassword"
+                      type="password"
+                      required
+                      minLength={12}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-[var(--foreground-muted)]">Confirmar nova senha</span>
+                    <Input
+                      name="confirmPassword"
+                      type="password"
+                      required
+                      minLength={12}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <p className="text-xs text-[var(--foreground-muted)]">
+                    Mínimo 12 caracteres, com maiúsculas, minúsculas e números.
+                  </p>
+                  {passwordError ? (
+                    <p className="text-red-400" role="alert">
+                      {passwordError}
+                    </p>
+                  ) : null}
+                  {passwordSuccess ? (
+                    <p className="text-emerald-400" role="status">
+                      Senha alterada com sucesso.
+                    </p>
+                  ) : null}
+                  <button
+                    type="submit"
+                    disabled={passwordPending}
+                    className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm text-white disabled:opacity-50"
+                  >
+                    {passwordPending ? "Alterando..." : "Alterar senha"}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <p className="text-[var(--foreground-muted)]">
+                  Para alterar a senha, utilize o fluxo seguro de recuperação de acesso.
+                </p>
+                <a href="/esqueci-minha-senha" className="text-[var(--primary)] hover:underline">
+                  Solicitar redefinição de senha
+                </a>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
+
+      <ConfirmModal
+        open={confirmProfileOpen}
+        title="Confirmar alterações"
+        message="Deseja salvar as alterações no seu perfil?"
+        confirmLabel="Confirmar alterações"
+        loading={profilePending}
+        onCancel={() => setConfirmProfileOpen(false)}
+        onConfirm={submitProfile}
+      />
+
+      <ConfirmModal
+        open={confirmPasswordOpen}
+        title="Confirmar troca de senha"
+        message="Tem certeza que deseja alterar sua senha?"
+        confirmLabel="Confirmar troca de senha"
+        loading={passwordPending}
+        onCancel={() => setConfirmPasswordOpen(false)}
+        onConfirm={submitPassword}
+      />
     </div>
   );
 }

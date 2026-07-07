@@ -1,12 +1,19 @@
 import { redirect } from "next/navigation";
 import { requirePageSession } from "@/lib/auth/page-guard";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthProvider } from "@/lib/providers";
 import { getUserJourney } from "@/modules/gamification/queries/journey";
 import { ProfileClient } from "./profile-client";
 
 export default async function PerfilPage() {
   const session = await requirePageSession();
   const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("phone, job_title")
+    .eq("id", session.userId)
+    .single();
 
   const { data: enrollments } = await supabase
     .from("course_enrollments")
@@ -31,6 +38,9 @@ export default async function PerfilPage() {
   return (
     <ProfileClient
       session={session}
+      phone={profile?.phone ?? ""}
+      jobTitle={profile?.job_title ?? ""}
+      localAuth={getAuthProvider() === "local"}
       enrollments={enrollments ?? []}
       certificates={certificates ?? []}
       journey={journey}

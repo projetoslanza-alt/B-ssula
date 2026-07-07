@@ -4,6 +4,7 @@ import { getSessionContext, hasPermission } from "@/modules/core/auth/session";
 export async function requirePageSession() {
   const session = await getSessionContext();
   if (!session) redirect("/acesso-pendente");
+  if (session.mustChangePassword) redirect("/primeiro-acesso");
   return session;
 }
 

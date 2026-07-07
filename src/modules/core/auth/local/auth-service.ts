@@ -49,10 +49,12 @@ export async function createLocalUserWithPassword(input: {
   fullName: string;
   password: string;
   status?: string;
+  mustChangePassword?: boolean;
 }): Promise<string> {
   assertStrongPassword(input.password);
   const pepper = serverEnv.PASSWORD_PEPPER;
   const passwordHash = await hashPassword(input.password, pepper);
+  const mustChange = input.mustChangePassword ?? false;
 
   return withTransaction(async (client) => {
     const normalizedEmail = input.email.toLowerCase();
@@ -80,14 +82,152 @@ export async function createLocalUserWithPassword(input: {
     if (!userId) throw new Error("Falha ao criar perfil.");
 
     await client.query(
-      `INSERT INTO user_credentials (user_id, password_hash)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET password_hash = EXCLUDED.password_hash, updated_at = now()`,
-      [userId, passwordHash],
+      `INSERT INTO user_credentials (user_id, password_hash, must_change_password, password_changed_at)
+       VALUES ($1, $2, $3, NULL)
+       ON CONFLICT (user_id) DO UPDATE
+         SET password_hash = EXCLUDED.password_hash,
+             must_change_password = EXCLUDED.must_change_password,
+             password_changed_at = NULL,
+             updated_at = now()`,
+      [userId, passwordHash, mustChange],
     );
 
     return userId;
   });
+}
+
+/**
+ * Redefine a senha de um usuário (fluxo administrativo) e opcionalmente
+ * marca must_change_password. Retorna o hash aplicado apenas internamente.
+ */
+export async function setUserPassword(input: {
+  userId: string;
+  password: string;
+  mustChangePassword?: boolean;
+}): Promise<void> {
+  assertStrongPassword(input.password);
+  const passwordHash = await hashPassword(input.password, serverEnv.PASSWORD_PEPPER);
+  const mustChange = input.mustChangePassword ?? false;
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `INSERT INTO user_credentials (user_id, password_hash, must_change_password, password_changed_at)
+       VALUES ($1, $2, $3, NULL)
+       ON CONFLICT (user_id) DO UPDATE
+         SET password_hash = EXCLUDED.password_hash,
+             must_change_password = EXCLUDED.must_change_password,
+             password_changed_at = NULL,
+             updated_at = now()`,
+      [input.userId, passwordHash, mustChange],
+    );
+    // Reset administrativo invalida sessões ativas do usuário-alvo.
+    await client.query(
+      `UPDATE user_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`,
+      [input.userId],
+    );
+  });
+}
+
+/** Marca (ou desmarca) a obrigatoriedade de troca de senha no próximo login. */
+export async function setMustChangePassword(userId: string, value: boolean): Promise<void> {
+  await query(
+    `UPDATE user_credentials SET must_change_password = $2, updated_at = now() WHERE user_id = $1`,
+    [userId, value],
+  );
+}
+
+/** Lê se o usuário precisa trocar a senha no primeiro acesso. */
+export async function getMustChangePassword(userId: string): Promise<boolean> {
+  const { rows } = await query<{ must_change_password: boolean }>(
+    `SELECT must_change_password FROM user_credentials WHERE user_id = $1`,
+    [userId],
+  );
+  return Boolean(rows[0]?.must_change_password);
+}
+
+/**
+ * Troca de senha no primeiro acesso, feita pelo próprio usuário autenticado.
+ * Valida força, impede repetir a senha temporária e limpa a flag.
+ */
+export async function changeFirstAccessPassword(
+  userId: string,
+  newPassword: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    assertStrongPassword(newPassword);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Senha inválida." };
+  }
+
+  const { rows } = await query<{ password_hash: string }>(
+    `SELECT password_hash FROM user_credentials WHERE user_id = $1`,
+    [userId],
+  );
+  const currentHash = rows[0]?.password_hash;
+  if (!currentHash) {
+    return { ok: false, error: "Credenciais não encontradas." };
+  }
+
+  const samePassword = await verifyPassword(newPassword, currentHash, serverEnv.PASSWORD_PEPPER);
+  if (samePassword) {
+    return { ok: false, error: "A nova senha deve ser diferente da senha temporária." };
+  }
+
+  const newHash = await hashPassword(newPassword, serverEnv.PASSWORD_PEPPER);
+  await query(
+    `UPDATE user_credentials
+       SET password_hash = $2, must_change_password = false, password_changed_at = now(), updated_at = now()
+     WHERE user_id = $1`,
+    [userId, newHash],
+  );
+
+  await recordAuthAudit(userId, "AUTH_FIRST_ACCESS_PASSWORD_CHANGED", {});
+  return { ok: true };
+}
+
+/**
+ * Troca de senha pelo perfil: exige senha atual correta, mantém a sessão ativa.
+ */
+export async function changeProfilePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    assertStrongPassword(newPassword);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Senha inválida." };
+  }
+
+  const { rows } = await query<{ password_hash: string }>(
+    `SELECT password_hash FROM user_credentials WHERE user_id = $1`,
+    [userId],
+  );
+  const currentHash = rows[0]?.password_hash;
+  if (!currentHash) {
+    return { ok: false, error: "Credenciais não encontradas." };
+  }
+
+  const currentOk = await verifyPassword(currentPassword, currentHash, serverEnv.PASSWORD_PEPPER);
+  if (!currentOk) {
+    return { ok: false, error: "Senha atual incorreta." };
+  }
+
+  const samePassword = await verifyPassword(newPassword, currentHash, serverEnv.PASSWORD_PEPPER);
+  if (samePassword) {
+    return { ok: false, error: "A nova senha deve ser diferente da senha atual." };
+  }
+
+  const newHash = await hashPassword(newPassword, serverEnv.PASSWORD_PEPPER);
+  await query(
+    `UPDATE user_credentials
+       SET password_hash = $2, must_change_password = false, password_changed_at = now(), updated_at = now()
+     WHERE user_id = $1`,
+    [userId, newHash],
+  );
+
+  await recordAuthAudit(userId, "AUTH_PROFILE_PASSWORD_CHANGED", {});
+  return { ok: true };
 }
 
 export async function authenticateLocalUser(

@@ -24,6 +24,7 @@ export type SessionContext = {
   permissions: string[];
   roleCodes: string[];
   organizations: OrganizationSummary[];
+  mustChangePassword?: boolean;
 };
 
 async function loadGroupPermissionsForMembership(
@@ -208,6 +209,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     permissions,
     roleCodes,
     organizations,
+    mustChangePassword: false,
   };
 }
 
@@ -215,6 +217,9 @@ export async function requireSession(): Promise<SessionContext> {
   const session = await getSessionContext();
   if (!session) {
     throw new UnauthorizedError("Sessão inválida ou acesso não configurado.");
+  }
+  if (session.mustChangePassword) {
+    throw new ForbiddenError("É necessário trocar a senha temporária antes de continuar.");
   }
   return session;
 }

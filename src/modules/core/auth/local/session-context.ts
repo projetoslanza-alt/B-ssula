@@ -101,6 +101,12 @@ export async function getLocalSessionContext(userId: string): Promise<SessionCon
   const { permissions, roleCodes } = await loadRolePermissions(membership.id);
   if (!permissions.length) return null;
 
+  const { rows: credRows } = await query<{ must_change_password: boolean }>(
+    `SELECT must_change_password FROM user_credentials WHERE user_id = $1`,
+    [userId],
+  );
+  const mustChangePassword = Boolean(credRows[0]?.must_change_password);
+
   return {
     userId,
     email: profile.email,
@@ -117,6 +123,7 @@ export async function getLocalSessionContext(userId: string): Promise<SessionCon
     permissions,
     roleCodes,
     organizations,
+    mustChangePassword,
   };
 }
 

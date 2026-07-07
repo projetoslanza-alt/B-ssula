@@ -19,6 +19,8 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   const session = await loadPlatformSession();
   if (!session) redirect("/acesso-pendente");
 
+  if (session.mustChangePassword) redirect("/primeiro-acesso");
+
   const [notifications, unreadCount] = await Promise.all([
     listUserNotifications(session.userId, session.tenantId, 8),
     countUnreadNotifications(session.userId, session.tenantId),

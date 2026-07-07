@@ -129,6 +129,44 @@ npm run production:local-access-groups
 
 ---
 
+## 5.1 SMTP e primeiro acesso de usuários
+
+O envio do e-mail de primeiro acesso usa SMTP. Defina no `.env.production`:
+
+| Variável | Exemplo |
+|----------|---------|
+| `SMTP_HOST` | `smtp.seudominio.com.br` |
+| `SMTP_PORT` | `587` |
+| `SMTP_SECURE` | `false` (`true` para porta 465) |
+| `SMTP_USER` | `nao-responda@useabussola.com.br` |
+| `SMTP_PASS` | *(segredo — nunca commitar)* |
+| `SMTP_FROM` | `nao-responda@useabussola.com.br` |
+| `SMTP_FROM_NAME` | `Bússola` |
+| `APP_URL` | `https://useabussola.com.br` (usado no link do e-mail) |
+
+**Fluxo de criação de usuário (Master):**
+
+1. `Administração → Usuários → Novo usuário`.
+2. Preencher nome, e-mail, grupo de acesso e manter "Enviar e-mail de primeiro acesso".
+3. O sistema cria o usuário, gera uma **senha temporária forte** (armazenada apenas como hash) e envia por e-mail o link (`APP_URL/login`), o login e a senha temporária.
+4. Se o SMTP não estiver configurado, o usuário é criado mesmo assim e a tela avisa que o e-mail não foi enviado — use **Reenviar acesso** na tela do usuário após configurar o SMTP.
+
+**Primeiro acesso do usuário:**
+
+1. Login com a senha temporária.
+2. O sistema redireciona obrigatoriamente para `/primeiro-acesso`.
+3. O usuário define uma nova senha (mín. 12 caracteres, diferente da temporária).
+4. Após salvar, o acesso é liberado normalmente.
+
+**Ações administrativas na tela do usuário:**
+
+- **Reenviar acesso (nova senha temporária)** — gera nova senha, envia por e-mail e exige troca.
+- **Forçar troca de senha no próximo login** — mantém a senha atual, mas obriga a troca.
+
+> A senha temporária **nunca** é exibida ao admin nem gravada em log/auditoria — só é comunicada pelo e-mail no momento da geração.
+
+---
+
 ## 6. Build e start
 
 ```powershell

@@ -48,7 +48,9 @@ export async function getCatalogCourses(
       )
     `)
     .eq("status", "published")
-    .or(`tenant_id.eq.${session.tenantId},courses.is_global.eq.true`);
+    // Pré-filtro por colunas reais de course_versions (compatível com PostgREST e adapter local).
+    // O recorte final por tenant/global é feito em memória para evitar filtro em coluna aninhada.
+    .or(`tenant_id.eq.${session.tenantId},tenant_id.is.null`);
 
   if (filters?.search) {
     query = query.textSearch("search_vector", filters.search, { type: "websearch", config: "portuguese" });
@@ -62,19 +64,27 @@ export async function getCatalogCourses(
 
   if (error || !data) return [];
 
-  const courseIds = data.map((v) => unwrapRelation(v.courses)?.id).filter(Boolean) as string[];
+  const visible = data.filter((version) => {
+    const course = unwrapRelation(version.courses);
+    return !!course && (course.tenant_id === session.tenantId || course.is_global === true);
+  });
 
-  const { data: enrollments } = await supabase
-    .from("course_enrollments")
-    .select("course_id, progress_percentage, status, mandatory, due_at")
-    .eq("user_id", session.userId)
-    .in("course_id", courseIds);
+  const courseIds = visible.map((v) => unwrapRelation(v.courses)?.id).filter(Boolean) as string[];
+
+  const { data: enrollments } =
+    courseIds.length > 0
+      ? await supabase
+          .from("course_enrollments")
+          .select("course_id, progress_percentage, status, mandatory, due_at")
+          .eq("user_id", session.userId)
+          .in("course_id", courseIds)
+      : { data: [] };
 
   const enrollmentMap = new Map(
     enrollments?.map((e) => [e.course_id, e]) ?? [],
   );
 
-  return data
+  return visible
     .map((version) => {
     const course = unwrapRelation(version.courses);
     if (!course) return null;

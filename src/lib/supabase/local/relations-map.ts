@@ -65,6 +65,8 @@ export const TABLE_RELATIONS: Record<string, Record<string, RelationDef>> = {
   },
   course_versions: {
     courses: { foreignKey: "course_id", cardinality: "one" },
+    course_modules: { foreignKey: "course_version_id", cardinality: "many" },
+    assessments: { foreignKey: "course_version_id", cardinality: "many" },
   },
   course_enrollments: {
     courses: { foreignKey: "course_id", cardinality: "one" },

@@ -116,6 +116,49 @@ describe("buildWhere", () => {
   });
 });
 
+describe("catálogo Universidade (local postgres)", () => {
+  it("gera embed courses!inner com learning_categories sem identificador aninhado inválido", () => {
+    const spec = `
+      id, title, short_description, cover_url, level, workload_minutes, status,
+      courses!inner ( id, slug, is_global, tenant_id, learning_categories ( name ) )
+    `;
+    const sql = buildSelectClause("course_versions", parseSelectSpec(spec));
+    expect(sql).toContain("AS courses");
+    // FK course_versions.course_id → courses.id (cardinalidade one)
+    expect(sql).toContain("course_versions.course_id");
+    // Não deve tratar coluna aninhada como identificador único inválido
+    expect(sql).not.toContain('"courses.is_global"');
+  });
+
+  it("or com tenant_id.eq e tenant_id.is.null usa colunas reais de course_versions", () => {
+    const params: unknown[] = [];
+    const sql = parseOrExpression("tenant_id.eq.tenant-1,tenant_id.is.null", params, { n: 1 });
+    expect(sql).toContain("tenant_id = $1");
+    expect(sql).toContain("tenant_id IS NULL");
+    expect(params).toEqual(["tenant-1"]);
+  });
+
+  it("course_versions embeda course_modules → lessons → lesson_contents como listas (json_agg)", () => {
+    const spec = `
+      id, title,
+      course_modules (
+        id, title, sort_order,
+        lessons (
+          id, title, sort_order,
+          lesson_contents ( id, content_type, title, external_url, file_path, sort_order )
+        )
+      )
+    `;
+    const sql = buildSelectClause("course_versions", parseSelectSpec(spec));
+    // course_modules é many → json_agg com FK course_version_id
+    expect(sql).toContain("json_agg");
+    expect(sql).toContain("course_version_id = course_versions.id");
+    expect(sql).toContain("AS course_modules");
+    // conteúdos com external_url (vídeos Google Drive)
+    expect(sql).toContain("external_url");
+  });
+});
+
 describe("buildSelectSql", () => {
   it("aplica range como offset/limit", () => {
     const { sql, params } = buildSelectSql({

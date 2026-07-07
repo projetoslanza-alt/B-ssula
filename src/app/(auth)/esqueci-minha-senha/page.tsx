@@ -6,18 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrandLogo } from "@/components/platform/brand-logo";
+import { isLocalAuthRuntime } from "@/lib/auth/runtime";
+import { resetPasswordForEmail } from "@/lib/auth/supabase-browser";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const useLocalAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "local";
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
-    if (useLocalAuth) {
+    if (isLocalAuthRuntime()) {
       await fetch("/api/auth/local/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -28,11 +28,7 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/esqueci-minha-senha`,
-    });
+    await resetPasswordForEmail(email, `${window.location.origin}/esqueci-minha-senha`);
     setSent(true);
     setLoading(false);
   }

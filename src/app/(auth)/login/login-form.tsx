@@ -3,7 +3,8 @@
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { isLocalAuthRuntime } from "@/lib/auth/runtime";
+import { signInWithPassword } from "@/lib/auth/supabase-browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,9 +44,7 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const useLocalAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "local";
-
-    if (useLocalAuth) {
+    if (isLocalAuthRuntime()) {
       const res = await fetch("/api/auth/local/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,11 +60,7 @@ export function LoginForm() {
       return;
     }
 
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error: authError } = await signInWithPassword(email, password);
 
     if (authError) {
       setError("E-mail ou senha incorretos.");

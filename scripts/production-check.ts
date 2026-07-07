@@ -132,6 +132,10 @@ function checkStrictEnv() {
   const isLocal = authProvider === "local" && process.env.DATABASE_PROVIDER === "local_postgres";
 
   if (isLocal) {
+    const publicAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER ?? process.env.AUTH_PROVIDER;
+    const publicDb = process.env.NEXT_PUBLIC_DATABASE_PROVIDER ?? process.env.DATABASE_PROVIDER;
+    const publicStorage = process.env.NEXT_PUBLIC_STORAGE_DRIVER ?? process.env.STORAGE_DRIVER;
+
     for (const key of [
       "AUTH_PROVIDER",
       "DATABASE_PROVIDER",
@@ -146,6 +150,15 @@ function checkStrictEnv() {
       if (!process.env[key]?.trim()) fail(`Variável local obrigatória ausente: ${key}`);
     }
     if (process.env.AUTH_PROVIDER !== "local") fail("AUTH_PROVIDER deve ser local.");
+    if (publicAuth !== "local") {
+      fail("NEXT_PUBLIC_AUTH_PROVIDER deve ser local (ou AUTH_PROVIDER=local com build via next.config).");
+    }
+    if (publicDb !== "local_postgres") {
+      fail("NEXT_PUBLIC_DATABASE_PROVIDER deve ser local_postgres.");
+    }
+    if (publicStorage !== "local") {
+      fail("NEXT_PUBLIC_STORAGE_DRIVER deve ser local.");
+    }
     if (process.env.DATABASE_PROVIDER !== "local_postgres") fail("DATABASE_PROVIDER deve ser local_postgres.");
     if (process.env.STORAGE_DRIVER !== "local") fail("STORAGE_DRIVER deve ser local.");
     if (process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) fail("NEXT_PUBLIC_SUPABASE_URL não deve existir em produção local.");

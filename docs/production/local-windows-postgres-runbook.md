@@ -75,7 +75,9 @@ Copiar `docs/production/env.local-postgres.production.example` → `.env.product
 | `AUTH_PROVIDER` | `local` |
 | `NEXT_PUBLIC_AUTH_PROVIDER` | `local` |
 | `DATABASE_PROVIDER` | `local_postgres` |
+| `NEXT_PUBLIC_DATABASE_PROVIDER` | `local_postgres` |
 | `STORAGE_DRIVER` | `local` |
+| `NEXT_PUBLIC_STORAGE_DRIVER` | `local` |
 | `DATABASE_URL` | PostgreSQL (`bussola_app`) |
 | `DIRECT_DATABASE_URL` | PostgreSQL (`bussola_admin`) |
 | `AUTH_SECRET` | ≥ 48 bytes |

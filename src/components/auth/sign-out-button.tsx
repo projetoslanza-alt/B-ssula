@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { LogOut } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { isLocalAuthRuntime } from "@/lib/auth/runtime";
+import { signOutGlobal } from "@/lib/auth/supabase-browser";
 import { cn } from "@/lib/utils";
 
 type SignOutButtonProps = {
@@ -23,11 +24,8 @@ export function SignOutButton({
     setLoading(true);
 
     try {
-      const useLocalAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "local";
-
-      if (!useLocalAuth) {
-        const supabase = createClient();
-        await supabase.auth.signOut({ scope: "global" });
+      if (!isLocalAuthRuntime()) {
+        await signOutGlobal();
       }
 
       const res = await fetch("/api/auth/signout", {

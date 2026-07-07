@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrandLogo } from "@/components/platform/brand-logo";
+import { isLocalAuthRuntime } from "@/lib/auth/runtime";
 
 function subscribeToLocationSearch() {
   return () => {};
@@ -19,7 +20,7 @@ function readToken(): string | null {
 export default function RedefinirSenhaPage() {
   const router = useRouter();
   const token = useSyncExternalStore(subscribeToLocationSearch, readToken, () => null);
-  const useLocalAuth = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "local";
+  const useLocalAuth = isLocalAuthRuntime();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);

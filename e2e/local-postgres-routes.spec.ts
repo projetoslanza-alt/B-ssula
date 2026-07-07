@@ -57,6 +57,34 @@ const AUTH_ROUTES: RouteCheck[] = [
   { module: "Dashboards", path: platformRoutes.dashboards.root, heading: /dashboard/i },
 ];
 
+test.describe("Login local no browser — PostgreSQL local", () => {
+  test("login sem erro Supabase no console e redirect para /inicio", async ({ page, context }) => {
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+    page.on("pageerror", (err) => consoleErrors.push(err.message));
+
+    await page.goto("/login");
+    await page.locator("#email").fill(QA_USERS.adminNorth);
+    await page.locator("#password").fill(qaPassword("user.admin.north"));
+    await page.getByRole("button", { name: /entrar/i }).click();
+
+    await page.waitForURL(/\/inicio/, { timeout: 25_000 });
+    await expect(page.getByRole("heading", { name: /todo time|precisa de um norte|norte/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const supabaseErrors = consoleErrors.filter((line) =>
+      /@supabase\/ssr|supabase client|NEXT_PUBLIC_SUPABASE/i.test(line),
+    );
+    expect(supabaseErrors, supabaseErrors.join("\n")).toHaveLength(0);
+
+    const cookies = await context.cookies();
+    expect(cookies.some((c) => c.name.includes("session") || c.name.includes("auth"))).toBeTruthy();
+  });
+});
+
 test.describe("Rotas públicas — PostgreSQL local", () => {
   for (const route of PUBLIC_ROUTES) {
     test(`${route.module}: ${route.path}`, async ({ page }) => {

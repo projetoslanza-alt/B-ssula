@@ -9,6 +9,8 @@ const envSchema = z.object({
   APP_ENV: appEnvSchema.default("development"),
   AUTH_PROVIDER: z.enum(["supabase", "local"]).default("supabase"),
   NEXT_PUBLIC_AUTH_PROVIDER: z.enum(["supabase", "local"]).optional(),
+  NEXT_PUBLIC_DATABASE_PROVIDER: z.enum(["supabase", "local_postgres"]).optional(),
+  NEXT_PUBLIC_STORAGE_DRIVER: z.enum(["supabase", "local"]).optional(),
 });
 
 const parsed = envSchema.safeParse({
@@ -18,6 +20,10 @@ const parsed = envSchema.safeParse({
   APP_ENV: process.env.APP_ENV,
   AUTH_PROVIDER: process.env.AUTH_PROVIDER ?? process.env.NEXT_PUBLIC_AUTH_PROVIDER,
   NEXT_PUBLIC_AUTH_PROVIDER: process.env.NEXT_PUBLIC_AUTH_PROVIDER ?? process.env.AUTH_PROVIDER,
+  NEXT_PUBLIC_DATABASE_PROVIDER:
+    process.env.NEXT_PUBLIC_DATABASE_PROVIDER ?? process.env.DATABASE_PROVIDER,
+  NEXT_PUBLIC_STORAGE_DRIVER:
+    process.env.NEXT_PUBLIC_STORAGE_DRIVER ?? process.env.STORAGE_DRIVER,
 });
 
 if (!parsed.success && process.env.NODE_ENV !== "test") {

@@ -24,6 +24,8 @@ async function main() {
   const { rows: perms } = await query<{ id: string; code: string }>(`SELECT id, code FROM permissions`);
   const permMap = new Map(perms.map((p) => [p.code, p.id]));
 
+  const groupIds = new Map<string, string>();
+
   for (const g of ACCESS_GROUP_DEFINITIONS) {
     const { rows: existing } = await query<{ id: string }>(
       `SELECT id FROM access_groups WHERE tenant_id = $1 AND code = $2`,
@@ -38,6 +40,7 @@ async function main() {
       );
       groupId = inserted.rows[0].id;
     }
+    groupIds.set(g.code, groupId);
 
     for (const code of g.permissions) {
       const permId = permMap.get(code);
@@ -50,6 +53,31 @@ async function main() {
       );
     }
     console.log(`Grupo ${g.name} OK`);
+  }
+
+  // Opcional: vincula o admin de bootstrap ao grupo Master, evitando ficar "Sem grupo".
+  const adminEmail = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase();
+  const masterGroupId = groupIds.get("master");
+  if (adminEmail && masterGroupId) {
+    const { rows: membershipRows } = await query<{ id: string; user_id: string }>(
+      `SELECT m.id, m.user_id
+       FROM organization_memberships m
+       JOIN profiles p ON p.id = m.user_id
+       WHERE m.tenant_id = $1 AND lower(p.email) = $2`,
+      [tenantId, adminEmail],
+    );
+    const membership = membershipRows[0];
+    if (membership) {
+      await query(
+        `INSERT INTO membership_access_groups (tenant_id, membership_id, group_id, assigned_by)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (membership_id, group_id) DO NOTHING`,
+        [tenantId, membership.id, masterGroupId, membership.user_id],
+      );
+      console.log(`Admin ${adminEmail} vinculado ao grupo Master.`);
+    } else {
+      console.warn(`Aviso: membership de ${adminEmail} não encontrado — vínculo Master não criado.`);
+    }
   }
 
   await query(

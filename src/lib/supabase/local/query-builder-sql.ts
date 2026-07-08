@@ -67,6 +67,8 @@ const NAMED_FK_HINTS: Record<string, string> = {
 
 function parseFkHintColumn(fkHint: string): string | undefined {
   if (NAMED_FK_HINTS[fkHint]) return NAMED_FK_HINTS[fkHint];
+  // Dica direta de coluna FK (ex.: profiles!user_id) — não é nome de constraint.
+  if (!fkHint.endsWith("_fkey") && /_id$/i.test(fkHint)) return fkHint;
   if (!fkHint.endsWith("_fkey")) return undefined;
   const base = fkHint.slice(0, -5);
   if (base.endsWith("_created_by")) return "created_by";

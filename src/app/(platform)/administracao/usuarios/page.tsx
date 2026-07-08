@@ -117,7 +117,15 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                   {m.groups.length > 0 ? `Grupo: ${m.groups.join(", ")}` : "Sem grupo de acesso"}
                 </p>
               </div>
-              <UserStatusControl membershipId={m.id} initialStatus={m.status} />
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href={platformRoutes.admin.user(m.id)}
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--panel-hover)]"
+                >
+                  Ver / editar
+                </Link>
+                <UserStatusControl membershipId={m.id} initialStatus={m.status} />
+              </div>
             </li>
           );
         })}

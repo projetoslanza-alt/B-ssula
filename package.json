@@ -41,6 +41,7 @@
     "production:access-groups": "tsx scripts/production/provision-production-access-groups.ts",
     "production:organization": "tsx scripts/production/bootstrap-production-organization.ts",
     "production:local-access-groups": "tsx scripts/production/provision-local-access-groups.ts",
+    "production:assign-user-group": "tsx scripts/production/assign-local-user-group.ts",
     "bootstrap:local-admin": "tsx scripts/production/bootstrap-local-admin.ts",
     "db:migrate:local-prod": "tsx scripts/db-migrate-local-prod.ts",
     "db:local:doctor": "tsx scripts/db-local-doctor.ts",

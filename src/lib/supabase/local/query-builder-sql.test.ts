@@ -80,6 +80,36 @@ describe("buildSelectClause", () => {
   });
 });
 
+describe("detalhe de usuário (organization_memberships)", () => {
+  it("parseia profiles!user_id como coluna FK direta no parent", () => {
+    expect(parseEmbedName("profiles!user_id")).toEqual({
+      alias: "profiles",
+      table: "profiles",
+      parentFkColumn: "user_id",
+    });
+  });
+
+  it("embeda membership_access_groups como lista via membership_id (não organization_membership_id)", () => {
+    const spec = `
+      id, status, user_id,
+      profiles!user_id ( full_name, email, phone ),
+      membership_access_groups ( group_id, access_groups ( id, name, code ) )
+    `;
+    const sql = buildSelectClause("organization_memberships", parseSelectSpec(spec));
+    expect(sql).toContain("AS membership_access_groups");
+    expect(sql).toContain("json_agg");
+    // FK correta: membership_access_groups.membership_id → organization_memberships.id
+    expect(sql).toContain(
+      "organization_memberships_membership_access_groups.membership_id = organization_memberships.id",
+    );
+    // Nunca deve inventar a coluna inexistente organization_membership_id
+    expect(sql).not.toContain("organization_membership_id");
+    // profiles resolvido pela coluna FK do parent (user_id)
+    expect(sql).toContain("organization_memberships.user_id");
+    expect(sql).toContain("AS profiles");
+  });
+});
+
 describe("buildWhere", () => {
   it("suporta ilike direto", () => {
     const params: unknown[] = [];

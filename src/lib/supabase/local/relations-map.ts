@@ -42,6 +42,8 @@ export const TABLE_RELATIONS: Record<string, Record<string, RelationDef>> = {
     profiles: { foreignKey: "user_id", cardinality: "one" },
     organizations: { foreignKey: "tenant_id", cardinality: "one" },
     access_groups: { foreignKey: "group_id", cardinality: "many" },
+    membership_access_groups: { foreignKey: "membership_id", cardinality: "many" },
+    membership_roles: { foreignKey: "membership_id", cardinality: "many" },
   },
   membership_access_groups: {
     access_groups: { foreignKey: "group_id", cardinality: "one" },

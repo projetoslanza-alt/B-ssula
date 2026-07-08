@@ -3,6 +3,7 @@ import { getSessionContext } from "@/modules/core/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { unwrapRelation } from "@/lib/supabase/relations";
 import { LearningPlayer } from "@/modules/learning/components/learning-player";
+import { filterActiveLearningTree } from "@/modules/learning/domain/active-content";
 
 export default async function AprenderPage({
   params,
@@ -15,6 +16,16 @@ export default async function AprenderPage({
   const { cursoId } = await params;
   const supabase = await createClient();
 
+  const { data: courseRow } = await supabase
+    .from("courses")
+    .select("id, archived_at")
+    .eq("id", cursoId)
+    .maybeSingle();
+
+  if (!courseRow || courseRow.archived_at) {
+    redirect("/universidade/catalogo");
+  }
+
   const { data: enrollments } = await supabase
     .from("course_enrollments")
     .select(`
@@ -23,12 +34,12 @@ export default async function AprenderPage({
       last_lesson_id,
       course_version_id,
       course_versions!inner (
-        id, title,
+        id, title, status,
         course_modules (
-          id, title, sort_order,
+          id, title, sort_order, is_active,
           lessons (
-            id, title, sort_order, completion_rule, completion_config,
-            lesson_contents ( id, content_type, title, content, external_url, file_url, file_path, metadata, sort_order )
+            id, title, sort_order, completion_rule, completion_config, is_active,
+            lesson_contents ( id, content_type, title, content, external_url, file_url, file_path, metadata, sort_order, is_active )
           )
         )
       )
@@ -47,7 +58,13 @@ export default async function AprenderPage({
   const version = unwrapRelation(enrollment.course_versions);
   if (!version) redirect("/universidade/catalogo");
 
-  const modules = (version.course_modules ?? []) as Parameters<typeof LearningPlayer>[0]["modules"];
+  if (version.status !== "published") {
+    redirect("/universidade/catalogo");
+  }
+
+  const modules = filterActiveLearningTree(
+    (version.course_modules ?? []) as Parameters<typeof LearningPlayer>[0]["modules"],
+  );
 
   const { data: lessonProgress } = await supabase
     .from("lesson_progress")

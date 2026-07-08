@@ -3,6 +3,8 @@ import { requirePageSession } from "@/lib/auth/page-guard";
 import { hasAnyPermission, hasPermission } from "@/modules/core/auth/session";
 import { TicketDetailClient } from "@/modules/support/components/ticket-detail-client";
 import { getTicket } from "@/modules/support/queries/tickets";
+import { listSupportCategories } from "@/modules/support/queries/tickets";
+import { listAssignableMembers } from "@/modules/support/queries/assignable-members";
 
 export default async function ChamadoDetalhePage({
   params,
@@ -29,12 +31,21 @@ export default async function ChamadoDetalhePage({
     redirect("/acesso-negado");
   }
 
+  const [categories, assignableMembers] = canManageAll
+    ? await Promise.all([
+        listSupportCategories(session.tenantId, true),
+        listAssignableMembers(session.tenantId),
+      ])
+    : [[], []];
+
   return (
     <TicketDetailClient
       ticket={ticket}
       canManage={canManageAll}
       canArchive={canArchive}
       canReplyInternal={canManageAll}
+      categories={categories}
+      assignableMembers={assignableMembers}
     />
   );
 }

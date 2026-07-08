@@ -191,7 +191,7 @@ export async function unpublishCourseAction(courseId: string, formData: FormData
 export async function archiveCourseAction(courseId: string, formData: FormData) {
   try {
     const session = await requireSession();
-    requirePermission(session, "learning.course.publish");
+    requirePermission(session, "learning.course.archive");
     const reason = String(formData.get("reason") ?? "").trim();
     if (reason.length < 3) return { error: "Informe o motivo (mínimo 3 caracteres)." };
 
@@ -211,6 +211,44 @@ export async function archiveCourseAction(courseId: string, formData: FormData) 
       tenantId: session.tenantId,
       actorId: session.userId,
       action: "COURSE_ARCHIVED",
+      entityType: "course",
+      entityId: courseId,
+      metadata: { reason },
+    });
+
+    revalidatePath("/universidade/admin/cursos");
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function restoreCourseAction(courseId: string, formData: FormData) {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "learning.course.archive");
+    const reason = String(formData.get("reason") ?? "").trim();
+    if (reason.length < 3) return { error: "Informe o motivo (mínimo 3 caracteres)." };
+
+    const supabase = await createClient();
+    await supabase
+      .from("courses")
+      .update({ archived_at: null })
+      .eq("id", courseId)
+      .eq("tenant_id", session.tenantId);
+
+    const { data: course } = await supabase.from("courses").select("current_version_id").eq("id", courseId).single();
+    if (course?.current_version_id) {
+      await supabase
+        .from("course_versions")
+        .update({ status: "draft", updated_by: session.userId })
+        .eq("id", course.current_version_id);
+    }
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "COURSE_RESTORED",
       entityType: "course",
       entityId: courseId,
       metadata: { reason },

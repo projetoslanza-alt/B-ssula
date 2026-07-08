@@ -27,7 +27,7 @@ export default async function AdminCursosPage() {
   const { data: courses } = await supabase
     .from("courses")
     .select(`
-      id, slug, created_at,
+      id, slug, created_at, archived_at,
       course_versions!fk_courses_current_version (
         title, status, level, workload_minutes
       )
@@ -59,12 +59,15 @@ export default async function AdminCursosPage() {
         >
           {courses.map((course) => {
             const version = unwrapRelation(course.course_versions);
-            const status = version?.status ?? "draft";
+            const status = course.archived_at ? "archived" : (version?.status ?? "draft");
             return (
               <DataTableRow key={course.id}>
                 <DataTableCell className="font-medium">{version?.title ?? "Sem título"}</DataTableCell>
                 <DataTableCell>
-                  <StatusBadge label={status} tone={status === "published" ? "success" : "default"} />
+                  <StatusBadge
+                    label={status}
+                    tone={status === "published" ? "success" : status === "archived" ? "warning" : "default"}
+                  />
                 </DataTableCell>
                 <DataTableCell>{COURSE_LEVEL_LABELS[version?.level ?? ""] ?? "—"}</DataTableCell>
                 <DataTableCell>

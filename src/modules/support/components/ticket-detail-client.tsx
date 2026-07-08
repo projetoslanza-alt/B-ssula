@@ -15,8 +15,10 @@ import {
   addTicketMessageAction,
   archiveTicketAction,
   reactivateTicketAction,
+  updateTicketDetailsAction,
   updateTicketStatusAction,
 } from "@/modules/support/actions/ticket-actions";
+import type { AssignableMember } from "@/modules/support/queries/assignable-members";
 
 const STATUS_LABELS = TICKET_STATUS_LABELS;
 
@@ -25,6 +27,12 @@ const PRIORITY_LABELS: Record<string, string> = {
   medium: "Média",
   high: "Alta",
   urgent: "Crítica",
+};
+
+type SupportCategory = {
+  id: string;
+  name: string;
+  support_subcategories: { id: string; name: string; is_active: boolean }[] | null;
 };
 
 type TicketMessage = {
@@ -42,6 +50,9 @@ type TicketDetailData = {
   description: string;
   status: string;
   priority: string;
+  category_id: string | null;
+  subcategory_id: string | null;
+  assignee_id: string | null;
   opened_at: string;
   sla_due_at: string | null;
   requesterName: string;
@@ -63,9 +74,18 @@ type TicketDetailClientProps = {
   canManage: boolean;
   canArchive: boolean;
   canReplyInternal: boolean;
+  categories?: SupportCategory[];
+  assignableMembers?: AssignableMember[];
 };
 
-export function TicketDetailClient({ ticket, canManage, canArchive, canReplyInternal }: TicketDetailClientProps) {
+export function TicketDetailClient({
+  ticket,
+  canManage,
+  canArchive,
+  canReplyInternal,
+  categories = [],
+  assignableMembers = [],
+}: TicketDetailClientProps) {
   const [pending, startTransition] = useTransition();
 
   const runWithReason = (
@@ -185,6 +205,84 @@ export function TicketDetailClient({ ticket, canManage, canArchive, canReplyInte
                 <CardTitle className="text-base">Ações administrativas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {canManage && ticket.status !== "archived" && categories.length > 0 && (
+                  <form
+                    action={(fd) => {
+                      const reason = String(fd.get("reason") ?? "").trim();
+                      if (reason.length < 3) return;
+                      startTransition(async () => {
+                        await updateTicketDetailsAction(ticket.id, fd);
+                      });
+                    }}
+                    className="space-y-2 border-b border-[var(--border)] pb-3"
+                  >
+                    <p className="text-xs font-medium text-[var(--foreground-muted)]">Editar chamado</p>
+                    <input
+                      name="title"
+                      defaultValue={ticket.title}
+                      required
+                      className="field w-full"
+                      placeholder="Título"
+                    />
+                    <Textarea
+                      name="description"
+                      defaultValue={ticket.description}
+                      required
+                      rows={3}
+                      placeholder="Descrição"
+                    />
+                    <select name="categoryId" defaultValue={ticket.category_id ?? ""} className="field w-full">
+                      <option value="">Sem categoria</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      name="subcategoryId"
+                      defaultValue={ticket.subcategory_id ?? ""}
+                      className="field w-full"
+                    >
+                      <option value="">Sem subcategoria</option>
+                      {categories.flatMap((cat) =>
+                        (cat.support_subcategories ?? [])
+                          .filter((s) => s.is_active)
+                          .map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              {cat.name} / {sub.name}
+                            </option>
+                          )),
+                      )}
+                    </select>
+                    <select name="priority" defaultValue={ticket.priority} className="field w-full">
+                      {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                    <select name="assigneeId" defaultValue={ticket.assignee_id ?? ""} className="field w-full">
+                      <option value="">Sem responsável</option>
+                      {assignableMembers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.fullName}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      name="reason"
+                      required
+                      minLength={3}
+                      placeholder="Motivo da alteração (obrigatório)"
+                      className="field w-full"
+                    />
+                    <Button type="submit" className="w-full" size="sm" disabled={pending}>
+                      Salvar alterações
+                    </Button>
+                  </form>
+                )}
+
                 {canManage && ticket.status !== "archived" && (
                   <form
                     action={(fd) => {

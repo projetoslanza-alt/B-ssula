@@ -56,6 +56,22 @@ const ADMIN_MODULES = [
       "gamification.campaign.edit",
     ],
   },
+  {
+    badge: "Comunicação",
+    badgeTone: "info" as const,
+    title: "News e comunicados",
+    description: "Crie, publique e arquive publicações para a organização.",
+    href: platformRoutes.news.root,
+    permission: "news.manage",
+  },
+  {
+    badge: "Dados",
+    badgeTone: "success" as const,
+    title: "Relatórios",
+    description: "Construa, edite e exporte relatórios operacionais.",
+    href: platformRoutes.reports.root,
+    permission: "reports.view",
+  },
 ];
 
 export default async function AdministracaoPage() {
@@ -96,9 +112,11 @@ export default async function AdministracaoPage() {
           <AdminModuleCard key={mod.href} {...mod} />
         ))}
       </div>
-      {visibleModules[4] && (
+      {visibleModules.length > 4 && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <AdminModuleCard {...visibleModules[4]} className="xl:col-span-1" />
+          {visibleModules.slice(4).map((mod) => (
+            <AdminModuleCard key={mod.href} {...mod} />
+          ))}
         </div>
       )}
 

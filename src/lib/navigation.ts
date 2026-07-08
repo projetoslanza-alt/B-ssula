@@ -53,7 +53,10 @@ export const PLATFORM_MODULES: PlatformModule[] = [
     id: "news",
     label: "News",
     href: r.news.root,
-    items: [],
+    items: [
+      { href: r.news.root, label: "Publicações" },
+      { href: r.news.new, label: "Nova publicação", permission: "news.manage" },
+    ],
   },
   {
     id: "support",
@@ -97,6 +100,9 @@ export const PLATFORM_MODULES: PlatformModule[] = [
       { href: r.learning.certificates, label: "Certificados", permissionsAny: ["learning.progress.read_own"] },
       { href: r.learning.progress, label: "Meu progresso", permissionsAny: ["learning.progress.read_own"] },
       { href: r.learning.adminCourses, label: "Gestão da Universidade", permission: "learning.course.create" },
+      { href: r.learning.adminPaths, label: "Trilhas", permission: "learning.path.manage" },
+      { href: r.learning.adminAssessments, label: "Avaliações (admin)", permission: "learning.assessment.manage" },
+      { href: r.learning.reports, label: "Relatórios Universidade", permission: "reports.learning.view" },
     ],
   },
   {
@@ -109,6 +115,16 @@ export const PLATFORM_MODULES: PlatformModule[] = [
       { href: r.gamification.missions, label: "Missões" },
       { href: r.gamification.achievements, label: "Conquistas" },
       { href: r.gamification.myJourney, label: "Minha jornada" },
+      {
+        href: `${r.gamification.root}?tab=central`,
+        label: "Central de campanhas",
+        permissionsAny: [
+          "gamification.campaign.create",
+          "gamification.campaign.publish",
+          "gamification.campaign.edit",
+        ],
+      },
+      { href: r.gamification.adminAudit, label: "Auditoria", permission: "gamification.audit.view" },
     ],
   },
   {
@@ -119,6 +135,10 @@ export const PLATFORM_MODULES: PlatformModule[] = [
     items: [
       { href: r.reports.root, label: "Construtor", permission: "reports.view" },
       { href: r.reports.new, label: "Criar relatório", permission: "reports.view" },
+      { href: r.reports.crm, label: "CRM", permission: "reports.crm.view" },
+      { href: r.reports.support, label: "Chamados", permission: "reports.support.view" },
+      { href: r.reports.learning, label: "Universidade", permission: "reports.learning.view" },
+      { href: r.reports.oneOnOne, label: "One a One", permission: "reports.one_on_one.view" },
     ],
   },
   {

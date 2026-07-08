@@ -44,6 +44,7 @@ export async function getCatalogCourses(
         slug,
         is_global,
         tenant_id,
+        archived_at,
         learning_categories ( name )
       )
     `)
@@ -66,7 +67,11 @@ export async function getCatalogCourses(
 
   const visible = data.filter((version) => {
     const course = unwrapRelation(version.courses);
-    return !!course && (course.tenant_id === session.tenantId || course.is_global === true);
+    return (
+      !!course &&
+      !course.archived_at &&
+      (course.tenant_id === session.tenantId || course.is_global === true)
+    );
   });
 
   const courseIds = visible.map((v) => unwrapRelation(v.courses)?.id).filter(Boolean) as string[];
@@ -172,6 +177,7 @@ export async function getLearningPaths(session: SessionContext) {
     .select("id, title, slug, status, workload_minutes")
     .or(`tenant_id.eq.${session.tenantId},is_global.eq.true`)
     .eq("status", "published")
+    .is("archived_at", null)
     .limit(20);
   return data ?? [];
 }

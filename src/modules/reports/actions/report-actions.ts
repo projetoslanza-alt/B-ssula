@@ -130,3 +130,91 @@ export async function exportReportCsvAction(reportId: string) {
     return { error: getErrorMessage(error) };
   }
 }
+
+export async function updateReportAction(reportId: string, formData: FormData) {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "reports.view");
+
+    const name = String(formData.get("name") ?? "").trim();
+    const description = String(formData.get("description") ?? "").trim() || null;
+    const source = String(formData.get("source") ?? "").trim();
+    const chartType = String(formData.get("chartType") ?? "table");
+    if (!name || !source) return { error: "Informe nome e fonte." };
+
+    let blocks: unknown[] = [];
+    try {
+      blocks = JSON.parse(String(formData.get("blocks") ?? "[]"));
+    } catch {
+      blocks = [];
+    }
+
+    const supabase = await createClient();
+    const layout = { chartType };
+    const { error } = await supabase
+      .from("report_definitions")
+      .update({
+        name,
+        description,
+        source,
+        layout,
+        blocks,
+        updated_by: session.userId,
+      })
+      .eq("id", reportId)
+      .eq("tenant_id", session.tenantId);
+
+    if (error) return { error: "Não foi possível atualizar o relatório." };
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "REPORT_UPDATED",
+      entityType: "report_definition",
+      entityId: reportId,
+      metadata: { name, source },
+    });
+
+    revalidatePath(platformRoutes.reports.report(reportId));
+    revalidatePath(platformRoutes.reports.root);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function setReportStatusAction(reportId: string, formData: FormData) {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "reports.view");
+
+    const status = String(formData.get("status") ?? "");
+    if (!["draft", "active", "inactive"].includes(status)) {
+      return { error: "Status inválido." };
+    }
+
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("report_definitions")
+      .update({ status, updated_by: session.userId })
+      .eq("id", reportId)
+      .eq("tenant_id", session.tenantId);
+
+    if (error) return { error: "Não foi possível alterar o status." };
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "REPORT_STATUS_CHANGED",
+      entityType: "report_definition",
+      entityId: reportId,
+      metadata: { status },
+    });
+
+    revalidatePath(platformRoutes.reports.report(reportId));
+    revalidatePath(platformRoutes.reports.root);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}

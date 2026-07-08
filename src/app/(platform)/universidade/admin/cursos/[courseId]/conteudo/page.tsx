@@ -24,10 +24,10 @@ export default async function ConteudoCursoPage({
   const { data: modules } = await supabase
     .from("course_modules")
     .select(`
-      id, title, description, sort_order,
+      id, title, description, sort_order, is_active,
       lessons (
-        id, title, sort_order, completion_rule,
-        lesson_contents ( id, content_type, title, content, external_url, file_path, sort_order )
+        id, title, sort_order, completion_rule, is_active,
+        lesson_contents ( id, content_type, title, content, external_url, file_path, sort_order, is_active )
       )
     `)
     .eq("course_version_id", data.editableVersionId)

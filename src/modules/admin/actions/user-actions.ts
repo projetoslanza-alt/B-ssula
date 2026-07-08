@@ -176,8 +176,16 @@ export type CreateUserState =
       isNewUser: boolean;
       emailSent: boolean;
       emailError?: string;
+      /** Exibida uma única vez na UI quando o e-mail não foi enviado. */
+      temporaryPassword?: string;
     }
   | { status: "error"; error: string };
+
+export type AdminPasswordResetResult =
+  | { ok: true; email: string; temporaryPassword: string; emailSent: boolean }
+  | { ok: false; error: string };
+
+export type AdminActionResult = { ok: true } | { ok: false; error: string };
 
 /**
  * Cria (ou vincula) um usuário à organização. No stack local gera senha
@@ -303,17 +311,24 @@ export async function createMembershipUserAction(
     // Envio de e-mail de primeiro acesso (nunca quebra a criação).
     let emailSent = false;
     let emailError: string | undefined;
-    if (isNewUser && sendEmail && temporaryPassword) {
-      const result = await sendUserWelcomeEmail({
-        fullName,
-        email,
-        temporaryPassword,
-        loginUrl: buildLoginUrl(),
-      });
-      emailSent = result.sent;
-      if (!result.sent) emailError = result.error;
+    let passwordForAdmin: string | undefined;
+    if (isNewUser && temporaryPassword) {
+      if (sendEmail) {
+        const result = await sendUserWelcomeEmail({
+          fullName,
+          email,
+          temporaryPassword,
+          loginUrl: buildLoginUrl(),
+        });
+        emailSent = result.sent;
+        if (!result.sent) {
+          emailError = result.error;
+          passwordForAdmin = temporaryPassword;
+        }
+      } else {
+        passwordForAdmin = temporaryPassword;
+      }
     }
-    // A senha temporária não persiste em memória após o envio.
     temporaryPassword = null;
 
     await recordAuditEvent(supabase, {
@@ -335,6 +350,7 @@ export async function createMembershipUserAction(
       isNewUser,
       emailSent,
       emailError,
+      temporaryPassword: passwordForAdmin,
     };
   } catch (error) {
     if (error instanceof ForbiddenError) {
@@ -370,9 +386,66 @@ async function loadMembershipProfile(
 }
 
 /**
- * Reset administrativo: gera nova senha temporária, exige troca no próximo login
- * e envia por e-mail. Usado por "Reenviar acesso" e "Resetar senha temporária".
+ * Reset administrativo com exibição única da senha temporária ao admin.
+ * A senha nunca é registrada em auditoria nem persistida em texto claro.
  */
+export async function resetTemporaryPasswordForAdminAction(
+  membershipId: string,
+  sendEmail = true,
+): Promise<AdminPasswordResetResult> {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "platform.users.manage");
+
+    if (!isLocalProductionStack()) {
+      return { ok: false, error: "Reset de senha disponível apenas no ambiente local." };
+    }
+
+    const supabase = await createClient();
+    const target = await loadMembershipProfile(supabase, session.tenantId, membershipId);
+    if (!target) return { ok: false, error: "Usuário não encontrado." };
+
+    const { setUserPassword } = await import("@/modules/core/auth/local/auth-service");
+    const temporaryPassword = generateTemporaryPassword();
+    await setUserPassword({
+      userId: target.userId,
+      password: temporaryPassword,
+      mustChangePassword: true,
+    });
+
+    let emailSent = false;
+    if (sendEmail) {
+      const result = await sendUserWelcomeEmail({
+        fullName: target.fullName,
+        email: target.email,
+        temporaryPassword,
+        loginUrl: buildLoginUrl(),
+      });
+      emailSent = result.sent;
+    }
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "MEMBERSHIP_PASSWORD_RESET",
+      entityType: "membership",
+      entityId: membershipId,
+      affectedUserId: target.userId,
+      origin: "admin:users",
+      metadata: { emailSent },
+    });
+
+    revalidatePath(platformRoutes.admin.user(membershipId));
+    return { ok: true, email: target.email, temporaryPassword, emailSent };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Não foi possível resetar a senha.",
+    };
+  }
+}
+
+/** @deprecated Use resetTemporaryPasswordForAdminAction no fluxo com modal. */
 export async function resetTemporaryPasswordAction(membershipId: string) {
   const detail = platformRoutes.admin.user(membershipId);
   try {
@@ -421,7 +494,45 @@ export async function resetTemporaryPasswordAction(membershipId: string) {
   }
 }
 
-/** Força a troca de senha no próximo login, sem alterar a senha atual. */
+/** Força troca de senha no próximo login (retorno para UI client). */
+export async function forcePasswordChangeForAdminAction(membershipId: string): Promise<AdminActionResult> {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "platform.users.manage");
+
+    if (!isLocalProductionStack()) {
+      return { ok: false, error: "Ação disponível apenas no ambiente local." };
+    }
+
+    const supabase = await createClient();
+    const target = await loadMembershipProfile(supabase, session.tenantId, membershipId);
+    if (!target) return { ok: false, error: "Usuário não encontrado." };
+
+    const { setMustChangePassword } = await import("@/modules/core/auth/local/auth-service");
+    await setMustChangePassword(target.userId, true);
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "MEMBERSHIP_FORCE_PASSWORD_CHANGE",
+      entityType: "membership",
+      entityId: membershipId,
+      affectedUserId: target.userId,
+      origin: "admin:users",
+      metadata: {},
+    });
+
+    revalidatePath(platformRoutes.admin.user(membershipId));
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Não foi possível forçar a troca de senha.",
+    };
+  }
+}
+
+/** @deprecated Use forcePasswordChangeForAdminAction no fluxo com modal. */
 export async function forcePasswordChangeAction(membershipId: string) {
   const detail = platformRoutes.admin.user(membershipId);
   try {
@@ -455,6 +566,70 @@ export async function forcePasswordChangeAction(membershipId: string) {
   } catch (error) {
     if (isRedirectError(error)) throw error;
     redirect(`${detail}?notice=error`);
+  }
+}
+
+/** Atualiza nome e telefone do perfil vinculado ao membership. */
+export async function updateMembershipProfileAdminAction(
+  membershipId: string,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "platform.users.manage");
+
+    const fullName = String(formData.get("fullName") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim() || null;
+    const reason = parseAuditReason(formData);
+
+    if (!fullName) return { ok: false, error: "Informe o nome completo." };
+
+    const supabase = await createClient();
+    const { data: membership } = await supabase
+      .from("organization_memberships")
+      .select("user_id, profiles!user_id ( full_name, phone )")
+      .eq("id", membershipId)
+      .eq("tenant_id", session.tenantId)
+      .maybeSingle();
+
+    if (!membership?.user_id) return { ok: false, error: "Usuário não encontrado." };
+
+    const profile = Array.isArray(membership.profiles) ? membership.profiles[0] : membership.profiles;
+    const previousValue = {
+      fullName: profile?.full_name ?? null,
+      phone: profile?.phone ?? null,
+    };
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name: fullName, phone })
+      .eq("id", membership.user_id);
+
+    if (error) return { ok: false, error: "Não foi possível atualizar o perfil." };
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "MEMBERSHIP_PROFILE_UPDATED",
+      entityType: "membership",
+      entityId: membershipId,
+      affectedUserId: membership.user_id,
+      origin: "admin:users",
+      metadata: {
+        reason,
+        previousValue,
+        newValue: { fullName, phone },
+      },
+    });
+
+    revalidatePath(platformRoutes.admin.user(membershipId));
+    revalidatePath(platformRoutes.admin.users);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Erro ao atualizar usuário.",
+    };
   }
 }
 

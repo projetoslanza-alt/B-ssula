@@ -539,3 +539,99 @@ export async function updateTicketPriorityAction(ticketId: string, formData: For
     return { error: getErrorMessage(error) };
   }
 }
+
+export async function updateTicketDetailsAction(ticketId: string, formData: FormData) {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "support.ticket.manage_all");
+
+    const title = String(formData.get("title") ?? "").trim();
+    const description = String(formData.get("description") ?? "").trim();
+    const categoryId = String(formData.get("categoryId") ?? "") || null;
+    const subcategoryId = String(formData.get("subcategoryId") ?? "") || null;
+    const priorityRaw = String(formData.get("priority") ?? "");
+    const priority = PRIORITY_MAP[priorityRaw] ?? priorityRaw;
+    const assigneeId = String(formData.get("assigneeId") ?? "") || null;
+    const reason = parseAuditReason(formData);
+
+    if (!title || !description) return { error: "Preencha título e descrição." };
+    if (!priority) return { error: "Prioridade inválida." };
+
+    const supabase = await createClient();
+    const { data: current, error: fetchError } = await supabase
+      .from("support_tickets")
+      .select("title, description, category_id, subcategory_id, priority, assignee_id, status")
+      .eq("id", ticketId)
+      .eq("tenant_id", session.tenantId)
+      .single();
+
+    if (fetchError || !current) return { error: "Chamado não encontrado." };
+
+    const updates: Record<string, unknown> = {
+      title,
+      description,
+      category_id: categoryId,
+      subcategory_id: subcategoryId,
+      priority,
+      assignee_id: assigneeId,
+      updated_by: session.userId,
+    };
+
+    if (assigneeId && current.status === "new") {
+      updates.status = "in_progress";
+    }
+
+    const { error } = await supabase
+      .from("support_tickets")
+      .update(updates)
+      .eq("id", ticketId)
+      .eq("tenant_id", session.tenantId);
+
+    if (error) return { error: "Não foi possível atualizar o chamado." };
+
+    const previousValue = {
+      title: current.title,
+      description: current.description,
+      categoryId: current.category_id,
+      subcategoryId: current.subcategory_id,
+      priority: current.priority,
+      assigneeId: current.assignee_id,
+      status: current.status,
+    };
+    const newValue = {
+      title,
+      description,
+      categoryId,
+      subcategoryId,
+      priority,
+      assigneeId,
+      status: updates.status ?? current.status,
+      reason,
+    };
+
+    await supabase.from("support_ticket_history").insert({
+      tenant_id: session.tenantId,
+      ticket_id: ticketId,
+      action: "details_updated",
+      previous_value: previousValue,
+      new_value: newValue,
+      created_by: session.userId,
+    });
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "SUPPORT_TICKET_DETAILS_UPDATED",
+      entityType: "support_ticket",
+      entityId: ticketId,
+      origin: "support:tickets",
+      metadata: { reason, previousValue, newValue },
+    });
+
+    revalidatePath(platformRoutes.support.ticket(ticketId));
+    revalidatePath(platformRoutes.support.all);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}

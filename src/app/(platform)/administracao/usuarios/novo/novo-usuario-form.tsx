@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TemporaryCredentialsModal } from "@/components/platform/temporary-credentials-modal";
 import { createMembershipUserAction, type CreateUserState } from "@/modules/admin/actions/user-actions";
 import { platformRoutes } from "@/lib/routes";
 
@@ -13,6 +14,13 @@ const initialState: CreateUserState = { status: "idle" };
 
 export function NovoUsuarioForm({ groups }: { groups: GroupOption[] }) {
   const [state, formAction, pending] = useActionState(createMembershipUserAction, initialState);
+  const [dismissedCredentials, setDismissedCredentials] = useState(false);
+
+  const showCredentials =
+    state.status === "success" &&
+    state.isNewUser &&
+    state.temporaryPassword &&
+    !dismissedCredentials;
 
   if (state.status === "success") {
     return (
@@ -21,10 +29,15 @@ export function NovoUsuarioForm({ groups }: { groups: GroupOption[] }) {
           {state.isNewUser && state.emailSent && (
             <p>Usuário criado com sucesso. O acesso foi enviado por e-mail para {state.email}.</p>
           )}
-          {state.isNewUser && !state.emailSent && (
+          {state.isNewUser && !state.emailSent && !state.temporaryPassword && (
             <p>
-              Usuário criado, mas o e-mail não foi enviado. Verifique as configurações de SMTP ou
-              use &quot;Resetar senha temporária e enviar&quot; na tela do usuário.
+              Usuário criado, mas o e-mail não foi enviado. Use &quot;Resetar senha temporária&quot; na
+              tela do usuário.
+            </p>
+          )}
+          {state.isNewUser && !state.emailSent && state.temporaryPassword && (
+            <p>
+              Usuário criado. O e-mail não foi enviado — copie os dados de acesso exibidos no modal.
             </p>
           )}
           {!state.isNewUser && (
@@ -39,6 +52,15 @@ export function NovoUsuarioForm({ groups }: { groups: GroupOption[] }) {
             <Button variant="outline">Voltar à lista</Button>
           </Link>
         </div>
+        {showCredentials && (
+          <TemporaryCredentialsModal
+            open
+            email={state.email}
+            temporaryPassword={state.temporaryPassword!}
+            emailSent={false}
+            onClose={() => setDismissedCredentials(true)}
+          />
+        )}
       </div>
     );
   }

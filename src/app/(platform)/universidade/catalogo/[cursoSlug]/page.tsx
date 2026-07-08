@@ -27,13 +27,14 @@ export default async function CursoDetalhePage({
       id,
       slug,
       is_global,
+      archived_at,
       current_version_id,
       learning_categories ( name )
     `)
     .eq("slug", cursoSlug)
     .maybeSingle();
 
-  if (!course) notFound();
+  if (!course || course.archived_at) notFound();
 
   const VERSION_FIELDS =
     "id, title, description, objectives, target_audience, level, workload_minutes, cover_url, status, certificate_enabled";
@@ -81,8 +82,9 @@ export default async function CursoDetalhePage({
 
   const { data: modules } = await supabase
     .from("course_modules")
-    .select("id, title, sort_order, lessons(id, title, duration_minutes, sort_order)")
+    .select("id, title, sort_order, is_active, lessons(id, title, duration_minutes, sort_order, is_active)")
     .eq("course_version_id", version.id)
+    .eq("is_active", true)
     .order("sort_order");
 
   const { data: enrollment } = await supabase
@@ -155,7 +157,8 @@ export default async function CursoDetalhePage({
                     <CardContent>
                       <ul className="space-y-2">
                         {(Array.isArray(mod.lessons) ? mod.lessons : [])
-                          ?.sort((a, b) => a.id.localeCompare(b.id))
+                          ?.filter((lesson) => lesson.is_active !== false)
+                          ?.sort((a, b) => a.sort_order - b.sort_order)
                           .map((lesson, j) => (
                             <li key={lesson.id} className="flex justify-between text-sm text-[var(--foreground-secondary)]">
                               <span>{j + 1}. {lesson.title}</span>

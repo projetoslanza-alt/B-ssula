@@ -25,12 +25,28 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
     console.error("admin.users.list", error.message);
   }
 
+  const membershipIds = (rows ?? []).map((row) => row.id);
   const userIds = (rows ?? []).map((row) => row.user_id);
   const { data: profiles } = userIds.length
     ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds)
     : { data: [] as { id: string; full_name: string | null; email: string }[] };
 
+  const { data: groupLinks } = membershipIds.length
+    ? await supabase
+        .from("membership_access_groups")
+        .select("membership_id, access_groups ( name )")
+        .in("membership_id", membershipIds)
+    : { data: [] as { membership_id: string; access_groups: { name: string } | { name: string }[] | null }[] };
+
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const groupsByMembership = new Map<string, string[]>();
+  for (const link of groupLinks ?? []) {
+    const group = Array.isArray(link.access_groups) ? link.access_groups[0] : link.access_groups;
+    if (!group?.name) continue;
+    const list = groupsByMembership.get(link.membership_id) ?? [];
+    list.push(group.name);
+    groupsByMembership.set(link.membership_id, list);
+  }
 
   const q = (params.q ?? "").trim().toLowerCase();
   const members = (rows ?? [])
@@ -47,6 +63,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
       id: row.id,
       status: row.status,
       profile: profileMap.get(row.user_id),
+      groups: groupsByMembership.get(row.id) ?? [],
     }));
 
   const nav = resolvePageNav({
@@ -90,7 +107,6 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
       <ul className="space-y-2">
         {members.map((m) => {
           const p = m.profile;
-          const roles: string[] = [];
           return (
             <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-[var(--panel)] px-4 py-3">
               <div>
@@ -98,7 +114,9 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                   {p?.full_name ?? p?.email}
                 </Link>
                 <p className="text-xs text-[var(--muted)]">{p?.email}</p>
-                <p className="text-xs text-[var(--muted)]">{roles.join(", ") || "Sem papéis"}</p>
+                <p className="text-xs text-[var(--muted)]">
+                  {m.groups.length > 0 ? `Grupo: ${m.groups.join(", ")}` : "Sem grupo de acesso"}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge label={m.status} tone={m.status === "active" ? "success" : "warning"} />

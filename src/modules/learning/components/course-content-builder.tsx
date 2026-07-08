@@ -32,6 +32,8 @@ import {
   updateModuleAction,
   updateLessonAction,
   updateContentAction,
+  setModuleActiveAction,
+  setLessonActiveAction,
 } from "@/modules/learning/actions/structure-actions";
 
 export type ContentBlock = {
@@ -42,6 +44,7 @@ export type ContentBlock = {
   external_url: string | null;
   file_path: string | null;
   sort_order: number;
+  is_active?: boolean;
 };
 
 export type LessonBlock = {
@@ -49,6 +52,7 @@ export type LessonBlock = {
   title: string;
   sort_order: number;
   completion_rule: string;
+  is_active?: boolean;
   lesson_contents: ContentBlock[];
 };
 
@@ -57,6 +61,7 @@ export type ModuleBlock = {
   title: string;
   description: string | null;
   sort_order: number;
+  is_active?: boolean;
   lessons: LessonBlock[];
 };
 
@@ -196,6 +201,14 @@ function ModuleEditor({
     });
   }
 
+  function toggleModuleActive() {
+    const nextActive = mod.is_active === false;
+    startTransition(async () => {
+      await setModuleActiveAction(courseId, mod.id, nextActive);
+      onRefresh();
+    });
+  }
+
   function moveLesson(lessonIndex: number, direction: -1 | 1) {
     const next = [...lessons];
     const target = lessonIndex + direction;
@@ -219,8 +232,14 @@ function ModuleEditor({
         >
           <ChevronDown className={`h-4 w-4 transition-transform ${open ? "" : "-rotate-90"}`} />
           Módulo {modIndex + 1}: {mod.title}
+          {mod.is_active === false && (
+            <span className="ml-2 rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">Inativo</span>
+          )}
         </button>
         <div className="flex gap-1">
+          <Button type="button" variant="ghost" size="sm" onClick={toggleModuleActive} disabled={pending}>
+            {mod.is_active === false ? "Ativar" : "Desativar"}
+          </Button>
           <Button type="button" variant="ghost" size="icon" onClick={onMoveUp} disabled={modIndex === 0 || pending} aria-label="Mover módulo para cima">
             <ChevronUp className="h-4 w-4" />
           </Button>
@@ -311,6 +330,14 @@ function LessonEditor({
     });
   }
 
+  function toggleLessonActive() {
+    const nextActive = lesson.is_active === false;
+    startTransition(async () => {
+      await setLessonActiveAction(courseId, lesson.id, nextActive);
+      onRefresh();
+    });
+  }
+
   function addContent(type: string) {
     const defaultTitle =
       type === "text" ? "Texto" : type === "video" ? "Vídeo" : type === "link" ? "Link" : "Conteúdo";
@@ -339,6 +366,9 @@ function LessonEditor({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-[var(--foreground-secondary)]">
           Aula {lessonIndex + 1}
+          {lesson.is_active === false && (
+            <span className="ml-2 text-xs text-amber-300">(inativa)</span>
+          )}
         </span>
         <Input
           className="max-w-xs"
@@ -354,6 +384,9 @@ function LessonEditor({
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onMoveDown} disabled={lessonIndex >= totalLessons - 1} aria-label="Mover aula para baixo">
           <ChevronDown className="h-4 w-4" />
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={toggleLessonActive} disabled={pending}>
+          {lesson.is_active === false ? "Ativar" : "Desativar"}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={removeLesson} aria-label="Excluir aula">
           <Trash2 className="h-4 w-4 text-red-500" />

@@ -428,3 +428,67 @@ export async function saveVisibilityAction(
     return { error: getErrorMessage(error) };
   }
 }
+
+export async function setModuleActiveAction(courseId: string, moduleId: string, isActive: boolean) {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "learning.course.create");
+    const { supabase } = await assertCourseAccess(courseId, session.tenantId);
+
+    const { error } = await supabase
+      .from("course_modules")
+      .update({ is_active: isActive })
+      .eq("id", moduleId)
+      .eq("tenant_id", session.tenantId);
+
+    if (error) return { error: "Não foi possível atualizar o módulo." };
+    revalidatePath(`/universidade/admin/cursos/${courseId}/conteudo`);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function setLessonActiveAction(courseId: string, lessonId: string, isActive: boolean) {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "learning.course.create");
+    const { supabase } = await assertCourseAccess(courseId, session.tenantId);
+
+    const { error } = await supabase
+      .from("lessons")
+      .update({ is_active: isActive })
+      .eq("id", lessonId)
+      .eq("tenant_id", session.tenantId);
+
+    if (error) return { error: "Não foi possível atualizar a aula." };
+    revalidatePath(`/universidade/admin/cursos/${courseId}/conteudo`);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function setLessonContentActiveAction(
+  courseId: string,
+  contentId: string,
+  isActive: boolean,
+) {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "learning.course.create");
+    const { supabase } = await assertCourseAccess(courseId, session.tenantId);
+
+    const { error } = await supabase
+      .from("lesson_contents")
+      .update({ is_active: isActive })
+      .eq("id", contentId)
+      .eq("tenant_id", session.tenantId);
+
+    if (error) return { error: "Não foi possível atualizar o conteúdo." };
+    revalidatePath(`/universidade/admin/cursos/${courseId}/conteudo`);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}

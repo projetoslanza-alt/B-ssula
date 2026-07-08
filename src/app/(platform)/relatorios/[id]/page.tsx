@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/lib/auth/page-guard";
+import { hasPermission } from "@/modules/core/auth/session";
 import { getReport } from "@/modules/reports/queries/definitions";
 import { RelatorioDetalheClient } from "./relatorio-detalhe-client";
 
@@ -18,5 +19,7 @@ export default async function RelatorioDetalhePage({
     notFound();
   }
 
-  return <RelatorioDetalheClient report={report} />;
+  return (
+    <RelatorioDetalheClient report={report} canExport={hasPermission(session, "reports.export")} />
+  );
 }

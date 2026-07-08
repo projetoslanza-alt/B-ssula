@@ -3,10 +3,9 @@ import { requireAnyPermission } from "@/lib/auth/page-guard";
 import { PageHeader } from "@/components/platform/page-header";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canManageUsersFully } from "@/modules/admin/user-permissions";
-import { updateMembershipStatusAction } from "@/modules/admin/actions/user-actions";
 import { resolvePageNav } from "@/lib/page-context";
 import { platformRoutes } from "@/lib/routes";
-import { StatusBadge } from "@/components/platform/status-badge";
+import { UserStatusControl } from "./user-status-control";
 
 type SearchParams = Promise<{ q?: string; membershipStatus?: string }>;
 
@@ -118,29 +117,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
                   {m.groups.length > 0 ? `Grupo: ${m.groups.join(", ")}` : "Sem grupo de acesso"}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <StatusBadge label={m.status} tone={m.status === "active" ? "success" : "warning"} />
-                <form
-                  action={updateMembershipStatusAction.bind(null, m.id)}
-                  className="flex flex-wrap items-center gap-2"
-                >
-                  <select name="status" defaultValue={m.status} className="rounded border px-2 py-1 text-xs">
-                    <option value="active">Ativo</option>
-                    <option value="suspended">Suspenso</option>
-                  </select>
-                  <input
-                    name="reason"
-                    required
-                    minLength={3}
-                    placeholder="Motivo (obrigatório)"
-                    aria-label="Motivo da alteração"
-                    className="rounded border px-2 py-1 text-xs"
-                  />
-                  <button type="submit" className="rounded border px-2 py-1 text-xs">
-                    Salvar
-                  </button>
-                </form>
-              </div>
+              <UserStatusControl membershipId={m.id} initialStatus={m.status} />
             </li>
           );
         })}

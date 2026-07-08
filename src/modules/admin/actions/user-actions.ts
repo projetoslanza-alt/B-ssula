@@ -82,89 +82,136 @@ async function assertCanManageMembershipStatus(
   return { supabase, target };
 }
 
-export async function updateMembershipStatusAction(membershipId: string, formData: FormData) {
-  const session = await requireSession();
-  const reason = parseAuditReason(formData);
-  const status = String(formData.get("status") ?? "");
-  if (!["active", "suspended"].includes(status)) throw new Error("Status inválido");
+/**
+ * Ativa/inativa um vínculo. Retorna resultado amigável em vez de lançar, para
+ * não derrubar a página no error boundary quando usada como form action.
+ * O motivo é obrigatório apenas ao inativar (status = "suspended").
+ */
+export async function updateMembershipStatusAction(
+  membershipId: string,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  try {
+    const session = await requireSession();
+    const status = String(formData.get("status") ?? "");
+    if (!["active", "suspended"].includes(status)) {
+      return { ok: false, error: "Status inválido." };
+    }
 
-  const { supabase, target } = await assertCanManageMembershipStatus(session, membershipId, status);
-  const previousStatus = target.status;
+    const reason = String(formData.get("reason") ?? "").trim();
+    if (status === "suspended" && reason.length < 3) {
+      return { ok: false, error: "Informe o motivo da inativação." };
+    }
 
-  const { error } = await supabase
-    .from("organization_memberships")
-    .update({ status })
-    .eq("id", membershipId)
-    .eq("tenant_id", session.tenantId);
+    const { supabase, target } = await assertCanManageMembershipStatus(session, membershipId, status);
+    const previousStatus = target.status;
 
-  if (error) throw error;
+    const { error } = await supabase
+      .from("organization_memberships")
+      .update({ status })
+      .eq("id", membershipId)
+      .eq("tenant_id", session.tenantId);
 
-  await recordAuditEvent(supabase, {
-    tenantId: session.tenantId,
-    actorId: session.userId,
-    action: "MEMBERSHIP_STATUS_CHANGED",
-    entityType: "membership",
-    entityId: membershipId,
-    affectedUserId: target.user_id,
-    origin: "admin:users",
-    metadata: {
-      reason,
-      previousValue: previousStatus,
-      newValue: status,
+    if (error) {
+      console.error("admin.users.status.update", error);
+      return { ok: false, error: "Não foi possível salvar a alteração. Tente novamente." };
+    }
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "MEMBERSHIP_STATUS_CHANGED",
+      entityType: "membership",
       entityId: membershipId,
-    },
-  });
+      affectedUserId: target.user_id,
+      origin: "admin:users",
+      metadata: {
+        reason: reason || null,
+        previousValue: previousStatus,
+        newValue: status,
+        entityId: membershipId,
+      },
+    });
 
-  revalidatePath(platformRoutes.admin.users);
-  revalidatePath(platformRoutes.admin.user(membershipId));
+    revalidatePath(platformRoutes.admin.users);
+    revalidatePath(platformRoutes.admin.user(membershipId));
+    return { ok: true };
+  } catch (error) {
+    console.error("admin.users.status", error);
+    if (error instanceof ForbiddenError) {
+      return { ok: false, error: "Você não tem permissão para alterar o status deste usuário." };
+    }
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Não foi possível salvar a alteração.",
+    };
+  }
 }
 
-export async function assignMembershipGroupAction(membershipId: string, formData: FormData) {
-  const session = await requireSession();
-  requirePermission(session, "platform.users.manage");
+export async function assignMembershipGroupAction(
+  membershipId: string,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "platform.users.manage");
 
-  const groupId = String(formData.get("groupId") ?? "");
-  const reason = parseAuditReason(formData);
-  if (!groupId) throw new Error("Selecione um grupo.");
+    const groupId = String(formData.get("groupId") ?? "");
+    const reason = String(formData.get("reason") ?? "").trim();
+    if (!groupId) return { ok: false, error: "Selecione um grupo." };
+    if (reason.length < 3) return { ok: false, error: "Informe o motivo da alteração." };
 
-  if (membershipId === session.membershipId) {
-    throw new Error("Você não pode alterar o próprio grupo de acesso.");
+    if (membershipId === session.membershipId) {
+      return { ok: false, error: "Você não pode alterar o próprio grupo de acesso." };
+    }
+
+    const supabase = await createClient();
+    const { data: group } = await supabase
+      .from("access_groups")
+      .select("code")
+      .eq("id", groupId)
+      .eq("tenant_id", session.tenantId)
+      .maybeSingle();
+
+    if (!group) return { ok: false, error: "Grupo de acesso inválido." };
+
+    const { error } = await supabase.from("membership_access_groups").upsert(
+      {
+        tenant_id: session.tenantId,
+        membership_id: membershipId,
+        group_id: groupId,
+        assigned_by: session.userId,
+      },
+      { onConflict: "membership_id,group_id" },
+    );
+    if (error) {
+      console.error("admin.users.group.upsert", error);
+      return { ok: false, error: "Não foi possível salvar o grupo. Tente novamente." };
+    }
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      action: "MEMBERSHIP_GROUP_ASSIGNED",
+      entityType: "membership",
+      entityId: membershipId,
+      origin: "admin:users",
+      metadata: { reason, groupId, groupCode: group?.code, newValue: groupId },
+    });
+
+    revalidatePath(platformRoutes.admin.user(membershipId));
+    revalidatePath(platformRoutes.admin.users);
+    return { ok: true };
+  } catch (error) {
+    console.error("admin.users.group", error);
+    if (error instanceof ForbiddenError) {
+      return { ok: false, error: "Você não tem permissão para alterar grupos." };
+    }
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Não foi possível salvar o grupo.",
+    };
   }
-
-  const supabase = await createClient();
-  const { data: group } = await supabase
-    .from("access_groups")
-    .select("code")
-    .eq("id", groupId)
-    .eq("tenant_id", session.tenantId)
-    .maybeSingle();
-
-  if (group?.code === "master" && !hasPermission(session, "platform.users.manage")) {
-    throw new Error("Gestão não pode elevar usuários ao grupo Master.");
-  }
-
-  const { error } = await supabase.from("membership_access_groups").upsert(
-    {
-      tenant_id: session.tenantId,
-      membership_id: membershipId,
-      group_id: groupId,
-      assigned_by: session.userId,
-    },
-    { onConflict: "membership_id,group_id" },
-  );
-  if (error) throw error;
-
-  await recordAuditEvent(supabase, {
-    tenantId: session.tenantId,
-    actorId: session.userId,
-    action: "MEMBERSHIP_GROUP_ASSIGNED",
-    entityType: "membership",
-    entityId: membershipId,
-    origin: "admin:users",
-    metadata: { reason, groupId, groupCode: group?.code, newValue: groupId },
-  });
-
-  revalidatePath(platformRoutes.admin.user(membershipId));
 }
 
 export type CreateUserState =

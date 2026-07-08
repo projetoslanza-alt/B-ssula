@@ -15,12 +15,15 @@ import {
   updateMembershipStatusAction,
 } from "@/modules/admin/actions/user-actions";
 import type { UserAuditEntry } from "@/modules/admin/queries/user-audit";
+import type { EnrollmentAdminRow } from "@/modules/learning/domain/enrollment-access";
+import { UserUniversityPanel } from "@/modules/learning/components/user-university-panel";
 import { platformRoutes } from "@/lib/routes";
 
 type GroupOption = { id: string; name: string };
 
 type UsuarioDetalheClientProps = {
   membershipId: string;
+  userId: string;
   status: string;
   fullName: string;
   email: string;
@@ -32,6 +35,10 @@ type UsuarioDetalheClientProps = {
   canManageUsers: boolean;
   canManageGroups: boolean;
   isLocal: boolean;
+  universityEnrollments: EnrollmentAdminRow[];
+  publishedCourses: { id: string; title: string }[];
+  canManageEnrollment: boolean;
+  canViewLearning: boolean;
 };
 
 type CredentialsState = {
@@ -42,6 +49,7 @@ type CredentialsState = {
 
 export function UsuarioDetalheClient({
   membershipId,
+  userId,
   status,
   fullName,
   email,
@@ -53,6 +61,10 @@ export function UsuarioDetalheClient({
   canManageUsers,
   canManageGroups,
   isLocal,
+  universityEnrollments,
+  publishedCourses,
+  canManageEnrollment,
+  canViewLearning,
 }: UsuarioDetalheClientProps) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -262,6 +274,16 @@ export function UsuarioDetalheClient({
             </Button>
           )}
         </div>
+      )}
+
+      {canViewLearning && (
+        <UserUniversityPanel
+          userId={userId}
+          membershipId={membershipId}
+          enrollments={universityEnrollments}
+          courses={publishedCourses}
+          canManageEnrollment={canManageEnrollment}
+        />
       )}
 
       {auditHistory.length > 0 && (

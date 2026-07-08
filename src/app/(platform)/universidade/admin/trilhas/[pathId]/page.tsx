@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { getSessionContext, requirePermission } from "@/modules/core/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/platform/page-header";
@@ -52,7 +53,24 @@ export default async function EditarTrilhaPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title={path.title} backHref={platformRoutes.learning.adminPaths} />
+      <PageHeader
+        title={path.title}
+        description="Trilha organiza cursos. O acesso do aluno é controlado pela matrícula em cada curso."
+        backHref={platformRoutes.learning.adminPaths}
+        actions={
+          <Link href={platformRoutes.learning.adminPathEnrollments(pathId)} className="btn btn-secondary btn-sm">
+            Acesso / matrículas
+          </Link>
+        }
+      />
+
+      <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-4 py-3 text-sm text-[var(--muted)]">
+        Trilha não possui matrícula própria. Use{" "}
+        <Link href={platformRoutes.learning.adminPathEnrollments(pathId)} className="text-sky-400 hover:underline">
+          Acesso / matrículas
+        </Link>{" "}
+        para matricular o aluno em todos os cursos vinculados, ou gerencie curso a curso.
+      </div>
 
       <form action={updateLearningPathFormAction.bind(null, pathId)} className="max-w-lg space-y-3 rounded-xl border p-4">
         <div>

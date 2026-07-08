@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { unwrapRelation } from "@/lib/supabase/relations";
 import type { SessionContext } from "@/modules/core/auth/session";
+import { canShowCourseInCatalog } from "@/modules/learning/domain/enrollment-access";
 
 export type CatalogCourse = {
   id: string;
@@ -67,11 +68,14 @@ export async function getCatalogCourses(
 
   const visible = data.filter((version) => {
     const course = unwrapRelation(version.courses);
-    return (
-      !!course &&
-      !course.archived_at &&
-      (course.tenant_id === session.tenantId || course.is_global === true)
-    );
+    if (!course) return false;
+    return canShowCourseInCatalog({
+      archivedAt: course.archived_at,
+      versionStatus: version.status,
+      isGlobal: course.is_global === true,
+      courseTenantId: course.tenant_id,
+      viewerTenantId: session.tenantId,
+    });
   });
 
   const courseIds = visible.map((v) => unwrapRelation(v.courses)?.id).filter(Boolean) as string[];

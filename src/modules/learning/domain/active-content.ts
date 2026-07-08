@@ -30,5 +30,8 @@ export function filterActiveLearningTree<T extends ModuleWithLessons>(modules: T
 }
 
 export function canPreviewUnpublishedCourse(session: SessionContext): boolean {
-  return hasPermission(session, "learning.course.create");
+  return (
+    hasPermission(session, "learning.course.create") ||
+    hasPermission(session, "learning.course.manage")
+  );
 }

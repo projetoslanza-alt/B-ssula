@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionContext, requirePermission } from "@/modules/core/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/platform/page-header";
 import { StatusBadge } from "@/components/platform/status-badge";
+import { UniversityAdminShell } from "@/modules/learning/components/university-admin-shell";
 import { platformRoutes } from "@/lib/routes";
 
 export default async function AdminTrilhasPage() {
@@ -24,17 +24,20 @@ export default async function AdminTrilhasPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Trilhas"
-        description="Gerencie trilhas de aprendizagem da organização."
-        backHref={platformRoutes.learning.adminCourses}
-        actions={
-          <Link href={platformRoutes.learning.adminPathNew} className="btn btn-primary btn-sm">
-            + Nova trilha
-          </Link>
-        }
-      />
+    <UniversityAdminShell
+      title="Gestão da Universidade"
+      description="Trilhas organizam cursos. O acesso do aluno é controlado pela matrícula em cada curso."
+      current="trilhas"
+      actions={
+        <Link href={platformRoutes.learning.adminPathNew} className="btn btn-primary btn-sm">
+          + Nova trilha
+        </Link>
+      }
+    >
+      <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-4 py-3 text-sm text-[var(--muted)]">
+        Trilha é organização curricular/visual. Não existe matrícula direta em trilha: matricule o aluno
+        nos cursos vinculados para liberar o conteúdo.
+      </div>
 
       <ul className="space-y-2">
         {(paths ?? []).map((path) => (
@@ -48,13 +51,21 @@ export default async function AdminTrilhasPage() {
               </Link>
               <p className="text-xs text-[var(--muted)]">{path.slug}</p>
             </div>
-            <StatusBadge
-              label={path.archived_at ? "arquivada" : path.status}
-              tone={path.status === "published" ? "success" : "default"}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge
+                label={path.archived_at ? "arquivada" : path.status}
+                tone={path.status === "published" ? "success" : "default"}
+              />
+              <Link
+                href={platformRoutes.learning.adminPathEnrollments(path.id)}
+                className="text-sm text-sky-400 hover:underline"
+              >
+                Acesso / cursos
+              </Link>
+            </div>
           </li>
         ))}
       </ul>
-    </div>
+    </UniversityAdminShell>
   );
 }

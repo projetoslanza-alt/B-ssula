@@ -341,7 +341,7 @@ export async function assignCourseAction(input: {
 
     const { data: course } = await supabase
       .from("courses")
-      .select("id, current_version_id")
+      .select("id, current_version_id, slug")
       .eq("id", input.courseId)
       .eq("tenant_id", session.tenantId)
       .single();
@@ -357,6 +357,17 @@ export async function assignCourseAction(input: {
 
     if (!version) return { error: "Curso não está publicado." };
 
+    const { data: existing } = await supabase
+      .from("course_enrollments")
+      .select("id, course_version_id, status")
+      .eq("user_id", input.userId)
+      .eq("course_id", input.courseId)
+      .maybeSingle();
+
+    if (existing && existing.course_version_id === version.id && existing.status !== "waived") {
+      return { error: "Usuário já está matriculado neste curso." };
+    }
+
     await supabase.from("course_assignments").insert({
       tenant_id: session.tenantId,
       course_id: input.courseId,
@@ -369,15 +380,8 @@ export async function assignCourseAction(input: {
       course_version_id: version.id,
     });
 
-    const { data: existing } = await supabase
-      .from("course_enrollments")
-      .select("id, course_version_id")
-      .eq("user_id", input.userId)
-      .eq("course_id", input.courseId)
-      .maybeSingle();
-
     if (!existing) {
-      await supabase.from("course_enrollments").insert({
+      const { error: insertError } = await supabase.from("course_enrollments").insert({
         tenant_id: session.tenantId,
         course_id: input.courseId,
         course_version_id: version.id,
@@ -388,13 +392,25 @@ export async function assignCourseAction(input: {
         due_at: input.dueAt,
         status: "not_started",
       });
-    } else if (existing.course_version_id === version.id) {
+      if (insertError) {
+        if (insertError.code === "23505") {
+          return { error: "Usuário já está matriculado neste curso." };
+        }
+        return { error: "Não foi possível matricular o aluno." };
+      }
+    } else {
+      // Reativa matrícula dispensada (waived) na mesma versão
       await supabase
         .from("course_enrollments")
         .update({
           mandatory: input.mandatory,
           due_at: input.dueAt,
           assigned_by: session.userId,
+          status: "not_started",
+          waived_at: null,
+          waived_by: null,
+          waive_reason: null,
+          enrollment_origin: "manager",
         })
         .eq("id", existing.id);
     }
@@ -407,7 +423,7 @@ export async function assignCourseAction(input: {
       message: input.mandatory
         ? "Um treinamento obrigatório foi atribuído a você."
         : "Um novo conteúdo foi recomendado para o seu desenvolvimento.",
-      link: `/universidade/catalogo/${input.courseId}`,
+      link: `/universidade/catalogo/${course.slug ?? input.courseId}`,
     });
 
     await recordAuditEvent(supabase, {
@@ -420,8 +436,95 @@ export async function assignCourseAction(input: {
     });
 
     revalidatePath(`/universidade/admin/cursos/${input.courseId}/matriculas`);
+    revalidatePath("/universidade/admin/matriculas");
     revalidatePath("/universidade/equipe");
-    return { success: true };
+    revalidatePath("/universidade/minha-universidade");
+    revalidatePath("/administracao/usuarios");
+    return { success: true, message: "Aluno matriculado com sucesso." };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function setEnrollmentActiveAction(input: {
+  enrollmentId: string;
+  active: boolean;
+  reason?: string;
+}) {
+  try {
+    const session = await requireSession();
+    requirePermission(session, "learning.enrollment.manage");
+    const supabase = await createClient();
+
+    const { data: enrollment } = await supabase
+      .from("course_enrollments")
+      .select("id, user_id, course_id, tenant_id, status, progress_percentage")
+      .eq("id", input.enrollmentId)
+      .eq("tenant_id", session.tenantId)
+      .single();
+
+    if (!enrollment) return { error: "Matrícula não encontrada." };
+
+    if (session.teamId && !hasPermission(session, "learning.course.publish")) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("team_id")
+        .eq("id", enrollment.user_id)
+        .single();
+      if (profile?.team_id !== session.teamId) {
+        return { error: "Sem permissão para esta matrícula." };
+      }
+    }
+
+    if (input.active) {
+      if (enrollment.status !== "waived") {
+        return { error: "Esta matrícula já está ativa." };
+      }
+      const nextStatus = Number(enrollment.progress_percentage ?? 0) > 0 ? "in_progress" : "not_started";
+      await supabase
+        .from("course_enrollments")
+        .update({
+          status: nextStatus,
+          waived_at: null,
+          waived_by: null,
+          waive_reason: null,
+        })
+        .eq("id", enrollment.id);
+    } else {
+      const reason = (input.reason ?? "").trim();
+      if (reason.length < 3) return { error: "Informe o motivo da inativação (mínimo 3 caracteres)." };
+      if (enrollment.status === "waived") {
+        return { error: "Esta matrícula já está inativa." };
+      }
+      await supabase
+        .from("course_enrollments")
+        .update({
+          status: "waived",
+          waived_at: new Date().toISOString(),
+          waived_by: session.userId,
+          waive_reason: reason,
+        })
+        .eq("id", enrollment.id);
+    }
+
+    await recordAuditEvent(supabase, {
+      tenantId: session.tenantId,
+      actorId: session.userId,
+      affectedUserId: enrollment.user_id,
+      action: input.active ? "ENROLLMENT_REACTIVATED" : "ENROLLMENT_WAIVED",
+      entityType: "course_enrollment",
+      entityId: enrollment.id,
+      metadata: { courseId: enrollment.course_id, reason: input.reason ?? null },
+    });
+
+    revalidatePath(`/universidade/admin/cursos/${enrollment.course_id}/matriculas`);
+    revalidatePath("/universidade/admin/matriculas");
+    revalidatePath("/universidade/minha-universidade");
+    revalidatePath("/administracao/usuarios");
+    return {
+      success: true,
+      message: input.active ? "Matrícula reativada com sucesso." : "Matrícula inativada com sucesso.",
+    };
   } catch (error) {
     return { error: getErrorMessage(error) };
   }

@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getSessionContext, requirePermission } from "@/modules/core/auth/session";
+import { getSessionContext, requirePermission, hasPermission } from "@/modules/core/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/platform/page-header";
 import { DataTable, DataTableCell, DataTableRow } from "@/components/platform/data-table";
 import { StatusBadge } from "@/components/platform/status-badge";
 import { publishCourseValidatedAction } from "@/modules/learning/actions/publish-actions";
@@ -10,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/states";
 import { unwrapRelation } from "@/lib/supabase/relations";
 import { COURSE_LEVEL_LABELS } from "@/modules/learning/domain/progress";
+import { UniversityAdminShell } from "@/modules/learning/components/university-admin-shell";
 import { platformRoutes } from "@/lib/routes";
 
 export default async function AdminCursosPage() {
@@ -19,7 +19,7 @@ export default async function AdminCursosPage() {
   try {
     requirePermission(session, "learning.course.create");
   } catch {
-    redirect("/acesso-negado");
+    if (!hasPermission(session, "learning.course.manage")) redirect("/acesso-negado");
   }
 
   const supabase = await createClient();
@@ -36,18 +36,16 @@ export default async function AdminCursosPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Cursos"
-        description="Gerencie o catálogo da sua organização."
-        backHref={platformRoutes.learning.root}
-        actions={
-          <Link href="/universidade/admin/cursos/novo" className="btn btn-primary btn-sm">
-            + Novo curso
-          </Link>
-        }
-      />
-
+    <UniversityAdminShell
+      title="Gestão da Universidade"
+      description="Cursos, trilhas, matrículas, progresso e certificados."
+      current="cursos"
+      actions={
+        <Link href="/universidade/admin/cursos/novo" className="btn btn-primary btn-sm">
+          + Novo curso
+        </Link>
+      }
+    >
       {courses && courses.length > 0 ? (
         <DataTable
           columns={[
@@ -78,6 +76,12 @@ export default async function AdminCursosPage() {
                     >
                       Editar
                     </Link>
+                    <Link
+                      href={`/universidade/admin/cursos/${course.id}/matriculas`}
+                      className="text-sm text-[var(--primary)] hover:underline"
+                    >
+                      Matrículas
+                    </Link>
                     {status === "draft" && (
                       <form
                         action={async () => {
@@ -107,6 +111,14 @@ export default async function AdminCursosPage() {
           }
         />
       )}
-    </div>
+
+      <p className="text-xs text-[var(--muted)]">
+        Master/Admin vê cursos ativos e inativos. Alunos só veem cursos publicados e não arquivados.{" "}
+        <Link href={platformRoutes.learning.adminEnrollments} className="text-sky-400 hover:underline">
+          Ir para matrículas
+        </Link>
+        .
+      </p>
+    </UniversityAdminShell>
   );
 }

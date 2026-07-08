@@ -6,6 +6,7 @@ import Link from "next/link";
 import { platformRoutes } from "@/lib/routes";
 import { unwrapRelation } from "@/lib/supabase/relations";
 import { cn } from "@/lib/utils";
+import { canShowCourseInMyCourses } from "@/modules/learning/domain/enrollment-access";
 
 type Filter = "all" | "mandatory" | "completed" | "favorites";
 
@@ -13,7 +14,9 @@ async function loadEnrollments(tenantId: string, userId: string, filter: Filter)
   const supabase = await createClient();
   let query = supabase
     .from("course_enrollments")
-    .select("id, status, progress_percentage, mandatory, due_at, courses(slug, id), course_versions(title)")
+    .select(
+      "id, status, progress_percentage, mandatory, due_at, courses(slug, id, archived_at), course_versions(title)",
+    )
     .eq("tenant_id", tenantId)
     .eq("user_id", userId);
 
@@ -27,7 +30,13 @@ async function loadEnrollments(tenantId: string, userId: string, filter: Filter)
   }
 
   const { data } = await query.limit(50);
-  return data ?? [];
+  return (data ?? []).filter((item) => {
+    const course = unwrapRelation(item.courses) as { archived_at?: string | null } | null;
+    return canShowCourseInMyCourses({
+      enrollmentStatus: item.status,
+      courseArchivedAt: course?.archived_at,
+    });
+  });
 }
 
 const TITLES: Record<Filter, string> = {

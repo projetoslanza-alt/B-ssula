@@ -295,7 +295,10 @@ export async function removeEnrollmentAction(enrollmentId: string, formData: For
     });
 
     revalidatePath(`/universidade/admin/cursos/${enrollment.course_id}/matriculas`);
-    return { success: true };
+    revalidatePath("/universidade/admin/matriculas");
+    revalidatePath("/universidade/minha-universidade");
+    revalidatePath("/administracao/usuarios");
+    return { success: true, message: "Matrícula removida com sucesso." };
   } catch (error) {
     return { error: getErrorMessage(error) };
   }

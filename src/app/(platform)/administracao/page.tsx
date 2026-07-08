@@ -22,9 +22,14 @@ const ADMIN_MODULES = [
     badge: "Universidade",
     badgeTone: "purple" as const,
     title: "Cursos e certificados",
-    description: "Configure conteúdos, avaliações, modelos e critérios de emissão.",
-    href: platformRoutes.learning.adminCourses,
-    permission: "learning.course.create",
+    description: "Gerencie cursos, trilhas, matrículas, progresso e certificados.",
+    href: platformRoutes.learning.admin,
+    permissionsAny: [
+      "learning.course.create",
+      "learning.course.manage",
+      "learning.enrollment.manage",
+      "learning.path.manage",
+    ],
   },
   {
     badge: "Chamados",
@@ -109,13 +114,27 @@ export default async function AdministracaoPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {visibleModules.slice(0, 4).map((mod) => (
-          <AdminModuleCard key={mod.href} {...mod} />
+          <AdminModuleCard
+            key={mod.href}
+            badge={mod.badge}
+            badgeTone={mod.badgeTone}
+            title={mod.title}
+            description={mod.description}
+            href={mod.href}
+          />
         ))}
       </div>
       {visibleModules.length > 4 && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {visibleModules.slice(4).map((mod) => (
-            <AdminModuleCard key={mod.href} {...mod} />
+            <AdminModuleCard
+              key={mod.href}
+              badge={mod.badge}
+              badgeTone={mod.badgeTone}
+              title={mod.title}
+              description={mod.description}
+              href={mod.href}
+            />
           ))}
         </div>
       )}

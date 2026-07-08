@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { unwrapRelation } from "@/lib/supabase/relations";
 import { LearningPlayer } from "@/modules/learning/components/learning-player";
 import { filterActiveLearningTree } from "@/modules/learning/domain/active-content";
+import { canLearnerAccessCourse } from "@/modules/learning/domain/enrollment-access";
 
 export default async function AprenderPage({
   params,
@@ -30,6 +31,7 @@ export default async function AprenderPage({
     .from("course_enrollments")
     .select(`
       id,
+      status,
       progress_percentage,
       last_lesson_id,
       course_version_id,
@@ -58,7 +60,13 @@ export default async function AprenderPage({
   const version = unwrapRelation(enrollment.course_versions);
   if (!version) redirect("/universidade/catalogo");
 
-  if (version.status !== "published") {
+  if (
+    !canLearnerAccessCourse({
+      enrollmentStatus: enrollment.status,
+      courseArchivedAt: courseRow.archived_at,
+      versionStatus: version.status,
+    })
+  ) {
     redirect("/universidade/catalogo");
   }
 

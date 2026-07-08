@@ -28,14 +28,21 @@ export default async function MinhaUniversidadePage() {
     .from("course_enrollments")
     .select(`
       id, status, progress_percentage, mandatory, due_at,
-      courses ( id, slug ),
+      courses ( id, slug, archived_at ),
       course_versions ( title, cover_url, level, workload_minutes )
     `)
     .eq("user_id", session.userId)
     .eq("tenant_id", session.tenantId)
     .order("last_access_at", { ascending: false });
 
-  const inProgress = enrollments?.filter((e) => e.status === "in_progress") ?? [];
+  const inProgress =
+    enrollments?.filter((e) => {
+      const course = unwrapRelation(e.courses) as { archived_at?: string | null } | null;
+      return (
+        e.status === "in_progress" &&
+        !course?.archived_at
+      );
+    }) ?? [];
 
   return (
     <div className="space-y-6">

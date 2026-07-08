@@ -1,14 +1,19 @@
 import { redirect } from "next/navigation";
 import { getSessionContext, hasPermission } from "@/modules/core/auth/session";
-import { createClient } from "@/lib/supabase/server";
 import { CourseAdminLayout } from "@/modules/learning/components/course-admin-layout";
 import { CourseEnrollmentPanel } from "@/modules/learning/components/course-enrollment-panel";
 import { loadCourseForAdmin } from "@/modules/learning/queries/course-admin";
+import {
+  listCourseEnrollmentsAdmin,
+  listTenantUsersForEnrollment,
+} from "@/modules/learning/queries/enrollment-admin";
 
 export default async function MatriculasCursoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ courseId: string }>;
+  searchParams?: Promise<{ q?: string }>;
 }) {
   const { courseId } = await params;
   const session = await getSessionContext();
@@ -18,45 +23,35 @@ export default async function MatriculasCursoPage({
   const data = await loadCourseForAdmin(courseId, session.tenantId);
   if (!data) redirect("/universidade/admin/cursos");
 
-  const supabase = await createClient();
-  const { data: enrollments } = await supabase
-    .from("course_enrollments")
-    .select("id, status, progress_percentage, mandatory, due_at, profiles!course_enrollments_user_id_fkey(full_name, email, team_id)")
-    .eq("course_id", courseId)
-    .eq("tenant_id", session.tenantId)
-    .order("created_at", { ascending: false });
+  const q = (await searchParams)?.q;
+  const teamScoped =
+    Boolean(session.teamId) && !hasPermission(session, "learning.course.publish");
 
-  let usersQuery = supabase.from("profiles").select("id, full_name, email").eq("tenant_id", session.tenantId).order("full_name").limit(100);
-  if (session.teamId && !hasPermission(session, "learning.course.publish")) {
-    usersQuery = usersQuery.eq("team_id", session.teamId);
-  }
-  const { data: users } = await usersQuery;
+  const enrollments = await listCourseEnrollmentsAdmin(courseId, session.tenantId);
+  const users = await listTenantUsersForEnrollment(session.tenantId, {
+    teamId: teamScoped ? session.teamId : null,
+    search: q,
+  });
 
-  const rows = (enrollments ?? [])
+  const rows = enrollments
     .filter((e) => {
-      if (!session.teamId || hasPermission(session, "learning.course.publish")) return true;
-      const p = Array.isArray(e.profiles) ? e.profiles[0] : e.profiles;
-      return (p as { team_id?: string })?.team_id === session.teamId;
+      if (!teamScoped) return true;
+      return e.teamId === session.teamId;
     })
-    .map((e) => {
-      const p = Array.isArray(e.profiles) ? e.profiles[0] : e.profiles;
-      return {
-        id: e.id,
-        userName: (p as { full_name?: string; email?: string })?.full_name ?? (p as { email?: string })?.email ?? "Usuário",
-        status: e.status,
-        progress: Number(e.progress_percentage ?? 0),
-        mandatory: e.mandatory,
-        dueAt: e.due_at,
-      };
-    });
+    .map((e) => ({
+      id: e.id,
+      userId: e.userId,
+      userName: e.userName,
+      email: e.email,
+      status: e.status,
+      progress: e.progress,
+      mandatory: e.mandatory,
+      dueAt: e.dueAt,
+    }));
 
   return (
     <CourseAdminLayout params={params} currentTab="matriculas">
-      <CourseEnrollmentPanel
-        courseId={courseId}
-        enrollments={rows}
-        users={(users ?? []).map((u) => ({ id: u.id, name: u.full_name ?? u.email ?? u.id }))}
-      />
+      <CourseEnrollmentPanel courseId={courseId} enrollments={rows} users={users} />
     </CourseAdminLayout>
   );
 }

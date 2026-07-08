@@ -1,11 +1,16 @@
 import { notFound } from "next/navigation";
 import { requireAnyPermission } from "@/lib/auth/page-guard";
+import { hasPermission } from "@/modules/core/auth/session";
 import { PageHeader } from "@/components/platform/page-header";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canManageUsersFully } from "@/modules/admin/user-permissions";
 import { isLocalProductionStack } from "@/lib/providers";
 import { platformRoutes } from "@/lib/routes";
 import { listUserAuditEvents } from "@/modules/admin/queries/user-audit";
+import {
+  listPublishedCoursesForEnrollment,
+  listUserEnrollmentsAdmin,
+} from "@/modules/learning/queries/enrollment-admin";
 import { UsuarioDetalheClient } from "./usuario-detalhe-client";
 
 /**
@@ -76,6 +81,23 @@ export default async function UsuarioDetalhePage({
     return [];
   });
 
+  const canManageEnrollment = hasPermission(session, "learning.enrollment.manage");
+  const canViewLearning =
+    canManageEnrollment ||
+    hasPermission(session, "learning.progress.view") ||
+    hasPermission(session, "learning.course.create");
+
+  const enrollments = canViewLearning
+    ? await listUserEnrollmentsAdmin(session.tenantId, membership.user_id).catch((error) => {
+        console.error("admin.users.detail.enrollments", error);
+        return [];
+      })
+    : [];
+
+  const publishedCourses = canManageEnrollment
+    ? await listPublishedCoursesForEnrollment(session.tenantId).catch(() => [])
+    : [];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -86,6 +108,7 @@ export default async function UsuarioDetalhePage({
 
       <UsuarioDetalheClient
         membershipId={membership.id}
+        userId={membership.user_id}
         status={membership.status}
         fullName={profile?.full_name ?? profile?.email ?? ""}
         email={profile?.email ?? ""}
@@ -97,6 +120,10 @@ export default async function UsuarioDetalhePage({
         canManageUsers={canManageUsers}
         canManageGroups={canManageGroups}
         isLocal={isLocal}
+        universityEnrollments={enrollments}
+        publishedCourses={publishedCourses}
+        canManageEnrollment={canManageEnrollment}
+        canViewLearning={canViewLearning}
       />
     </div>
   );

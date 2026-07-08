@@ -1,13 +1,19 @@
 import { notFound } from "next/navigation";
 import { requireAnyPermission } from "@/lib/auth/page-guard";
 import { PageHeader } from "@/components/platform/page-header";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { canManageUsersFully } from "@/modules/admin/user-permissions";
 import { isLocalProductionStack } from "@/lib/providers";
 import { platformRoutes } from "@/lib/routes";
 import { listUserAuditEvents } from "@/modules/admin/queries/user-audit";
 import { UsuarioDetalheClient } from "./usuario-detalhe-client";
 
+/**
+ * Detalhe do usuário. O parâmetro [userId] representa o membership.id
+ * (mesmo ID usado pela listagem em platformRoutes.admin.user).
+ * Usa consultas simples e separadas — sem embeds aninhados frágeis —
+ * para nunca cair em erro genérico por causa do adaptador de query.
+ */
 export default async function UsuarioDetalhePage({
   params,
 }: {
@@ -18,38 +24,46 @@ export default async function UsuarioDetalhePage({
   const canManageUsers = canManageUsersFully(session.permissions);
   const isLocal = isLocalProductionStack();
   const { userId: membershipId } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
-  const { data: membership } = await supabase
+  const { data: membership, error: membershipError } = await supabase
     .from("organization_memberships")
-    .select(`
-      id, status, user_id,
-      profiles!user_id ( full_name, email, phone ),
-      membership_access_groups ( group_id, access_groups ( id, name, code ) )
-    `)
+    .select("id, status, user_id")
     .eq("id", membershipId)
     .eq("tenant_id", session.tenantId)
     .maybeSingle();
 
+  if (membershipError) {
+    console.error("admin.users.detail.membership", membershipError.message);
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Usuário" description="" backHref={platformRoutes.admin.users} />
+        <p className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
+          Não foi possível carregar os dados deste usuário. Tente novamente em instantes.
+        </p>
+      </div>
+    );
+  }
+
   if (!membership) notFound();
 
-  const profile = Array.isArray(membership.profiles) ? membership.profiles[0] : membership.profiles;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, email, phone")
+    .eq("id", membership.user_id)
+    .maybeSingle();
 
-  const groupLinks = membership.membership_access_groups ?? [];
-  const groups = groupLinks
-    .map((mag: { access_groups: { name: string } | { name: string }[] }) => {
-      const g = Array.isArray(mag.access_groups) ? mag.access_groups[0] : mag.access_groups;
-      return g?.name;
-    })
-    .filter(Boolean) as string[];
+  const { data: groupLinks } = await supabase
+    .from("membership_access_groups")
+    .select("group_id, access_groups ( id, name, code )")
+    .eq("membership_id", membership.id);
 
-  const currentGroupId =
-    groupLinks.length > 0
-      ? (() => {
-          const first = groupLinks[0] as { group_id: string };
-          return first.group_id ?? null;
-        })()
-      : null;
+  const normalizedLinks = (groupLinks ?? []).map((link) => {
+    const g = Array.isArray(link.access_groups) ? link.access_groups[0] : link.access_groups;
+    return { groupId: link.group_id as string, name: g?.name as string | undefined };
+  });
+  const groups = normalizedLinks.map((l) => l.name).filter(Boolean) as string[];
+  const currentGroupId = normalizedLinks[0]?.groupId ?? null;
 
   const { data: allGroups } = await supabase
     .from("access_groups")
@@ -57,7 +71,10 @@ export default async function UsuarioDetalhePage({
     .eq("tenant_id", session.tenantId)
     .order("name");
 
-  const auditHistory = await listUserAuditEvents(session.tenantId, membership.user_id);
+  const auditHistory = await listUserAuditEvents(session.tenantId, membership.user_id).catch((error) => {
+    console.error("admin.users.detail.audit", error);
+    return [];
+  });
 
   return (
     <div className="space-y-6">

@@ -119,7 +119,11 @@ export function UsuarioDetalheClient({
     fd.set("groupId", groupId);
     fd.set("reason", groupReason.trim());
     run(async () => {
-      await assignMembershipGroupAction(membershipId, fd);
+      const result = await assignMembershipGroupAction(membershipId, fd);
+      if (!result.ok) {
+        setMessage({ tone: "error", text: result.error });
+        return;
+      }
       setGroupOpen(false);
       setGroupReason("");
       setMessage({ tone: "success", text: "Grupo de acesso atualizado." });
@@ -127,20 +131,24 @@ export function UsuarioDetalheClient({
   };
 
   const saveStatus = () => {
-    if (statusReason.trim().length < 3) {
-      setMessage({ tone: "error", text: "Informe o motivo da alteração." });
+    if (nextStatus === "suspended" && statusReason.trim().length < 3) {
+      setMessage({ tone: "error", text: "Informe o motivo da inativação." });
       return;
     }
     const fd = new FormData();
     fd.set("status", nextStatus);
-    fd.set("reason", statusReason.trim());
+    if (statusReason.trim()) fd.set("reason", statusReason.trim());
     run(async () => {
-      await updateMembershipStatusAction(membershipId, fd);
+      const result = await updateMembershipStatusAction(membershipId, fd);
+      if (!result.ok) {
+        setMessage({ tone: "error", text: result.error });
+        return;
+      }
       setStatusOpen(false);
       setStatusReason("");
       setMessage({
         tone: "success",
-        text: nextStatus === "active" ? "Usuário reativado." : "Usuário inativado.",
+        text: nextStatus === "active" ? "Usuário reativado com sucesso." : "Usuário inativado com sucesso.",
       });
     });
   };
@@ -362,7 +370,7 @@ export function UsuarioDetalheClient({
               <Input
                 value={statusReason}
                 onChange={(e) => setStatusReason(e.target.value)}
-                placeholder="Motivo (obrigatório)"
+                placeholder={nextStatus === "suspended" ? "Motivo (obrigatório)" : "Motivo (opcional)"}
               />
             </div>
             <div className="mt-6 flex justify-end gap-2">
